@@ -4,8 +4,8 @@ services:
     runtime: docker
     plan: free
     rootDir: apps/ai-service
-    dockerfilePath: apps/ai-service/Dockerfile
-    dockerContext: apps/ai-service
+    dockerfilePath: Dockerfile
+    dockerContext: .
     autoDeployTrigger: "off"
     healthCheckPath: /health
     envVars:
