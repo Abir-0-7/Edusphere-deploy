@@ -1,0 +1,17 @@
+// Shared flat ESLint config; root eslint.config.mjs re-exports this.
+import eslint from '@eslint/js';
+import prettier from 'eslint-config-prettier';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  { ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/coverage/**'] },
+  eslint.configs.recommended,
+  tseslint.configs.recommended,
+  prettier,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+);

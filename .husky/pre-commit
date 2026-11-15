@@ -1,0 +1,2 @@
+# lint-staged only; full lint/typecheck/test runs in CI (turbo run is too slow per-commit)
+npx -y pnpm@9 exec lint-staged

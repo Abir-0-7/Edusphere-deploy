@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+.turbo/
+coverage/
+.husky/_/
+*.tsbuildinfo
+test-results/
+playwright-report/
+*.log
+ci-logs.zip

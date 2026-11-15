@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "StudyVault Focus Blocker",
+  "version": "0.1.0",
+  "description": "Block selected sites while you study.",
+  "minimum_chrome_version": "120",
+  "permissions": ["declarativeNetRequest", "storage", "alarms"],
+  "background": {
+    "service_worker": "src/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "StudyVault Focus Blocker",
+    "default_popup": "src/popup.html"
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost/*",
+      "http://127.0.0.1/*"
+    ]
+  }
+}

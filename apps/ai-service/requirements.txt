@@ -1,0 +1,16 @@
+# Runtime dependencies tested with Python 3.12.
+fastapi==0.162.6
+uvicorn==0.54.0
+httpx==0.28.1
+pydantic==2.14.3
+pydantic-settings==2.16.3
+python-dotenv==1.2.4
+python-multipart==0.0.33
+PyJWT[crypto]==2.15.1
+psycopg[binary]==3.3.9
+pdfplumber==0.11.10
+pypdf==7.1.0
+Pillow==13.0.0
+pypdfium2==5.15.2
+edge-tts==7.3.1
+sentry-sdk==2.75.0

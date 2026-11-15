@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StudyVault Focus Blocker</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Focus blocker</h1>
+        <p id="focus-status" role="status">Loading focus status...</p>
+      </header>
+      <form id="domain-form">
+        <label for="domain-input">Website domain</label>
+        <div class="add-row">
+          <input id="domain-input" name="domain" type="text" autocomplete="off" placeholder="example.com" required>
+          <button type="submit">Add</button>
+        </div>
+      </form>
+      <p id="message" role="status" aria-live="polite"></p>
+      <section aria-labelledby="list-heading">
+        <div class="list-heading">
+          <h2 id="list-heading">Blocked websites</h2>
+          <span id="domain-count">0</span>
+        </div>
+        <ul id="domain-list"></ul>
+        <p id="empty-state">No websites added.</p>
+      </section>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

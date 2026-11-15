@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "idx_chunks_fts" ON "chunks" USING gin (to_tsvector('english', "content"));--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_chunks_vec" ON "chunks" USING hnsw ("embedding" vector_cosine_ops);

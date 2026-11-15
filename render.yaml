@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: studyvault-ai
+    runtime: docker
+    plan: free
+    rootDir: apps/ai-service
+    dockerfilePath: apps/ai-service/Dockerfile
+    dockerContext: apps/ai-service
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      - key: AI_SERVICE_DATABASE_URL
+        sync: false
+      - key: AI_SERVICE_JWT_JWKS_URL
+        sync: false
+      - key: AI_SERVICE_JWT_ISSUER
+        sync: false
+      - key: AI_SERVICE_JWT_AUTHORIZED_PARTIES
+        sync: false
+      - key: AI_SERVICE_CORS_ORIGINS
+        sync: false
+      - key: AI_SERVICE_JWT_DEV_MODE
+        value: "false"
+      - key: AI_SERVICE_JOB_STORE
+        value: postgres
+      - key: AI_SERVICE_WORKER_ENABLED
+        value: "true"
+      - key: AI_SERVICE_OCR_ENABLED
+        value: "true"

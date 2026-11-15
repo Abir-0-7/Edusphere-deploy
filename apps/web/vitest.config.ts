@@ -1,0 +1,13 @@
+import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
+
+export default defineConfig({
+  // Playwright specs under e2e/ are run by the Playwright runner, not vitest.
+  test: {
+    include: ['tests/**/*.test.ts'],
+    exclude: ['e2e/**', 'node_modules/**', '.next/**'],
+  },
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+});

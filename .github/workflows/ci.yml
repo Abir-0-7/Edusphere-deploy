@@ -1,0 +1,56 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ts:
+    runs-on: ubuntu-latest
+    env:
+      # Forked PRs use placeholders; repository secrets enable the authenticated
+      # Clerk learning-loop spec without putting credentials in source control.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_Y2xlcmsuZXhhbXBsZS5jb20k' }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_ci_placeholder' }}
+      E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL || '' }}
+      DATABASE_URL: postgresql://user:pass@localhost:5432/studyvault
+      AI_SERVICE_URL: http://localhost:8000
+      AI_SERVICE_INTERNAL_TOKEN: ci-placeholder
+      UPSTASH_REDIS_REST_URL: https://example.upstash.io
+      UPSTASH_REDIS_REST_TOKEN: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        # No `version:` here — the action reads `packageManager` from package.json.
+        # Passing both is an error ("Multiple versions of pnpm specified").
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm --filter @studyvault/web exec playwright install --with-deps chromium
+      # Playwright starts the production server on an explicit IPv4 listener in CI.
+      - run: pnpm --filter @studyvault/web test:e2e
+        env:
+          HTTP_PROXY: ''
+          HTTPS_PROXY: ''
+          ALL_PROXY: ''
+          NO_PROXY: localhost,127.0.0.1
+          no_proxy: localhost,127.0.0.1
+        # Without the optional Clerk secrets, the signed-in spec skips and the
+        # anonymous guards still validate route protection.
+
+  python:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/ai-service } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements-dev.txt
+      - run: pip-audit -r requirements.txt
+      - run: ruff check app tests
+      - run: pytest -q
