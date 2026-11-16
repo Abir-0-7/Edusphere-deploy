@@ -4,7 +4,7 @@ import { SortingRace } from './games/sorting-race';
 import { NQueens } from './games/n-queens';
 import { TowersOfHanoi } from './games/hanoi';
 import { FlashcardTowerDefense } from './games/tower-defense';
-import { validateCompletion } from './completion';
+import { isTowerAnswerCorrect, validateCompletion } from './completion';
 
 describe('fixed timestep', () => { it('runs deterministic steps and caps a frame', () => { const loop = new FixedTimestepLoop(10); let n = 0; expect(loop.advance(0.25, () => n++)).toBe(2); expect(n).toBe(2); }); });
 describe('minigames', () => {
@@ -12,6 +12,16 @@ describe('minigames', () => {
   it('validates queens', () => { const game = new NQueens(4); [1, 3, 0, 2].forEach((column, row) => game.place(row, column)); expect(game.complete).toBe(true); });
   it('rejects illegal hanoi moves', () => { const game = new TowersOfHanoi(2); expect(game.move(0, 2)).toBe(true); expect(game.move(0, 2)).toBe(false); });
   it('answers tower enemies', () => { const game = new FlashcardTowerDefense(); game.spawn(0); expect(game.answer(1, true)).toBe(true); expect(game.score).toBe(100); });
+  it('accepts a false choice for a false card while rejecting a true choice', () => {
+    const game = new FlashcardTowerDefense();
+    game.spawn(0);
+    game.spawn(1);
+    expect(game.answer(2, isTowerAnswerCorrect(2, true))).toBe(false);
+    expect(game.score).toBe(0);
+    expect(game.answer(2, isTowerAnswerCorrect(2, false))).toBe(true);
+    expect(game.score).toBe(100);
+    expect(game.enemies.map((enemy) => enemy.id)).toEqual([1]);
+  });
 });
 
 describe('server replayed game completions', () => {

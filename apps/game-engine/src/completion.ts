@@ -17,6 +17,11 @@ export const TOWER_CARDS = [
   { prompt: 'The number 9 is prime.', answer: false },
 ] as const;
 
+/** The UI and server replay compare the raw True/False choice with the same deck. */
+export function isTowerAnswerCorrect(enemyId: number, answer: boolean): boolean {
+  return answer === TOWER_CARDS[(enemyId - 1) % TOWER_CARDS.length]?.answer;
+}
+
 export type Completion = { complete: boolean; score: number };
 
 export function validateCompletion(gameId: string, rawActions: readonly GameAction[]): Completion {
@@ -40,7 +45,7 @@ export function validateCompletion(gameId: string, rawActions: readonly GameActi
     const game = new FlashcardTowerDefense();
     for (const action of rawActions) {
       if (action.type === 'spawn') game.spawn(action.lane, action.hp);
-      else if (action.type === 'answer') game.answer(action.enemyId, action.answer === TOWER_CARDS[(action.enemyId - 1) % TOWER_CARDS.length]?.answer);
+      else if (action.type === 'answer') game.answer(action.enemyId, isTowerAnswerCorrect(action.enemyId, action.answer));
       else return { complete: false, score: 0 };
     }
     return { complete: game.score > 0, score: game.score };
