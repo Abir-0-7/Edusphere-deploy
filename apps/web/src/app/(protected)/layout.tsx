@@ -11,5 +11,5 @@ import type { ReactNode } from 'react';
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
-  return <div id="main-content">{children}</div>;
+  return <>{children}</>;
 }

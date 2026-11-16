@@ -2,7 +2,7 @@ export default function PrivacyPage() {
   return (
     <main id="main-content" className="mx-auto max-w-3xl space-y-5 p-8">
       <h1 className="text-3xl font-bold">Privacy</h1>
-      <p>StudyVault uses your uploaded material to provide chapters, summaries, chat, and flashcards.</p>
+      <p>EduSphere uses your uploaded material to provide chapters, summaries, chat, and flashcards.</p>
       <section>
         <h2 className="text-xl font-semibold">Data we store</h2>
         <p className="mt-1">

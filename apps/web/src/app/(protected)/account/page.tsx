@@ -25,7 +25,7 @@ export default function AccountPage() {
       const href = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      link.download = 'studyvault-data-export.json';
+      link.download = 'edusphere-data-export.json';
       link.click();
       URL.revokeObjectURL(href);
       setMessage('Your data export has downloaded.');
@@ -59,7 +59,7 @@ export default function AccountPage() {
       <div>
         <h1 className="text-2xl font-bold">Your data and account</h1>
         <p className="mt-2 text-neutral-700">
-          Download your StudyVault data or permanently close your account.
+          Download your EduSphere data or permanently close your account.
         </p>
       </div>
 
@@ -84,7 +84,7 @@ export default function AccountPage() {
           Delete account
         </h2>
         <p className="mt-1 text-sm text-neutral-700">
-          This permanently deletes your sign-in account and StudyVault data. This cannot be undone.
+          This permanently deletes your sign-in account and EduSphere data. This cannot be undone.
         </p>
         <label htmlFor="delete-confirmation" className="mt-4 block text-sm font-medium">
           Type DELETE to confirm

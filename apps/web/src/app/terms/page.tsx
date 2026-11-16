@@ -3,7 +3,7 @@ export default function TermsPage() {
     <main id="main-content" className="mx-auto max-w-3xl space-y-5 p-8">
       <h1 className="text-3xl font-bold">Terms of use</h1>
       <p>
-        StudyVault provides study aids from user-supplied material. Generated content can be incomplete or
+        EduSphere provides study aids from user-supplied material. Generated content can be incomplete or
         incorrect and should be checked against the original source.
       </p>
       <p>

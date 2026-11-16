@@ -12,10 +12,15 @@ type GetToken = () => Promise<string | null>;
 async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
   const token = await getToken();
   const base = process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000';
-  return fetch(`${base}${path}`, {
-    ...init,
-    headers: { ...(init.headers ?? {}), authorization: `Bearer ${token ?? ''}` },
-  });
+  try {
+    return await fetch(`${base}${path}`, {
+      ...init,
+      headers: { ...(init.headers ?? {}), authorization: `Bearer ${token ?? ''}` },
+    });
+  } catch {
+    const origin = typeof window === 'undefined' ? 'this deployment' : window.location.origin;
+    throw new Error(`Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`);
+  }
 }
 
 export type { ChatReply, Chapter, Flashcard, JobStatus };
