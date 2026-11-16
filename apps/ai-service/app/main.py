@@ -204,7 +204,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                 await task
 
 
-app = FastAPI(title="StudyVault AI Service", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="EduSphere AI Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list(),

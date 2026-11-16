@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y tesseract-ocr \
+    && apt-get install --no-install-recommends -y tesseract-ocr tesseract-ocr-ben \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system studyvault \
     && useradd --system --gid studyvault --home-dir /app studyvault

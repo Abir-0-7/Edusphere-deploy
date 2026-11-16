@@ -31,8 +31,8 @@ service rooted at `apps/ai-service`, builds the checked-in Dockerfile, and
 checks `/health`. The image installs Tesseract so scanned-PDF OCR works; the
 service `.dockerignore` keeps local secrets, virtualenvs, tests, and caches out
 of the build context. For
-manual setup, select Docker, use `apps/ai-service` as the root/context, and
-`apps/ai-service/Dockerfile` as the Dockerfile path. Confirm the service returns
+manual setup, select Docker, use `apps/ai-service` as the root, `.` as the
+build context, and `Dockerfile` as the Dockerfile path (both relative to that root). Confirm the service returns
 `{"status":"ok"}` over HTTPS.
 
 The Blueprint requests the required secret values during its initial setup.
@@ -68,10 +68,23 @@ limits](https://render.com/docs/free) before selecting a plan.
 Create a Vercel project from the repository with **Root Directory**
 `apps/web`. Enable access to workspace source files outside that directory so
 the build can resolve `packages/db`, `packages/types`, and the root pnpm
-workspace. Use the detected pnpm install/build settings and verify a preview
-deployment before promoting it. If the detected build does not resolve shared
-workspace packages, use the monorepo build command from the workspace root:
-`pnpm --filter @studyvault/web... build`.
+workspace. Use the detected pnpm install setting and verify a preview
+deployment before promoting it.
+
+Keep the dependency-aware Turbo build enabled: the Game Vault build writes its
+browser bundle into `apps/web/public/games` before Next.js packages the web app.
+From the web root, an explicit build command is
+`cd ../.. && pnpm exec turbo run build --filter=@studyvault/web...`.
+These game assets are generated and are not committed to Git.
+
+For scanned Bangla PDFs, set `AI_SERVICE_OCR_LANG=eng+ben` on Render. The
+Docker image includes both language packs. Deploy the updated image after
+changing the OCR configuration.
+
+Test browser requests from the stable web origin configured in
+`AI_SERVICE_CORS_ORIGINS` and `AI_SERVICE_JWT_AUTHORIZED_PARTIES`. Vercel's
+deployment-specific preview origins are different hosts; each needs its own
+explicit allowlist entry if it will be used for authenticated API testing.
 
 Configure Vercel environment variables separately for **Preview** and
 **Production**; a variable change applies only to new deployments. Use a

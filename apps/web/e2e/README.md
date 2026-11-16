@@ -3,6 +3,11 @@
 Playwright specs live in `e2e/` and run with `pnpm --filter @studyvault/web test:e2e`.
 
 `guard.spec.ts` covers anonymous route protection and runs without credentials.
+With the exact CI placeholder publishable key, its test-only request harness
+fetches document responses with `sec-fetch-dest: empty` so Clerk's development
+browser handshake does not navigate to the nonexistent placeholder domain.
+Requests still execute the actual middleware, signed-out auth checks, CSP, and
+redirects. Real Clerk keys use normal browser navigation.
 `learning-loop.spec.ts` exercises upload -> chapters -> grounded chat ->
 flashcard generation -> review. It uses Clerk's official Playwright helper to
 sign in an existing development-instance test user; it does not bypass the

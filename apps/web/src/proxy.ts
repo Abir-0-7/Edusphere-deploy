@@ -20,8 +20,9 @@ export default clerkMiddleware({
 
 export const config = {
   matcher: [
+    // OCR runtime/language files are public static assets, like other bundled scripts.
     // Skip static files and Next internals; run on everything else including api routes.
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!ocr/|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
     '/__clerk/(.*)',
   ],

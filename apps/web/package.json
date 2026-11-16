@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "node scripts/prepare-ocr-assets.mjs && next dev --turbopack",
+    "build": "node scripts/prepare-ocr-assets.mjs && next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests && node --test scripts/prepare-ocr-assets.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
