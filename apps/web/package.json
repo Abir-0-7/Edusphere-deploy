@@ -6,7 +6,7 @@
     "dev": "node scripts/prepare-ocr-assets.mjs && next dev --turbopack",
     "build": "node scripts/prepare-ocr-assets.mjs && next build",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "corepack pnpm --filter \"@studyvault/web^...\" --recursive run build && tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests && node --test scripts/prepare-ocr-assets.test.mjs",
     "test:e2e": "playwright test"
   },

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
 import { QueryProvider } from './providers';
+import { headers } from 'next/headers';
+import { isLocalDemoPage } from '@/lib/local-demo';
 
 export const metadata = {
   title: 'EduSphere',
@@ -39,10 +41,14 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
   return (
     <nav aria-label="Primary navigation" className={mobile ? 'app-mobile-nav' : 'app-side-nav'}>
       {navSections.flatMap((section) => [
-        <p key={`${section.label}-label`} className="app-nav-section">{section.label}</p>,
+        <p key={`${section.label}-label`} className="app-nav-section">
+          {section.label}
+        </p>,
         ...section.links.map((link) => (
           <Link key={link.href} href={link.href} className="app-nav-link">
-            <span className="app-nav-mark" aria-hidden="true">{link.mark}</span>
+            <span className="app-nav-mark" aria-hidden="true">
+              {link.mark}
+            </span>
             <span>{link.label}</span>
           </Link>
         )),
@@ -51,18 +57,39 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  if (isLocalDemoPage(await headers())) {
+    return (
+      <html lang="en">
+        <body>
+          <QueryProvider>
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-6 py-4 text-amber-950">
+              <Link href="/games" className="font-semibold">
+                EduSphere / Game Vault
+              </Link>
+              <span className="text-sm">LOCAL OFFLINE DEMO · Synthetic tokens · No account connected</span>
+            </header>
+            <div id="main-content">{children}</div>
+          </QueryProvider>
+        </body>
+      </html>
+    );
+  }
   return (
     <ClerkProvider dynamic>
       <html lang="en">
         <body>
           <QueryProvider>
-            <a href="#main-content" className="skip-link">Skip to content</a>
+            <a href="#main-content" className="skip-link">
+              Skip to content
+            </a>
             <div className="app-frame">
               <Show when="signed-in">
                 <aside className="app-sidebar" aria-label="EduSphere workspace">
                   <Link href="/dashboard" className="app-brand">
-                    <span className="app-brand-mark" aria-hidden="true">ES</span>
+                    <span className="app-brand-mark" aria-hidden="true">
+                      ES
+                    </span>
                     <span>
                       <strong>EduSphere</strong>
                       <small>LEARNING WORKSPACE</small>
@@ -84,25 +111,35 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <header className="app-topbar">
                   <Show when="signed-in">
                     <Link href="/dashboard" className="app-mobile-brand">
-                      <span className="app-brand-mark" aria-hidden="true">ES</span>
+                      <span className="app-brand-mark" aria-hidden="true">
+                        ES
+                      </span>
                       <strong>EduSphere</strong>
                     </Link>
                     <span className="app-topbar-context">PERSONAL STUDY SPACE</span>
                   </Show>
                   <Show when="signed-out">
                     <Link href="/" className="app-guest-brand">
-                      <span className="app-brand-mark" aria-hidden="true">ES</span>
+                      <span className="app-brand-mark" aria-hidden="true">
+                        ES
+                      </span>
                       <strong>EduSphere</strong>
                     </Link>
                   </Show>
                   <div className="app-topbar-actions">
                     <Show when="signed-in">
-                      <Link href="/library" className="app-upload-link">Add material <span aria-hidden="true">+</span></Link>
-                      <span className="app-topbar-user"><UserButton /></span>
+                      <Link href="/library" className="app-upload-link">
+                        Add material <span aria-hidden="true">+</span>
+                      </Link>
+                      <span className="app-topbar-user">
+                        <UserButton />
+                      </span>
                     </Show>
                     <Show when="signed-out">
                       <SignInButton mode="modal">
-                        <button type="button" className="app-signin-button">Sign in</button>
+                        <button type="button" className="app-signin-button">
+                          Sign in
+                        </button>
                       </SignInButton>
                     </Show>
                   </div>
@@ -110,7 +147,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Show when="signed-in">
                   <Navigation mobile />
                 </Show>
-                <div id="main-content" tabIndex={-1} className="app-page-content">{children}</div>
+                <div id="main-content" tabIndex={-1} className="app-page-content">
+                  {children}
+                </div>
               </div>
             </div>
           </QueryProvider>

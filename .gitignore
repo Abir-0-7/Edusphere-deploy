@@ -1,12 +1,15 @@
 node_modules/
 .next/
-apps/web/public/games/
+apps/web/public/games/*
+!apps/web/public/games/cyberverse/
 dist/
 .venv/
 __pycache__/
 *.pyc
 .env
 .env.local
+.env.*
+!.env.example
 .turbo/
 coverage/
 .husky/_/
