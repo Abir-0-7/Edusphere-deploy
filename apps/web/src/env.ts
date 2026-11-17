@@ -23,7 +23,10 @@ const EnvSchema = z.object({
   NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().default('/sign-up'),
   NEXT_PUBLIC_STUDYVAULT_EXTENSION_ID: z.preprocess(
     (value) => (value === '' ? undefined : value),
-    z.string().regex(/^[a-p]{32}$/, 'must be a 32-character Chrome extension ID').optional(),
+    z
+      .string()
+      .regex(/^[a-p]{32}$/, 'must be a 32-character Chrome extension ID')
+      .optional(),
   ),
   // AI usage limits (task 1.11).
   AI_DAILY_LIMIT: z.coerce.number().int().positive().default(30),
@@ -33,6 +36,11 @@ const EnvSchema = z.object({
 export type Env = z.infer<typeof EnvSchema>;
 
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
+  if (source.NODE_ENV === 'production' && source.EDUSPHERE_LOCAL_DEMO === 'true') {
+    throw new Error(
+      'EDUSPHERE_LOCAL_DEMO is development-only. Disable it before a production build or deployment.',
+    );
+  }
   const parsed = EnvSchema.safeParse(source);
   if (!parsed.success) {
     const missing = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n  ');

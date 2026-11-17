@@ -12,6 +12,12 @@ const VALID = {
 };
 
 describe('typed env validation', () => {
+  it('rejects local demo configuration in production', () => {
+    expect(() => loadEnv({ ...VALID, NODE_ENV: 'production', EDUSPHERE_LOCAL_DEMO: 'true' })).toThrow(
+      /development-only/,
+    );
+    expect(() => loadEnv({ ...VALID, NODE_ENV: 'development', EDUSPHERE_LOCAL_DEMO: 'true' })).not.toThrow();
+  });
   it('accepts a complete environment', () => {
     expect(() => loadEnv(VALID)).not.toThrow();
   });

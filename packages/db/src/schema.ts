@@ -305,12 +305,35 @@ export const tokenLedger = pgTable(
   ],
 );
 
+/** Server-authoritative Game Vault mission entitlements and progression. */
+export const gameMissionProgress = pgTable(
+  'game_mission_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    gameId: text('game_id').notNull(),
+    missionId: text('mission_id').notNull(),
+    unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    xpAwarded: integer('xp_awarded').notNull().default(0),
+    achievements: jsonb('achievements').notNull().default([]),
+  },
+  (t) => [
+    unique('uq_game_mission_progress_user_game_mission').on(t.userId, t.gameId, t.missionId),
+    index('idx_game_mission_progress_user_game').on(t.userId, t.gameId),
+  ],
+);
+
 /** Study guilds and memberships; membership user IDs are always scoped to the owner. */
 export const studyGuilds = pgTable(
   'study_guilds',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    ownerUserId: uuid('owner_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    ownerUserId: uuid('owner_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 64 }).notNull(),
     inviteCode: varchar('invite_code', { length: 16 }).notNull().unique(),
     weeklyGoalMinutes: integer('weekly_goal_minutes').notNull().default(300),
@@ -324,9 +347,16 @@ export const studyGuildMembers = pgTable(
   'study_guild_members',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    guildId: uuid('guild_id').notNull().references(() => studyGuilds.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    guildId: uuid('guild_id')
+      .notNull()
+      .references(() => studyGuilds.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('uq_study_guild_member').on(t.guildId, t.userId), index('idx_guild_members_user').on(t.userId)],
+  (t) => [
+    unique('uq_study_guild_member').on(t.guildId, t.userId),
+    index('idx_guild_members_user').on(t.userId),
+  ],
 );
