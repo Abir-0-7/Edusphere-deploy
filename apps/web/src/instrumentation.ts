@@ -1,7 +1,6 @@
 /**
- * Validate core server configuration at startup. Upstash is optional in the
- * environment schema, so its absence does not prevent unrelated routes from
- * serving.
+ * Next.js instrumentation hook: runs once when the server boots.
+ * Fails fast with a clear message if required env vars are missing (task 1.6).
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;

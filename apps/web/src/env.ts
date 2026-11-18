@@ -14,16 +14,8 @@ const EnvSchema = z.object({
   AI_SERVICE_INTERNAL_TOKEN: z.string().min(1),
   JUDGE0_BASE_URL: z.string().url().optional(),
   JUDGE0_API_KEY: z.string().optional(),
-  // Redis is used only by AI rate limiting. It must not prevent the rest of
-  // the app from starting when the preview service is not configured yet.
-  UPSTASH_REDIS_REST_URL: z.preprocess(
-    (value) => (value === '' ? undefined : value),
-    z.string().url().optional(),
-  ),
-  UPSTASH_REDIS_REST_TOKEN: z.preprocess(
-    (value) => (value === '' ? undefined : value),
-    z.string().min(1).optional(),
-  ),
+  UPSTASH_REDIS_REST_URL: z.string().url(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
   SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   // Clerk redirects; sensible defaults for local dev.

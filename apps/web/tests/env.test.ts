@@ -16,19 +16,6 @@ describe('typed env validation', () => {
     expect(() => loadEnv(VALID)).not.toThrow();
   });
 
-  it('treats Redis credentials as optional for unrelated routes', () => {
-    const withoutRedis: Record<string, string | undefined> = { ...VALID };
-    delete withoutRedis.UPSTASH_REDIS_REST_URL;
-    delete withoutRedis.UPSTASH_REDIS_REST_TOKEN;
-
-    expect(loadEnv(withoutRedis).DATABASE_URL).toBe(VALID.DATABASE_URL);
-    expect(loadEnv(withoutRedis).UPSTASH_REDIS_REST_URL).toBeUndefined();
-    expect(loadEnv(withoutRedis).UPSTASH_REDIS_REST_TOKEN).toBeUndefined();
-    expect(() =>
-      loadEnv({ ...withoutRedis, UPSTASH_REDIS_REST_URL: '', UPSTASH_REDIS_REST_TOKEN: '' }),
-    ).not.toThrow();
-  });
-
   it('fails fast with a clear message when variables are missing', () => {
     try {
       loadEnv({});

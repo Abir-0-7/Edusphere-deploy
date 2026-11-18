@@ -95,9 +95,7 @@ separate staging database and Clerk test instance for Preview. Set at least:
 - `AI_SERVICE_URL` to the FastAPI HTTPS origin and
   `NEXT_PUBLIC_AI_SERVICE_URL` to the browser-accessible HTTPS origin
 - `AI_SERVICE_INTERNAL_TOKEN`
-- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to enable the AI
-  per-minute rate limiter. The web app can serve other routes without Upstash;
-  AI requests return 503 until the rate limiter is configured.
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
 - `AI_DAILY_LIMIT` and `AI_RATE_LIMIT_PER_MIN` to the approved quotas
 - `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` when Sentry is configured
 

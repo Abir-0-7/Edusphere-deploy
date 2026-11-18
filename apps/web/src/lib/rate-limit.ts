@@ -20,8 +20,7 @@ let _minuteLimiter: Ratelimit | undefined;
 let _redis: Redis | undefined;
 
 function redis() {
-  const config = requireRedisConfig(getEnv().UPSTASH_REDIS_REST_URL, getEnv().UPSTASH_REDIS_REST_TOKEN);
-  _redis ??= new Redis(config);
+  _redis ??= new Redis({ url: getEnv().UPSTASH_REDIS_REST_URL, token: getEnv().UPSTASH_REDIS_REST_TOKEN });
   return _redis;
 }
 
@@ -37,25 +36,12 @@ function minuteLimiter() {
 export interface RateLimitResult {
   ok: boolean;
   retryAfterSeconds?: number;
-  reason?: 'minute_limit' | 'daily_quota' | 'service_unavailable';
-}
-
-export function requireRedisConfig(url: string | undefined, token: string | undefined) {
-  if (!url || !token) throw new Error('AI rate limiting is unavailable because Upstash is not configured.');
-  return { url, token };
+  reason?: 'minute_limit' | 'daily_quota';
 }
 
 /** Check the per-minute window first, then the daily quota (UTC). */
 export async function checkAiRateLimit(clerkId: string): Promise<RateLimitResult> {
-  let minute: Awaited<ReturnType<ReturnType<typeof minuteLimiter>['limit']>>;
-  try {
-    minute = await minuteLimiter().limit(clerkId);
-  } catch (error) {
-    console.error('AI rate limiting unavailable', {
-      error: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return { ok: false, reason: 'service_unavailable', retryAfterSeconds: 60 };
-  }
+  const minute = await minuteLimiter().limit(clerkId);
   if (!minute.success) {
     return {
       ok: false,
