@@ -7,6 +7,19 @@ on:
 jobs:
   ts:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: studyvault_test
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: studyvault_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U studyvault_test -d studyvault_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       # Forked PRs use placeholders; repository secrets enable the authenticated
       # Clerk learning-loop spec without putting credentials in source control.
@@ -26,12 +39,23 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @studyvault/game-engine build
+      # Run directly so Turbo cannot omit the test URL or replay cached skips.
+      - name: PostgreSQL Game Vault integration
+        run: |
+          pnpm --filter @studyvault/web exec vitest run tests/game-sessions-pg.test.ts
+          pnpm --filter @studyvault/web exec vitest run tests/cyberverse-pg.test.ts
+          pnpm --filter @studyvault/realtime exec vitest run tests/postgres.test.ts
+        env:
+          STUDYVAULT_TEST_DATABASE_URL: postgresql://studyvault_test:test_only@127.0.0.1:5432/studyvault_test
+      - run: pnpm --filter @studyvault/web exec playwright install --with-deps chromium
+      # Exercise the actual player with deterministic fixtures on forked PRs too.
+      - run: pnpm --filter @studyvault/web test:e2e:games
       - run: pnpm audit --prod
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm --filter @studyvault/web exec playwright install --with-deps chromium
       # Playwright starts the production server on an explicit IPv4 listener in CI.
       - run: pnpm --filter @studyvault/web test:e2e
         env:

@@ -1,0 +1,2 @@
+apps/web/public/games/cyberverse/** -text -diff
+apps/web/public/games/cyberverse/build-manifest.json text eol=lf diff

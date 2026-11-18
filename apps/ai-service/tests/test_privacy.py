@@ -136,3 +136,30 @@ def test_delete_removes_owned_rows(privacy) -> None:
         assert cur.fetchone()[0] == 0
         cur.execute("SELECT count(*) FROM users WHERE id = %s", (uid,))
         assert cur.fetchone()[0] == 0
+
+
+def test_game_export_scopes_saves_and_includes_either_duel_member() -> None:
+    from app.privacy import PrivacyStore
+
+    cursor = MagicMock()
+    cursor.__enter__.return_value = cursor
+    connection = MagicMock()
+    connection.cursor.return_value = cursor
+    cursor.fetchone.return_value = ("user-id", "clerk-id", "person@example.test", "2026-01-01")
+    cursor.fetchall.return_value = []
+    store = PrivacyStore.__new__(PrivacyStore)
+    store._conn = connection
+
+    data = store.export_user_data("user-id")
+
+    queries = cursor.execute.call_args_list
+    for table in ("game_sessions", "game_mission_progress", "realtime_matchmaking", "realtime_event_limits"):
+        query = next(call for call in queries if f"FROM {table} WHERE" in call.args[0])
+        assert "WHERE user_id = %s" in query.args[0]
+        assert query.args[1] == ("user-id",)
+        assert data["tables"][table] == []
+    duel = next(call for call in queries if "FROM realtime_duels WHERE" in call.args[0])
+    assert "user_id = %s OR opponent_user_id = %s" in duel.args[0]
+    assert "state - 'cards'" in duel.args[0]
+    assert duel.args[1] == ("user-id", "user-id")
+    assert data["tables"]["realtime_duels"] == []

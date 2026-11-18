@@ -1,0 +1,3056 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StudyVault Game Vault web API",
+    "version": "1.0.0",
+    "description": "Generated from shared Zod contracts. Run node packages/types/scripts/export-game-openapi.mjs."
+  },
+  "components": {
+    "securitySchemes": {
+      "clerkSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__session"
+      }
+    }
+  },
+  "paths": {
+    "/api/games/sessions": {
+      "get": {
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Committed owner-scoped game state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "maxItems": 100,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "snapshot": {
+                            "type": "object",
+                            "properties": {
+                              "config": {
+                                "type": "object",
+                                "properties": {
+                                  "version": {
+                                    "type": "number",
+                                    "enum": [
+                                      1
+                                    ]
+                                  },
+                                  "game_id": {
+                                    "type": "string",
+                                    "enum": [
+                                      "SortingRace",
+                                      "NQueens",
+                                      "TowersOfHanoi",
+                                      "FlashcardTowerDefense",
+                                      "ConceptMatch",
+                                      "RetrievalSprint",
+                                      "CodeTrace"
+                                    ]
+                                  },
+                                  "difficulty": {
+                                    "type": "string",
+                                    "enum": [
+                                      "easy",
+                                      "medium",
+                                      "hard"
+                                    ]
+                                  },
+                                  "seed": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 4294967295
+                                  },
+                                  "practice": {
+                                    "type": "boolean"
+                                  },
+                                  "objective_id": {
+                                    "description": "Only question games support a learning objective.",
+                                    "type": "string",
+                                    "enum": [
+                                      "python.arithmetic",
+                                      "python.collections",
+                                      "python.iteration",
+                                      "python.branching"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "version",
+                                  "game_id",
+                                  "difficulty",
+                                  "seed",
+                                  "practice"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "actions": {
+                                "maxItems": 500,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "seq": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 500
+                                    },
+                                    "action": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "swap"
+                                              ]
+                                            },
+                                            "left": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 15
+                                            },
+                                            "right": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 15
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "left",
+                                            "right"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "place"
+                                              ]
+                                            },
+                                            "row": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 11
+                                            },
+                                            "column": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 11
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "row",
+                                            "column"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "move"
+                                              ]
+                                            },
+                                            "from": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 2
+                                            },
+                                            "to": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 2
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "from",
+                                            "to"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "answer"
+                                              ]
+                                            },
+                                            "question_id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "choice": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 15
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "question_id",
+                                            "choice"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "undo"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "hint"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "seq",
+                                    "action"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "config",
+                              "actions"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "view": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "maxItems": 16,
+                                "type": "array",
+                                "items": {
+                                  "type": "number"
+                                }
+                              },
+                              "columns": {
+                                "maxItems": 12,
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": -1,
+                                  "maximum": 11
+                                }
+                              },
+                              "towers": {
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "maxItems": 8,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 8
+                                  }
+                                }
+                              },
+                              "question": {
+                                "nullable": true,
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "prompt": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  },
+                                  "choices": {
+                                    "maxItems": 16,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    }
+                                  },
+                                  "source": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "label",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "prompt",
+                                  "choices",
+                                  "source"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "feedback": {
+                                "nullable": true,
+                                "type": "object",
+                                "properties": {
+                                  "question_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "correct": {
+                                    "type": "boolean"
+                                  },
+                                  "explanation": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  },
+                                  "source": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      }
+                                    },
+                                    "required": [
+                                      "label",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "question_id",
+                                  "correct",
+                                  "explanation",
+                                  "source"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "correct": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              "mistakes": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              "hints": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              "score": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "explanation": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "values",
+                              "columns",
+                              "towers",
+                              "question",
+                              "feedback",
+                              "correct",
+                              "mistakes",
+                              "hints",
+                              "score",
+                              "explanation"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ready",
+                              "playing",
+                              "paused",
+                              "won",
+                              "lost",
+                              "abandoned"
+                            ]
+                          },
+                          "tokens_awarded": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "revision",
+                          "snapshot",
+                          "view",
+                          "status",
+                          "tokens_awarded",
+                          "updated_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "progression": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "required": [
+                        "SortingRace",
+                        "NQueens",
+                        "TowersOfHanoi",
+                        "FlashcardTowerDefense",
+                        "ConceptMatch",
+                        "RetrievalSprint",
+                        "CodeTrace"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "sessions",
+                    "progression"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "game_id": {
+                    "type": "string",
+                    "enum": [
+                      "SortingRace",
+                      "NQueens",
+                      "TowersOfHanoi",
+                      "FlashcardTowerDefense",
+                      "ConceptMatch",
+                      "RetrievalSprint",
+                      "CodeTrace"
+                    ]
+                  },
+                  "difficulty": {
+                    "default": "easy",
+                    "type": "string",
+                    "enum": [
+                      "easy",
+                      "medium",
+                      "hard"
+                    ]
+                  },
+                  "practice": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "objective_id": {
+                    "type": "string",
+                    "enum": [
+                      "python.arithmetic",
+                      "python.collections",
+                      "python.iteration",
+                      "python.branching"
+                    ]
+                  }
+                },
+                "required": [
+                  "game_id",
+                  "difficulty",
+                  "practice"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed owner-scoped game state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "snapshot": {
+                      "type": "object",
+                      "properties": {
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            "game_id": {
+                              "type": "string",
+                              "enum": [
+                                "SortingRace",
+                                "NQueens",
+                                "TowersOfHanoi",
+                                "FlashcardTowerDefense",
+                                "ConceptMatch",
+                                "RetrievalSprint",
+                                "CodeTrace"
+                              ]
+                            },
+                            "difficulty": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "seed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            },
+                            "practice": {
+                              "type": "boolean"
+                            },
+                            "objective_id": {
+                              "description": "Only question games support a learning objective.",
+                              "type": "string",
+                              "enum": [
+                                "python.arithmetic",
+                                "python.collections",
+                                "python.iteration",
+                                "python.branching"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "version",
+                            "game_id",
+                            "difficulty",
+                            "seed",
+                            "practice"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "actions": {
+                          "maxItems": 500,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "seq": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 500
+                              },
+                              "action": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "swap"
+                                        ]
+                                      },
+                                      "left": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "right": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "left",
+                                      "right"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "place"
+                                        ]
+                                      },
+                                      "row": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      },
+                                      "column": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "row",
+                                      "column"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "move"
+                                        ]
+                                      },
+                                      "from": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      },
+                                      "to": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "from",
+                                      "to"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "answer"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "choice": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "choice"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "undo"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hint"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "seq",
+                              "action"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "config",
+                        "actions"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "view": {
+                      "type": "object",
+                      "properties": {
+                        "values": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        "columns": {
+                          "maxItems": 12,
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": -1,
+                            "maximum": 11
+                          }
+                        },
+                        "towers": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 8
+                            }
+                          }
+                        },
+                        "question": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "prompt": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "choices": {
+                              "maxItems": 16,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 500
+                              }
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "prompt",
+                            "choices",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "feedback": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "question_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "correct": {
+                              "type": "boolean"
+                            },
+                            "explanation": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "question_id",
+                            "correct",
+                            "explanation",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "correct": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "mistakes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "hints": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "score": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "values",
+                        "columns",
+                        "towers",
+                        "question",
+                        "feedback",
+                        "correct",
+                        "mistakes",
+                        "hints",
+                        "score",
+                        "explanation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "playing",
+                        "paused",
+                        "won",
+                        "lost",
+                        "abandoned"
+                      ]
+                    },
+                    "tokens_awarded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "snapshot",
+                    "view",
+                    "status",
+                    "tokens_awarded",
+                    "updated_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/sessions/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Committed owner-scoped game state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "snapshot": {
+                      "type": "object",
+                      "properties": {
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            "game_id": {
+                              "type": "string",
+                              "enum": [
+                                "SortingRace",
+                                "NQueens",
+                                "TowersOfHanoi",
+                                "FlashcardTowerDefense",
+                                "ConceptMatch",
+                                "RetrievalSprint",
+                                "CodeTrace"
+                              ]
+                            },
+                            "difficulty": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "seed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            },
+                            "practice": {
+                              "type": "boolean"
+                            },
+                            "objective_id": {
+                              "description": "Only question games support a learning objective.",
+                              "type": "string",
+                              "enum": [
+                                "python.arithmetic",
+                                "python.collections",
+                                "python.iteration",
+                                "python.branching"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "version",
+                            "game_id",
+                            "difficulty",
+                            "seed",
+                            "practice"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "actions": {
+                          "maxItems": 500,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "seq": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 500
+                              },
+                              "action": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "swap"
+                                        ]
+                                      },
+                                      "left": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "right": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "left",
+                                      "right"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "place"
+                                        ]
+                                      },
+                                      "row": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      },
+                                      "column": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "row",
+                                      "column"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "move"
+                                        ]
+                                      },
+                                      "from": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      },
+                                      "to": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "from",
+                                      "to"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "answer"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "choice": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "choice"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "undo"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hint"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "seq",
+                              "action"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "config",
+                        "actions"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "view": {
+                      "type": "object",
+                      "properties": {
+                        "values": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        "columns": {
+                          "maxItems": 12,
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": -1,
+                            "maximum": 11
+                          }
+                        },
+                        "towers": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 8
+                            }
+                          }
+                        },
+                        "question": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "prompt": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "choices": {
+                              "maxItems": 16,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 500
+                              }
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "prompt",
+                            "choices",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "feedback": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "question_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "correct": {
+                              "type": "boolean"
+                            },
+                            "explanation": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "question_id",
+                            "correct",
+                            "explanation",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "correct": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "mistakes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "hints": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "score": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "values",
+                        "columns",
+                        "towers",
+                        "question",
+                        "feedback",
+                        "correct",
+                        "mistakes",
+                        "hints",
+                        "score",
+                        "explanation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "playing",
+                        "paused",
+                        "won",
+                        "lost",
+                        "abandoned"
+                      ]
+                    },
+                    "tokens_awarded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "snapshot",
+                    "view",
+                    "status",
+                    "tokens_awarded",
+                    "updated_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "revision": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "command": {
+                        "type": "string",
+                        "enum": [
+                          "start",
+                          "pause",
+                          "resume",
+                          "abandon"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "revision",
+                      "command"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "revision": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "command": {
+                        "type": "string",
+                        "enum": [
+                          "act"
+                        ]
+                      },
+                      "action": {
+                        "type": "object",
+                        "properties": {
+                          "seq": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 500
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "swap"
+                                    ]
+                                  },
+                                  "left": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 15
+                                  },
+                                  "right": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 15
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "left",
+                                  "right"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "place"
+                                    ]
+                                  },
+                                  "row": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 11
+                                  },
+                                  "column": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 11
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "row",
+                                  "column"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "move"
+                                    ]
+                                  },
+                                  "from": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 2
+                                  },
+                                  "to": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 2
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "from",
+                                  "to"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "answer"
+                                    ]
+                                  },
+                                  "question_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "choice": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 15
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "question_id",
+                                  "choice"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "undo"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "hint"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "seq",
+                          "action"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "revision",
+                      "command",
+                      "action"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed owner-scoped game state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "snapshot": {
+                      "type": "object",
+                      "properties": {
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            "game_id": {
+                              "type": "string",
+                              "enum": [
+                                "SortingRace",
+                                "NQueens",
+                                "TowersOfHanoi",
+                                "FlashcardTowerDefense",
+                                "ConceptMatch",
+                                "RetrievalSprint",
+                                "CodeTrace"
+                              ]
+                            },
+                            "difficulty": {
+                              "type": "string",
+                              "enum": [
+                                "easy",
+                                "medium",
+                                "hard"
+                              ]
+                            },
+                            "seed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            },
+                            "practice": {
+                              "type": "boolean"
+                            },
+                            "objective_id": {
+                              "description": "Only question games support a learning objective.",
+                              "type": "string",
+                              "enum": [
+                                "python.arithmetic",
+                                "python.collections",
+                                "python.iteration",
+                                "python.branching"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "version",
+                            "game_id",
+                            "difficulty",
+                            "seed",
+                            "practice"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "actions": {
+                          "maxItems": 500,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "seq": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 500
+                              },
+                              "action": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "swap"
+                                        ]
+                                      },
+                                      "left": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "right": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "left",
+                                      "right"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "place"
+                                        ]
+                                      },
+                                      "row": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      },
+                                      "column": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 11
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "row",
+                                      "column"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "move"
+                                        ]
+                                      },
+                                      "from": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      },
+                                      "to": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 2
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "from",
+                                      "to"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "answer"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "choice": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "choice"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "undo"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hint"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "seq",
+                              "action"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "config",
+                        "actions"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "view": {
+                      "type": "object",
+                      "properties": {
+                        "values": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        "columns": {
+                          "maxItems": 12,
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": -1,
+                            "maximum": 11
+                          }
+                        },
+                        "towers": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "maxItems": 8,
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 8
+                            }
+                          }
+                        },
+                        "question": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "prompt": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "choices": {
+                              "maxItems": 16,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 500
+                              }
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "prompt",
+                            "choices",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "feedback": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "question_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "correct": {
+                              "type": "boolean"
+                            },
+                            "explanation": {
+                              "type": "string",
+                              "maxLength": 2000
+                            },
+                            "source": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "url"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "question_id",
+                            "correct",
+                            "explanation",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "correct": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "mistakes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "hints": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        "score": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "explanation": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "values",
+                        "columns",
+                        "towers",
+                        "question",
+                        "feedback",
+                        "correct",
+                        "mistakes",
+                        "hints",
+                        "score",
+                        "explanation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "playing",
+                        "paused",
+                        "won",
+                        "lost",
+                        "abandoned"
+                      ]
+                    },
+                    "tokens_awarded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "snapshot",
+                    "view",
+                    "status",
+                    "tokens_awarded",
+                    "updated_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "description": "Delete only the owned save; earned token ledger entries and daily cap remain intact.",
+        "responses": {
+          "204": {
+            "description": "Saved game deleted"
+          },
+          "400": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Invalid input, auth, ownership, revision, capacity, or durable-store failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

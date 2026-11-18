@@ -71,11 +71,10 @@ the build can resolve `packages/db`, `packages/types`, and the root pnpm
 workspace. Use the detected pnpm install setting and verify a preview
 deployment before promoting it.
 
-Keep the dependency-aware Turbo build enabled: the Game Vault build writes its
-browser bundle into `apps/web/public/games` before Next.js packages the web app.
-From the web root, an explicit build command is
+Keep the dependency-aware Turbo build enabled so the shared game engine is built
+before Next.js packages the web app. From the web root, an explicit build command is
 `cd ../.. && pnpm exec turbo run build --filter=@studyvault/web...`.
-These game assets are generated and are not committed to Git.
+The Cyberverse Godot export is checked in; no Godot build is required.
 
 For scanned Bangla PDFs, set `AI_SERVICE_OCR_LANG=eng+ben` on Render. The
 Docker image includes both language packs. Deploy the updated image after

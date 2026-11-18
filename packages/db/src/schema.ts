@@ -318,7 +318,7 @@ export const gameMissionProgress = pgTable(
     unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     xpAwarded: integer('xp_awarded').notNull().default(0),
-    achievements: jsonb('achievements').notNull().default([]),
+    achievements: jsonb('achievements').$type<string[]>().notNull().default([]),
   },
   (t) => [
     unique('uq_game_mission_progress_user_game_mission').on(t.userId, t.gameId, t.missionId),

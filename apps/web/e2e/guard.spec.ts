@@ -57,8 +57,38 @@ test('review page is protected', async ({ page }) => {
 });
 
 test('every signed-in route redirects when unauthenticated', async ({ page }) => {
-  for (const path of ['/progress', '/tools', '/document/abc', '/library', '/tutor', '/games']) {
+  for (const path of [
+    '/progress',
+    '/tools',
+    '/document/abc',
+    '/library',
+    '/tutor',
+    '/games',
+    '/games/n-queens',
+    '/games/cyberverse',
+  ]) {
     await page.goto(path);
     await expect(page, `${path} should redirect`).toHaveURL(/\/sign-in/);
   }
+});
+
+test('Cyberverse export requires a same-origin frame request', async ({ request }) => {
+  const asset = '/games/cyberverse/index.html';
+  const direct = await request.get(asset, { maxRedirects: 0 });
+  expect(direct.status()).toBe(307);
+  expect(direct.headers().location).toBe('/games/cyberverse');
+
+  const crossSite = await request.get(asset, {
+    headers: { 'sec-fetch-dest': 'iframe', 'sec-fetch-site': 'cross-site' },
+    maxRedirects: 0,
+  });
+  expect(crossSite.status()).toBe(307);
+
+  const embedded = await request.get(asset, {
+    headers: { 'sec-fetch-dest': 'iframe', 'sec-fetch-site': 'same-origin' },
+    maxRedirects: 0,
+  });
+  expect(embedded.status()).toBe(200);
+  expect(embedded.headers()['content-security-policy']).toContain("frame-ancestors 'self'");
+  expect(embedded.headers()['cache-control']).toContain('no-store');
 });

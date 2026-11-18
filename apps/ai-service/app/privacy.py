@@ -60,6 +60,16 @@ _OWNED_TABLES = [
     ("study_plans", ["id", "document_id", "exam_date", "plan", "created_at"]),
     ("weekly_advice", ["id", "content", "model", "generated_at"]),
     ("token_ledger", ["id", "amount", "reason", "ref_id", "created_at"]),
+    (
+        "game_sessions",
+        ["id", "user_id", "game_id", "snapshot", "status", "revision", "tokens_awarded", "created_at", "updated_at"],
+    ),
+    (
+        "game_mission_progress",
+        ["id", "user_id", "game_id", "mission_id", "unlocked_at", "completed_at", "xp_awarded", "achievements"],
+    ),
+    ("realtime_matchmaking", ["user_id", "match_id", "opponent_user_id", "created_at", "expires_at"]),
+    ("realtime_event_limits", ["user_id", "minute", "count"]),
 ]
 
 # Guild rows use explicit ownership columns rather than the standard
@@ -98,6 +108,15 @@ class PrivacyStore:
                 cur.execute(f"SELECT {cols} FROM {table} WHERE user_id = %s", (user_id,))
                 rows = cur.fetchall()
             data["tables"][table] = [dict(zip(columns, row, strict=True)) for row in rows]
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, user_id, opponent_user_id, state - 'cards', created_at, updated_at, expires_at "
+                "FROM realtime_duels WHERE user_id = %s OR opponent_user_id = %s",
+                (user_id, user_id),
+            )
+            rows = cur.fetchall()
+        columns = ["id", "user_id", "opponent_user_id", "state", "created_at", "updated_at", "expires_at"]
+        data["tables"]["realtime_duels"] = [dict(zip(columns, row, strict=True)) for row in rows]
         for table, columns, owner_clause in _GUILD_TABLES:
             cols = ", ".join(columns)
             with self._conn.cursor() as cur:

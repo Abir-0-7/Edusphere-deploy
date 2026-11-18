@@ -1,13 +1,14 @@
 'use client';
 
 import type { ChatReply, Chapter, Flashcard, JobStatus } from './ai-types';
-import type { ParsePdfResponse } from '@studyvault/types';
+import { ErrorEnvelopeSchema, type ParsePdfResponse } from '@studyvault/types';
+import { z } from 'zod';
 
 /**
  * Browser-side ai-service client. The caller passes a `getToken` (from Clerk's
  * useAuth hook) so every call carries a real session token for verification.
  */
-type GetToken = () => Promise<string | null>;
+export type GetToken = () => Promise<string | null>;
 
 async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
   const token = await getToken();
@@ -19,13 +20,42 @@ async function authFetch(getToken: GetToken, path: string, init: RequestInit = {
     });
   } catch {
     const origin = typeof window === 'undefined' ? 'this deployment' : window.location.origin;
-    throw new Error(`Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`);
+    throw new Error(
+      `Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`,
+    );
   }
 }
 
 export type { ChatReply, Chapter, Flashcard, JobStatus };
 
-export async function uploadPdf(getToken: GetToken, file: File): Promise<{ jobId: string; documentId: string }> {
+const tokenBalanceSchema = z.object({ balance: z.number().int().nonnegative() });
+
+export async function getTokenBalance(getToken: GetToken) {
+  const token = await getToken();
+  if (!token) throw new Error('Sign in to see your study tokens.');
+
+  const response = await authFetch(async () => token, '/api/tokens/balance', { cache: 'no-store' });
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error('Token balance failed: ' + (response.ok ? 'invalid service response' : response.status));
+  }
+  if (!response.ok) {
+    const failure = ErrorEnvelopeSchema.safeParse(body);
+    throw new Error(
+      failure.success ? failure.data.error.message : 'Token balance failed: ' + response.status,
+    );
+  }
+  const result = tokenBalanceSchema.safeParse(body);
+  if (!result.success) throw new Error('Token balance failed: invalid service response');
+  return result.data;
+}
+
+export async function uploadPdf(
+  getToken: GetToken,
+  file: File,
+): Promise<{ jobId: string; documentId: string }> {
   const fd = new FormData();
   fd.append('file', file);
   const res = await authFetch(getToken, '/api/parse-pdf', { method: 'POST', body: fd });

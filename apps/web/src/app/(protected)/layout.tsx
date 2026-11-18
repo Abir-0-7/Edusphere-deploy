@@ -1,8 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { headers } from 'next/headers';
-import { isLocalDemoPage } from '@/lib/local-demo';
 
 /**
  * Server-side auth guard for every signed-in route (OWASP "auth on every
@@ -11,8 +9,7 @@ import { isLocalDemoPage } from '@/lib/local-demo';
  * code runs, and it is testable without Clerk's JS bundle.
  */
 export default async function ProtectedLayout({ children }: { children: ReactNode }) {
-  if (isLocalDemoPage(await headers())) return <>{children}</>;
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
-  return <>{children}</>;
+  return <div id="main-content">{children}</div>;
 }
