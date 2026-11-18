@@ -7,9 +7,8 @@ export const ErrorSchema = z.object({
   details: z.unknown().optional(),
 });
 export type ApiErrorBody = z.infer<typeof ErrorSchema>;
-export interface ErrorEnvelope {
-  error: ApiErrorBody;
-}
+export const ErrorEnvelopeSchema = z.object({ error: ErrorSchema });
+export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
 export const JobStatusSchema = z.enum(['pending', 'running', 'done', 'failed']);
 export type JobStatus = z.infer<typeof JobStatusSchema>;
@@ -63,8 +62,21 @@ export const ChatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-export const GuildCreateSchema = z.object({ name: z.string().trim().min(2).max(64), weeklyGoalMinutes: z.number().int().min(30).max(10080).default(300) });
+export const GuildCreateSchema = z.object({
+  name: z.string().trim().min(2).max(64),
+  weeklyGoalMinutes: z.number().int().min(30).max(10080).default(300),
+});
 export const GuildJoinSchema = z.object({ inviteCode: z.string().trim().min(8).max(16).toUpperCase() });
 export const GuildGoalSchema = z.object({ weeklyGoalMinutes: z.number().int().min(30).max(10080) });
-export const GuildSchema = z.object({ id: z.string().uuid(), name: z.string(), inviteCode: z.string(), weeklyGoalMinutes: z.number().int(), memberCount: z.number().int().nonnegative(), weeklyMultiplier: z.number().min(1).max(1.25) });
+export const GuildSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  inviteCode: z.string(),
+  weeklyGoalMinutes: z.number().int(),
+  memberCount: z.number().int().nonnegative(),
+  weeklyMultiplier: z.number().min(1).max(1.25),
+});
 export type Guild = z.infer<typeof GuildSchema>;
+
+export * from './game-api';
+export * from './cyberverse-api';

@@ -1,13 +1,34 @@
 import type { NextConfig } from 'next';
 
+const cyberverseDocument = '/games/cyberverse/index.html';
+
 const nextConfig: NextConfig = {
+  async redirects() {
+    // The standalone export has its own demo. A direct navigation instead
+    // enters the protected game page, which loads a same-origin frame.
+    return [
+      {
+        source: cyberverseDocument,
+        missing: [{ type: 'header', key: 'sec-fetch-dest', value: 'iframe' }],
+        destination: '/games/cyberverse',
+        permanent: false,
+      },
+      {
+        source: cyberverseDocument,
+        missing: [{ type: 'header', key: 'sec-fetch-site', value: 'same-origin' }],
+        destination: '/games/cyberverse',
+        permanent: false,
+      },
+    ];
+  },
   turbopack: {},
   poweredByHeader: false,
   async headers() {
     return [
       {
-        source: '/games/cyberverse/:path*',
+        source: cyberverseDocument,
         headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
           {
             key: 'Content-Security-Policy',
             value:

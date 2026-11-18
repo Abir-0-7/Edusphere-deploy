@@ -4,7 +4,16 @@ import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/coverage/**', '**/public/games/**', '**/public/ocr/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/.next/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/public/ocr/**',
+      '**/public/games/cyberverse/**',
+    ],
+  },
   eslint.configs.recommended,
   tseslint.configs.recommended,
   prettier,

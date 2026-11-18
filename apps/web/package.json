@@ -6,9 +6,10 @@
     "dev": "node scripts/prepare-ocr-assets.mjs && next dev --turbopack",
     "build": "node scripts/prepare-ocr-assets.mjs && next build",
     "lint": "eslint .",
-    "typecheck": "corepack pnpm --filter \"@studyvault/web^...\" --recursive run build && tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests && node --test scripts/prepare-ocr-assets.test.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:games": "playwright test --config e2e/game-vault-isolated.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.0",

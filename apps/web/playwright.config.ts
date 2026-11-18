@@ -15,6 +15,7 @@ const BASE_URL = process.env.CI ? 'http://127.0.0.1:3000' : 'http://localhost:30
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: '**/game-vault-isolated.spec.ts',
   timeout: 60_000,
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,

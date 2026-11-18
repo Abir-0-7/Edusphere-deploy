@@ -1,16 +1,12 @@
-import { notFound } from 'next/navigation';
-import { GameVaultPlayer } from '@/components/game-vault-player';
-import { getVaultGame } from '@/lib/game-vault/catalog';
-import { headers } from 'next/headers';
-import { isLocalDemoPage } from '@/lib/local-demo';
+import { notFound, redirect } from 'next/navigation';
+import { GameVault } from '@/components/game-vault';
+import { gameForSlug } from '@/lib/game-catalog';
 
-export default async function GamePlayerPage({ params }: { params: Promise<{ gameId: string }> }) {
-  const { gameId } = await params;
-  const game = getVaultGame(gameId);
+export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
+  const { gameId: slug } = await params;
+  if (slug === 'logic-arcade') redirect('/games');
+  const game = gameForSlug(slug);
   if (!game) notFound();
-  return (
-    <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">
-      <GameVaultPlayer game={game} localDemo={isLocalDemoPage(await headers())} />
-    </main>
-  );
+
+  return <GameVault game={game} />;
 }

@@ -55,6 +55,9 @@ importers:
 
   apps/game-engine:
     dependencies:
+      '@studyvault/types':
+        specifier: workspace:^
+        version: link:../../packages/types
       phaser:
         specifier: ^3.88.2
         version: 3.90.0

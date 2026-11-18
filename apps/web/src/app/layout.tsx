@@ -2,9 +2,8 @@ import { ClerkProvider, Show, SignInButton, UserButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
+import { GamesNavigation } from '@/components/games-navigation';
 import { QueryProvider } from './providers';
-import { headers } from 'next/headers';
-import { isLocalDemoPage } from '@/lib/local-demo';
 
 export const metadata = {
   title: 'EduSphere',
@@ -58,23 +57,6 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  if (isLocalDemoPage(await headers())) {
-    return (
-      <html lang="en">
-        <body>
-          <QueryProvider>
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-6 py-4 text-amber-950">
-              <Link href="/games" className="font-semibold">
-                EduSphere / Game Vault
-              </Link>
-              <span className="text-sm">LOCAL OFFLINE DEMO · Synthetic tokens · No account connected</span>
-            </header>
-            <div id="main-content">{children}</div>
-          </QueryProvider>
-        </body>
-      </html>
-    );
-  }
   return (
     <ClerkProvider dynamic>
       <html lang="en">
@@ -128,6 +110,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   </Show>
                   <div className="app-topbar-actions">
                     <Show when="signed-in">
+                      <GamesNavigation />
                       <Link href="/library" className="app-upload-link">
                         Add material <span aria-hidden="true">+</span>
                       </Link>
