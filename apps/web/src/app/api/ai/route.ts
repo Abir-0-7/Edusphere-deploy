@@ -21,18 +21,23 @@ export async function POST(req: Request) {
 
   const limited = await checkAiRateLimit(userId);
   if (!limited.ok) {
+    const unavailable = limited.reason === 'service_unavailable';
     return NextResponse.json(
       {
         error: {
-          code: 'rate_limited',
-          message:
-            limited.reason === 'daily_quota'
+          code: unavailable ? 'internal' : 'rate_limited',
+          message: unavailable
+            ? 'AI service is temporarily unavailable; retry shortly.'
+            : limited.reason === 'daily_quota'
               ? 'Daily AI quota reached; resets at midnight UTC'
               : 'Too many requests; slow down',
           details: { retryAfterSeconds: limited.retryAfterSeconds },
         },
       },
-      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds ?? 60) } },
+      {
+        status: unavailable ? 503 : 429,
+        headers: { 'Retry-After': String(limited.retryAfterSeconds ?? 60) },
+      },
     );
   }
 
