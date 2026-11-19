@@ -9,7 +9,6 @@ from fastapi.responses import StreamingResponse
 
 from app.courses import engine
 from app.courses.adaptation import adaptation_for_session, infer_role
-from app.courses.catalog import DIAGNOSTIC
 from app.courses.contracts import (
     AdvanceRequest,
     AssignmentDraftRequest,
@@ -93,7 +92,7 @@ def create_course_router(get_user_id, store, course_tutor=None, course_tutor_str
             if not release.prerequisites
             else [
                 {"id": key, "prompt": prompt, "kind": "text" if isinstance(answer, str) else "number"}
-                for key, (prompt, answer) in DIAGNOSTIC.items()
+                for key, (prompt, answer) in engine.prerequisite_diagnostic(release).items()
             ]
         )
         return DiagnosticResponse(questions=questions)

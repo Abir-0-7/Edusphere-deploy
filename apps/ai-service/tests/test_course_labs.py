@@ -42,12 +42,23 @@ def _receipt(
 def test_published_courses_include_coding_shell_labs_and_assignments():
     releases = catalog()
     assert {release.slug for release in releases} == {
-        "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+        "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations",
+        "llm-rag-debugging", "ai-agents-tool-calling", "neural-training-diagnostics",
+        "web-security-exploit-tracing", "concurrency-race-deadlocks",
+        "system-design-caching", "regex-finite-state-parsing",
     }
     for release in releases:
         assert release.status == "published"
-        assert release.version == "2"
         assert release.labs and len(release.assignments) == 1
+        if release.slug in {
+            "llm-rag-debugging", "ai-agents-tool-calling", "neural-training-diagnostics",
+            "web-security-exploit-tracing", "concurrency-race-deadlocks",
+            "system-design-caching", "regex-finite-state-parsing",
+        }:
+            assert release.version == "1"
+            assert {lab.kind for lab in release.labs} == {"sql_query"}
+            continue
+        assert release.version == "2"
         if release.slug == "sql-query-foundations":
             assert {lab.kind for lab in release.labs} == {"sql_query"}
             continue

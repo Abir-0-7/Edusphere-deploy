@@ -121,7 +121,7 @@ async def test_course_tutor_stream_passes_active_source_scope_to_shared_router()
     assert '"exercises"' not in messages[1]["content"] and '"checkpoint"' not in messages[1]["content"]
 
 
-def test_deployment_entrypoint_starts_with_four_courses_and_learning_profile_in_safe_memory_mode(monkeypatch):
+def test_deployment_entrypoint_starts_with_eleven_courses_and_learning_profile_in_safe_memory_mode(monkeypatch):
     # Execute the full entrypoint afresh, rather than only assembling a test
     # router. Explicit memory settings and a blocked connect prevent DB access.
     settings = Settings(
@@ -155,7 +155,10 @@ def test_deployment_entrypoint_starts_with_four_courses_and_learning_profile_in_
         catalog = client.get("/api/courses", headers=headers)
         assert catalog.status_code == 200, catalog.text
         assert {course["slug"] for course in catalog.json()["courses"]} == {
-            "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+            "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations",
+            "llm-rag-debugging", "ai-agents-tool-calling", "neural-training-diagnostics",
+            "web-security-exploit-tracing", "concurrency-race-deadlocks",
+            "system-design-caching", "regex-finite-state-parsing",
         }
         profile = client.get("/api/learner-profile", headers=headers)
         assert profile.status_code == 200, profile.text

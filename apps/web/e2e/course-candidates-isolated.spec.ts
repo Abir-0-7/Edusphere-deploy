@@ -70,6 +70,13 @@ const publishedCourseNames = [
   'PyTorch Fundamentals',
   'SQL Query Foundations',
   'Git Foundations',
+  'LLM & RAG Pipeline Debugging',
+  'AI Agents & Tool-Calling Workflows',
+  'Neural Training Diagnostics & Pitfalls',
+  'Web Security: Trace the Exploit',
+  'Concurrency, Race Conditions & Deadlocks',
+  'System Design & Caching Under Load',
+  'Regex & Finite-State Parsing',
 ];
 
 async function expectPublishedCatalog(page: Page) {
@@ -79,7 +86,7 @@ async function expectPublishedCatalog(page: Page) {
   }
 }
 
-test('all four published courses are available in the catalog', async ({ page }) => {
+test('all eleven published courses are available in the catalog', async ({ page }) => {
   await routeLearningServiceToFixture(page);
   await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), `catalog-${randomUUID()}`);
   await page.goto('/courses');

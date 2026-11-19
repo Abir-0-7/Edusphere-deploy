@@ -1,4 +1,4 @@
-"""Local Playwright server using the actual published four-course catalog."""
+"""Local Playwright server using the actual published eleven-course catalog."""
 
 import os
 

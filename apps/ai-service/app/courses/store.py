@@ -244,7 +244,7 @@ class MemoryCourseStore:
                 if row["user_id"] == user_id and row["release_id"] == str(release.id):
                     return engine.session_view(row, release)
             if not engine.prerequisite_met(release, self.completed_slugs(user_id), diagnostic):
-                raise InvalidInput("Complete Python Foundations or pass the prerequisite diagnostic first")
+                raise InvalidInput("Complete the required prerequisite course or pass its diagnostic first")
             identifier = str(uuid.uuid4())
             doc = self.documents.create(
                 user_id=user_id,
@@ -612,7 +612,7 @@ class PgCourseStore:
                 (user_id,),
             )
             if not engine.prerequisite_met(release, {row[0] for row in cur.fetchall()}, diagnostic):
-                raise InvalidInput("Complete Python Foundations or pass the prerequisite diagnostic first")
+                raise InvalidInput("Complete the required prerequisite course or pass its diagnostic first")
             identifier, document_id = str(uuid.uuid4()), str(uuid.uuid4())
             markdown, chapters, chunks = _material(release, identifier, document_id, user_id)
             cur.execute(

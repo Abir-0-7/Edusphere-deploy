@@ -56,13 +56,38 @@ def initial_state() -> dict[str, Any]:
     }
 
 
+_PYTORCH_DIAGNOSTIC = {
+    "tensor-elements": ("A tensor has shape (2, 3). How many elements does it contain?", 6),
+    "reshape-elements": ("Six values are reshaped to (3, 2). How many values are there after reshaping?", 6),
+    "gradient": ("For a scalar x = 4, y = x * x. What is dy/dx at x = 4?", 8),
+    "evaluation-mode": (
+        "Before validation with dropout, use model.train() or model.eval()? Answer train or eval.",
+        "eval",
+    ),
+    "parameter-update": (
+        "Which call updates model parameters: loss.backward() or optimizer.step()? Answer backward or step.",
+        "step",
+    ),
+}
+
+
+def prerequisite_diagnostic(release: CourseRelease) -> dict[str, tuple[str, str | int]]:
+    """Select server-owned keys by prerequisite; keys are never release content."""
+    if release.prerequisites == ["python-foundations"]:
+        return DIAGNOSTIC.copy()
+    if release.prerequisites == ["pytorch-fundamentals"]:
+        return _PYTORCH_DIAGNOSTIC.copy()
+    return {}
+
+
 def prerequisite_met(release: CourseRelease, completed_slugs: set[str], diagnostic: dict | None = None) -> bool:
     if set(release.prerequisites) <= completed_slugs:
         return True
-    if release.prerequisites == ["python-foundations"] and diagnostic is not None:
-        return set(diagnostic) == set(DIAGNOSTIC) and all(
+    questions = prerequisite_diagnostic(release)
+    if questions and diagnostic is not None:
+        return set(diagnostic) == set(questions) and all(
             type(diagnostic[key]) is type(answer) and diagnostic[key] == answer
-            for key, (_, answer) in DIAGNOSTIC.items()
+            for key, (_, answer) in questions.items()
         )
     return False
 

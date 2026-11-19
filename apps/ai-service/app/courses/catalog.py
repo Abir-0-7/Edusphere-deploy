@@ -618,9 +618,10 @@ def catalog() -> tuple[CourseRelease, ...]:
     # Import after the shared builders are defined: the authored SQL/Git module
     # reuses those builders, while its draft fixtures retain publication gates.
     from app.courses.catalog_candidates import candidates
+    from app.courses.catalog_expansion import expansion_courses
 
     promoted = tuple(release.model_copy(update={"status": "published"}, deep=True) for release in candidates())
-    return python_foundations(), pytorch_fundamentals(), *promoted
+    return python_foundations(), pytorch_fundamentals(), *promoted, *expansion_courses()
 
 
 # Diagnostic permits an experienced learner to enter PyTorch without fabricating
