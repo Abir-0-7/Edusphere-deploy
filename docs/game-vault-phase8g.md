@@ -6,12 +6,15 @@ human editorial approval, and disposable PostgreSQL acceptance.
 ## Delivered local behavior
 
 The protected `/games` player presents Sorting Race, N-Queens, Towers of Hanoi,
-Recall Defense, Concept Match, Retrieval Sprint and Code Trace. Each has an
+Recall Defense, Concept Match, Retrieval Sprint and Code Trace, plus Debugging
+Detective, SQL Detective, Graph Path, Proof Builder, Data Detective, Adaptive Quiz
+and Exam Escape. The 2026-11-19 user request superseded the earlier implementation
+hold for those seven new practice modes; see `game-expansion.md`. Each has an
 objective, instructions, difficulty and expected duration. Native buttons cover
 pointer, keyboard and touch. Ready/start, pause/resume, abandon, retry, fullscreen,
 sound and reduced-motion preferences share one account-bound view.
 
-The `/games` collection now gives each of its eight entries a distinct inline SVG
+The `/games` collection now gives each of its fifteen entries a distinct inline SVG
 preview. The player uses game-specific boards for sorting, chess placement and
 Hanoi, plus separate visual treatments for defense, matching, retrieval and code
 tracing. The N-Queens board includes readable coordinates and live placement
@@ -53,10 +56,10 @@ correct answer. Three incorrect answers end the round early. This rule is shown
 before Start and in result explanations. Even a one-question objective answered
 incorrectly is a loss with no reward.
 
-This is an authored-content adapter, not the complete 8.G03 deck bridge. Published
-deck/version/evidence prerequisites from 8.D01 are not yet available in this
-worktree. Arbitrary deck IDs and injected questions/keys are rejected. Private deck
-selection and lesson-locator handoff remain gated until those contracts exist.
+This is an authored-content adapter, not the complete 8.G03 deck bridge. The
+combined main release now includes versioned decks and pinned source contracts
+from 8.D/F01. Arbitrary deck IDs and injected questions/keys are still rejected;
+the private game-deck adapter and lesson-locator handoff remain to be integrated.
 Source links currently open the official supporting tutorial. Human editorial
 review remains a release gate; deterministic tests do not constitute human review.
 
@@ -108,7 +111,7 @@ pnpm --filter @studyvault/realtime test
 
 The isolated browser harness renders the actual React component, intercepts only
 its HTTP transport and uses the real reducer on the test-server side. It adds no
-production authentication bypass. It covers all seven completions with mouse at
+production authentication bypass. It covers all fourteen completions with mouse at
 1440px, keyboard at 768px and touch at 390px; win/loss/retry/source feedback,
 pause/refresh recovery, preferences, hard 8x8 queens, hints/undo and save deletion.
 The signed-in `game-vault.spec.ts` remains separate and requires Clerk test secrets.
@@ -131,24 +134,28 @@ one transaction, verifies the fixed six-answer `binary-v1` result, and gives 100
 game XP once (separate from mastery/readiness). Other five missions remain previews.
 Cross-origin and non-frame messages are ignored. Direct navigation to the export returns to the protected game page.
 
-The app registers separate direct routes and menu items for all seven existing
-games plus CYBERVERSE. Saved sessions remain scoped to each original game.
+The app registers separate direct routes and menu items for all fourteen
+StudyVault games plus CYBERVERSE. Saved sessions remain scoped to each game.
 The existing migration `0007_game_vault_missions.sql` preserves Cyberverse entitlements. The additive
 `0008_game_vault_sessions.sql` migration adds saved games and realtime persistence. Privacy export covers Cyberverse
 progress; token balance continues to use the existing StudyVault balance API.
 
 ## Local verification
 
-- All seven StudyVault games were completed in Chromium using mouse, keyboard
-  and touch. The 16-case suite also checked game-specific menu art, board
-  progress, save recovery, navigation, Binary
+- All fourteen StudyVault games were completed in Chromium using mouse, keyboard
+  and touch. The 17-case suite also checked game-specific menu art, board
+  progress, the new activities, save recovery, navigation, Binary
   City unlock and replay, unauthorized frame messages, and the original Godot
   export boot. Next's production security headers were checked separately.
-- Eight real PostgreSQL integration tests used disposable schemas. They covered
+- The original integration previously passed eight real PostgreSQL tests in disposable schemas. They covered
   session locking, reward retention, entitlement/debit rollback, replay, account
-  cascades and realtime recovery. Drizzle detected no pending game schema changes.
-- Repository-wide TypeScript lint, typecheck and production build passed.
-  Python lint and tests passed (148 passed, nine optional integrations skipped).
+  cascades and realtime recovery. The expanded PostgreSQL session suite now has
+  three tests; those were skipped locally because `STUDYVAULT_TEST_DATABASE_URL`
+  was not configured. No production database was used for these checks.
+- Expansion checks passed: 127 engine tests, six shared-contract tests, 146 web
+  tests (seven optional integration cases skipped), scoped lint/typecheck and the
+  web production build. The targeted backend/client subset passed 91 tests.
+  No Python service code was changed for this expansion.
 
 ## Release checks still open
 
@@ -156,6 +163,8 @@ progress; token balance continues to use the existing StudyVault balance API.
 - Full private versioned-deck/objective evidence bridge (8.G03).
 - Human review of question content and screen-reader/contrast audit.
 - Signed-in staging parity, actual Clerk reconnect and measured free-host capacity.
-- Debugging Detective and later modes remain gated by demand, per user decision.
+- Demand/capacity evaluation and adaptive calibration remain open for the new
+  authored practice slices; the 2026-11-19 implementation request is recorded in
+  `game-expansion.md` and is not evidence of learner demand or content approval.
 
-See `game-candidate-evaluation.md` for the demand-gated design review.
+See `game-candidate-evaluation.md` for the design review and authorization history.

@@ -1,0 +1,23 @@
+{
+  "document": {
+    "store": {
+      "asset:legacy-image": {
+        "id": "asset:legacy-image",
+        "typeName": "asset",
+        "type": "image",
+        "props": {
+          "name": "legacy.png",
+          "src": "data:image/png;base64,not-real-test-data",
+          "w": 1,
+          "h": 1,
+          "fileSize": 1,
+          "mimeType": "image/png",
+          "isAnimated": false
+        },
+        "meta": {}
+      }
+    },
+    "schema": { "schemaVersion": 2, "sequences": {} }
+  },
+  "session": { "version": 1 }
+}

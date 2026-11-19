@@ -61,3 +61,4 @@ async function proxyLearningRequest(request: Request, context: RouteContext): Pr
 export const GET = proxyLearningRequest;
 export const POST = proxyLearningRequest;
 export const PUT = proxyLearningRequest;
+export const DELETE = proxyLearningRequest;

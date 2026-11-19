@@ -13,6 +13,7 @@ export {
   applyGame,
   createGame,
   getGameResult,
+  getAuthoredQuestion,
   getPublicQuestion,
   restoreGame,
   reviewedQuestionCount,

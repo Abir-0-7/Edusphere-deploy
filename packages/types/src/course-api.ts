@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { RunnerProblemIdSchema } from './code-runner-api';
+import { EvidencePinSchema } from './source-version-api';
 
 /** Wire contracts for the authored, deterministic course catalog and sessions. */
 const StrictString = z.string().min(1);
@@ -17,12 +18,18 @@ export const CourseSourceSchema = z.strictObject({
 });
 export type CourseSource = z.infer<typeof CourseSourceSchema>;
 
-export const EvidenceSchema = z.strictObject({
-  id: StrictString,
-  source_id: StrictString,
-  locator: StrictString,
-  quote: StrictString,
-});
+export const EvidenceSchema = z
+  .strictObject({
+    id: StrictString,
+    source_id: StrictString,
+    locator: StrictString,
+    quote: StrictString,
+    source_pin: EvidencePinSchema.optional(),
+  })
+  .refine((evidence) => evidence.source_pin === undefined || evidence.source_pin.quote === evidence.quote, {
+    path: ['source_pin', 'quote'],
+    message: 'Pinned quote must match the course evidence exactly.',
+  });
 export type Evidence = z.infer<typeof EvidenceSchema>;
 
 export const ObjectiveSchema = z.strictObject({
@@ -209,6 +216,13 @@ export const CourseReleaseSchema = z
       }
     }
     for (const item of release.evidence) {
+      if (release.visibility === 'catalog' && item.source_pin !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['evidence'],
+          message: 'Private source pins cannot enter the catalog without editorial review.',
+        });
+      }
       const source = sources.get(item.source_id);
       if (!source || !normalized(source.body).includes(normalized(item.quote))) {
         context.addIssue({
@@ -417,7 +431,7 @@ export const CourseDetailSchema = CourseSummarySchema.extend({
 }).strict();
 export type CourseDetail = z.infer<typeof CourseDetailSchema>;
 
-export const MaterialEvidenceSchema = EvidenceSchema.extend({
+export const MaterialEvidenceSchema = EvidenceSchema.safeExtend({
   document_id: Uuid,
   chapter_id: Uuid,
   chunk_id: Uuid,

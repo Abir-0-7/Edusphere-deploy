@@ -14,6 +14,9 @@ CORE_PATHS = (
     "/api/bibliography",
     "/api/bibliography/{item_id}",
     "/api/bibliography/library-documents",
+    "/api/documents/{document_id}/source-versions",
+    "/api/source-versions/{version_id}",
+    "/api/source-versions/{version_id}/resolve",
     "/api/learner-profile",
     "/api/learner-profile/diagnostic",
     "/api/learner-profile/track-plan",
@@ -98,7 +101,7 @@ def core_openapi(spec: dict[str, Any]) -> dict[str, Any]:
             "description": (
                 "Generated from FastAPI response/request models with python -m scripts.export_openapi. "
                 "Scope: learner profiles, optional diagnostics, learning JSON, summary/TTS streams, "
-                "focus, progress, plans, bibliography records and academic tools. "
+                "focus, progress, plans, bibliography records, pinned source versions and academic tools. "
                 "Named/data SSE event payloads are documented in x-event-schemas. "
                 "Health and privacy export remain in the runtime /openapi.json. "
                 "Requests are authenticated with a Clerk bearer token."

@@ -11,6 +11,7 @@ import {
   applyGame,
   createGame,
   getGameResult,
+  getAuthoredQuestion,
   getPublicQuestion,
   restoreGame,
   serializeGame,
@@ -63,6 +64,13 @@ const TITLES: Record<GameId, string> = {
   ConceptMatch: 'Concept Match',
   RetrievalSprint: 'Retrieval Sprint',
   CodeTrace: 'Code Trace',
+  DebuggingDetective: 'Debugging Detective',
+  SQLDetective: 'SQL Detective',
+  GraphPath: 'Graph Path',
+  ProofBuilder: 'Proof Builder',
+  DataDetective: 'Data Detective',
+  AdaptiveQuiz: 'Adaptive Quiz',
+  ExamEscape: 'Exam Escape',
 };
 function gamePath(id: GameId): string {
   return `/games/${id
@@ -340,17 +348,85 @@ async function finish(
     while (server.active?.status === 'playing') {
       const state = restoreGame(server.active.snapshot);
       const question = getPublicQuestion(state);
-      const privateQuestion = questionsFor(state.config)[state.questionIndex];
+      const privateQuestion = getAuthoredQuestion(state);
       if (!question || !privateQuestion) break;
-      const choice = correct
-        ? privateQuestion.answer
-        : (privateQuestion.answer + 1) % question.choices.length;
-      const answer = question.choices[choice];
-      if (!answer) throw new Error('Missing fixture answer');
-      await activate(page, panel.getByRole('button', { name: answer, exact: true }), input);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(question).not.toHaveProperty('solution');
+      expect(question).not.toHaveProperty('answer');
+      const activity = question.activity;
+      if (activity?.kind === 'proof') expect(activity).not.toHaveProperty('dependencies');
+      if (activity?.kind === 'sql' || activity?.kind === 'data') {
+        const table = panel.getByRole('table');
+        await expect(table).toBeVisible();
+        await expect(table.getByRole('columnheader')).toHaveCount(activity.columns.length);
+        await expect(table.getByRole('row')).toHaveCount(activity.rows.length + 1);
+      }
+      if (activity?.kind === 'adaptive')
+        await expect(panel.getByText(activity.reason, { exact: true })).toBeVisible();
+      if (activity?.kind === 'escape')
+        await expect(panel.getByText(activity.room, { exact: true })).toBeVisible();
+      if (activity?.kind === 'debug') {
+        const solution = privateQuestion.solution;
+        if (typeof solution?.line !== 'number' || typeof solution.repair !== 'number')
+          throw new Error('Missing debug solution');
+        await activate(
+          page,
+          panel.getByRole('button', {
+            name: `Line ${solution.line + 1}: ${activity.lines[solution.line]}`,
+            exact: true,
+          }),
+          input,
+        );
+        const repair = correct ? solution.repair : (solution.repair + 1) % activity.repairs.length;
+        await activate(
+          page,
+          panel.getByRole('button', {
+            name: `Repair ${repair + 1}: ${activity.repairs[repair]}`,
+            exact: true,
+          }),
+          input,
+        );
+        await activate(page, panel.getByRole('button', { name: 'Submit repair', exact: true }), input);
+      } else if (activity?.kind === 'graph') {
+        const solution = privateQuestion.solution;
+        if (!solution?.node_ids) throw new Error('Missing path solution');
+        const path = correct ? solution.node_ids : solution.node_ids.length ? [] : [activity.start];
+        if (path.length) {
+          for (const node of path) {
+            await activate(page, panel.getByRole('button', { name: `Node ${node}`, exact: true }), input);
+          }
+          await activate(page, panel.getByRole('button', { name: 'Submit path', exact: true }), input);
+        } else {
+          await activate(page, panel.getByRole('button', { name: 'No path exists', exact: true }), input);
+        }
+      } else if (activity?.kind === 'proof') {
+        const solution = privateQuestion.solution;
+        if (!solution?.step_ids) throw new Error('Missing proof solution');
+        const steps = correct ? solution.step_ids : [...solution.step_ids].reverse();
+        for (const step of steps) {
+          const index = activity.steps.findIndex((candidate) => candidate.id === step);
+          if (index < 0) throw new Error('Missing published proof step');
+          await activate(
+            page,
+            panel.getByRole('button', {
+              name: `Add step ${index + 1}: ${activity.steps[index]!.text}`,
+              exact: true,
+            }),
+            input,
+          );
+        }
+        await activate(page, panel.getByRole('button', { name: 'Check proof', exact: true }), input);
+      } else {
+        const choice = correct
+          ? privateQuestion.answer
+          : (privateQuestion.answer + 1) % question.choices.length;
+        const answer = question.choices[choice];
+        if (!answer) throw new Error('Missing fixture answer');
+        await activate(page, panel.getByRole('button', { name: answer, exact: true }), input);
+      }
       await expect(panel.getByRole('link', { name: /^Read source:/ })).toHaveAttribute(
         'href',
-        /^https:\/\/docs\.python\.org\//,
+        privateQuestion.source.url,
       );
     }
   }
@@ -414,7 +490,7 @@ for (const [input, width] of [
   ['keyboard', 768],
   ['touch', 390],
 ] as const) {
-  test(`all seven games complete with ${input} at ${width}px`, async ({ page }) => {
+  test(`all fourteen games complete with ${input} at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     const server = await fixtureServer(page);
     for (const id of GameIdSchema.options) {
@@ -433,7 +509,18 @@ test('question games show loss, explanation and source, then retry without losin
   await page.goto(gamePath('ConceptMatch'));
   await page.getByLabel('Sound feedback').uncheck();
   await page.getByLabel('Reduce motion').check();
-  for (const id of ['ConceptMatch', 'RetrievalSprint', 'CodeTrace'] as const) {
+  for (const id of [
+    'ConceptMatch',
+    'RetrievalSprint',
+    'CodeTrace',
+    'DebuggingDetective',
+    'SQLDetective',
+    'GraphPath',
+    'ProofBuilder',
+    'DataDetective',
+    'AdaptiveQuiz',
+    'ExamEscape',
+  ] as const) {
     await begin(page, id, 'keyboard');
     await finish(page, server, 'keyboard', false);
     await expect(activePanel(page).getByText(/token\(s\) awarded by the server/)).toHaveCount(0);
@@ -498,6 +585,44 @@ test('hard puzzle boards remain fully reachable after resize and restore', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test('new game practice saves recover with hints and never award tokens', async ({ page }) => {
+  const server = await fixtureServer(page);
+  for (const id of [
+    'DebuggingDetective',
+    'SQLDetective',
+    'GraphPath',
+    'ProofBuilder',
+    'DataDetective',
+    'AdaptiveQuiz',
+    'ExamEscape',
+  ] as const) {
+    await page.goto(gamePath(id));
+    await page.getByLabel(/Practice mode/).check();
+    await begin(page, id, 'keyboard');
+    const panel = activePanel(page);
+    await activate(page, panel.getByRole('button', { name: 'Hint', exact: true }), 'keyboard');
+    await expect(panel.getByText(/^Hint:/)).toBeVisible();
+    expect(restoreGame(server.active!.snapshot).hints).toBe(1);
+    await activate(page, panel.getByRole('button', { name: 'Pause', exact: true }), 'keyboard');
+    const savedId = server.active!.id;
+    await page.reload();
+    await activate(
+      page,
+      page
+        .getByRole('region', { name: 'Saved sessions' })
+        .getByRole('button', { name: 'Resume', exact: true })
+        .first(),
+      'keyboard',
+    );
+    await activate(page, panel.getByRole('button', { name: 'Resume', exact: true }), 'keyboard');
+    expect(server.active!.id).toBe(savedId);
+    expect(restoreGame(server.active!.snapshot).hints).toBe(1);
+    await finish(page, server, 'keyboard');
+    expect(server.active?.tokens_awarded).toBe(0);
+  }
+  expect(server.awardedTokens).toBe(0);
+});
+
 test('deleting an old save frees capacity for a new session', async ({ page }) => {
   const server = await fixtureServer(page);
   await page.goto('/games/sorting-race');
@@ -550,8 +675,8 @@ test('the game menu opens distinct pages with scoped saves and direct URLs', asy
   await expect(page.getByRole('heading', { name: 'Game Vault', level: 1 })).toBeVisible();
   await expect(page.getByText('EduSphere arcade')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Explore the collection' })).toBeVisible();
-  await expect(page.locator('main article')).toHaveCount(8);
-  await expect(page.locator('[data-game-preview]')).toHaveCount(8);
+  await expect(page.locator('main article')).toHaveCount(15);
+  await expect(page.locator('[data-game-preview]')).toHaveCount(15);
   await expect(page.getByRole('link', { name: 'Play now Cyberverse', exact: true })).toHaveAttribute(
     'href',
     '/games/cyberverse',

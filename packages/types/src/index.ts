@@ -2,7 +2,15 @@ import { z } from 'zod';
 
 /** Shared error shape — single source of truth for all API errors. */
 export const ErrorSchema = z.object({
-  code: z.enum(['invalid_input', 'unauthorized', 'not_found', 'rate_limited', 'file_too_large', 'conflict', 'internal']),
+  code: z.enum([
+    'invalid_input',
+    'unauthorized',
+    'not_found',
+    'rate_limited',
+    'file_too_large',
+    'conflict',
+    'internal',
+  ]),
   message: z.string(),
   details: z.unknown().optional(),
 });
@@ -89,3 +97,8 @@ export * from './track-plan-api';
 export * from './learning-api';
 export * from './flashcard-studio-api';
 export * from './concept-graph-api';
+export * from './cover-api';
+
+export * from './bibliography-api';
+export * from './source-version-api';
+export * from './isbn';

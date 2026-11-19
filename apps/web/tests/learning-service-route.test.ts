@@ -4,7 +4,7 @@ const { authMock, getEnvMock } = vi.hoisted(() => ({ authMock: vi.fn(), getEnvMo
 vi.mock('@clerk/nextjs/server', () => ({ auth: authMock }));
 vi.mock('@/env', () => ({ getEnv: getEnvMock }));
 
-import { GET } from '../src/app/api/learning-service/[...path]/route';
+import { DELETE, GET } from '../src/app/api/learning-service/[...path]/route';
 
 describe('learning service proxy route', () => {
   beforeEach(() => {
@@ -63,5 +63,27 @@ describe('learning service proxy route', () => {
 
     expect(response.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('forwards an authenticated bibliography deletion with the account token', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('{"deleted":true}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const id = '01234567-89ab-cdef-0123-456789abcdef';
+    const response = await DELETE(
+      new Request(`https://edusphere.example/api/learning-service/api/bibliography/${id}`, {
+        method: 'DELETE',
+      }),
+      { params: Promise.resolve({ path: ['api', 'bibliography', id] }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toBe(`https://studyvault-ai.example/api/bibliography/${id}`);
+    expect(init?.method).toBe('DELETE');
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed-clerk-token');
   });
 });

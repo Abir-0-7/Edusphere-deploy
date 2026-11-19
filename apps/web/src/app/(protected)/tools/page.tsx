@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { CoverBuilder } from '@/components/cover-builder';
+import { BibliographyWorkspace } from '@/components/bibliography-workspace';
 import { BoardLearningPreview, readBoardGraphHandoff } from '@/components/board-learning-preview';
 import { insertConceptIntoTldraw } from '@/lib/concept-graph-board';
 import { boardStorageKeys, clearLocalBoard, loadLocalBoard, saveLocalBoard } from '@/lib/local-boards';
@@ -15,7 +17,6 @@ import 'tldraw/tldraw.css';
 const baseUrl = () => process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000';
 const inputClass = 'w-full rounded border border-[var(--line)] bg-white px-3 py-2 text-sm';
 const labelClass = 'mb-1.5 block text-xs font-semibold text-[var(--ink)]';
-const citationSchema = z.object({ citation: z.string(), style: z.string() });
 const reviewSchema = z.object({
   time_complexity: z.string(),
   space_complexity: z.string(),
@@ -38,12 +39,22 @@ function failureMessage(error: unknown, fallback: string) {
 function Whiteboard() {
   const { isLoaded, userId, getToken } = useAuth();
   if (!isLoaded || !userId) {
-    return <p id="whiteboard" role="status" className="surface surface-padded">Loading your whiteboard account.</p>;
+    return (
+      <p id="whiteboard" role="status" className="surface surface-padded">
+        Loading your whiteboard account.
+      </p>
+    );
   }
   return <AccountWhiteboard key={userId} ownerId={userId} getToken={getToken} />;
 }
 
-function AccountWhiteboard({ ownerId, getToken }: { ownerId: string; getToken: () => Promise<string | null> }) {
+function AccountWhiteboard({
+  ownerId,
+  getToken,
+}: {
+  ownerId: string;
+  getToken: () => Promise<string | null>;
+}) {
   const searchParams = useSearchParams();
   const handoff = readBoardGraphHandoff(searchParams);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -141,102 +152,14 @@ function AccountWhiteboard({ ownerId, getToken }: { ownerId: string; getToken: (
 }
 
 function CoverPdf() {
-  const [title, setTitle] = useState('Study Notes');
-  const [meta, setMeta] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const build = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-      const doc = await PDFDocument.create();
-      const page = doc.addPage([612, 792]);
-      const font = await doc.embedFont(StandardFonts.HelveticaBold);
-      page.drawText(title.trim(), {
-        x: 70,
-        y: 650,
-        size: 32,
-        font,
-        maxWidth: 472,
-        lineHeight: 38,
-        color: rgb(0.06, 0.3, 0.23),
-      });
-      const small = await doc.embedFont(StandardFonts.Helvetica);
-      page.drawText(meta.trim(), {
-        x: 70,
-        y: 495,
-        size: 16,
-        font: small,
-        maxWidth: 472,
-        lineHeight: 23,
-        color: rgb(0.35, 0.4, 0.37),
-      });
-      const bytes = await doc.save();
-      const blob = new Blob([bytes.slice().buffer], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'cover.pdf';
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      setError('Could not create this cover. Use Latin characters in the title and byline, then try again.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const { isLoaded, userId } = useAuth();
   return (
-    <section id="cover" className="surface surface-padded scroll-mt-20">
-      <p className="page-kicker">PRESENT YOUR WORK</p>
-      <h2 className="section-heading">Assignment cover page</h2>
-      <p className="section-caption">Create a simple PDF cover with your own title and details.</p>
-      <form onSubmit={(event) => void build(event)} className="mt-5 space-y-4">
-        <div>
-          <label htmlFor="cover-title" className={labelClass}>
-            Assignment title
-          </label>
-          <input
-            id="cover-title"
-            required
-            maxLength={90}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label htmlFor="cover-byline" className={labelClass}>
-            Your name, course, or year
-          </label>
-          <input
-            id="cover-byline"
-            maxLength={150}
-            value={meta}
-            onChange={(event) => setMeta(event.target.value)}
-            placeholder="e.g. Your name / CSE 101 / 2026"
-            className={inputClass}
-          />
-        </div>
-        <p className="text-xs text-[var(--muted)]">The cover font supports Latin characters.</p>
-        {error && (
-          <p role="alert" className="status-error">
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={busy || !title.trim()}
-          className="action-primary disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {busy ? 'Creating PDF...' : 'Download cover.pdf'}
-        </button>
-      </form>
-    </section>
+    <div id="cover" className="scroll-mt-20">
+      <CoverBuilder
+        key={isLoaded ? (userId ?? 'signed-out') : 'auth-loading'}
+        ownerId={isLoaded ? (userId ?? null) : null}
+      />
+    </div>
   );
 }
 
@@ -379,210 +302,17 @@ function ClientOcr() {
 }
 
 function CitationForm() {
-  const { getToken } = useAuth();
-  const [style, setStyle] = useState('apa');
-  const [authors, setAuthors] = useState('');
-  const [title, setTitle] = useState('');
-  const [year, setYear] = useState('');
-  const [container, setContainer] = useState('');
-  const [url, setUrl] = useState('');
-  const [pages, setPages] = useState('');
-  const [out, setOut] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const cite = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    setOut('');
-    setError('');
-    try {
-      const token = await getToken();
-      const response = await fetch(`${baseUrl()}/api/citations`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${token ?? ''}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          style,
-          authors: authors
-            .split(/\r?\n|;/)
-            .map((author) => author.trim())
-            .filter(Boolean),
-          title: title.trim(),
-          year: year.trim(),
-          container: container.trim(),
-          url: url.trim(),
-          pages: pages.trim(),
-        }),
-      });
-      if (!response.ok) throw new Error(serviceError(response.status, 'Citation formatting'));
-      const data = citationSchema.safeParse(await response.json());
-      if (!data.success) throw new Error('The citation service returned an incomplete result. Please retry.');
-      setOut(data.data.citation);
-    } catch (cause) {
-      setError(failureMessage(cause, 'Could not format this citation.'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const { isLoaded, userId } = useAuth();
   return (
-    <section id="citations" className="surface surface-padded scroll-mt-20">
-      <p className="page-kicker">CREDIT YOUR SOURCES</p>
-      <h2 className="section-heading">Citation formatter</h2>
-      <p className="section-caption">
-        Enter the details from your source, then format an APA, MLA, or IEEE reference.
-      </p>
-      <form onSubmit={(event) => void cite(event)} className="mt-5 space-y-4">
-        <fieldset>
-          <legend className={labelClass}>Citation style</legend>
-          <div className="flex flex-wrap gap-2">
-            {['apa', 'mla', 'ieee'].map((option) => (
-              <button
-                type="button"
-                key={option}
-                onClick={() => {
-                  setStyle(option);
-                  setOut('');
-                }}
-                aria-pressed={style === option}
-                className={`${style === option ? 'action-primary' : 'action-secondary'} uppercase`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label htmlFor="citation-title" className={labelClass}>
-              Source title <span className="font-normal text-[var(--muted)]">(required)</span>
-            </label>
-            <input
-              id="citation-title"
-              required
-              maxLength={500}
-              value={title}
-              onChange={(event) => {
-                setTitle(event.target.value);
-                setOut('');
-              }}
-              placeholder="Article, book, or webpage title"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="citation-authors" className={labelClass}>
-              Authors
-            </label>
-            <textarea
-              id="citation-authors"
-              rows={2}
-              maxLength={1000}
-              value={authors}
-              onChange={(event) => {
-                setAuthors(event.target.value);
-                setOut('');
-              }}
-              placeholder="One full name per line"
-              aria-describedby="citation-authors-help"
-              className={`${inputClass} resize-y`}
-            />
-            <p id="citation-authors-help" className="mt-1.5 text-xs text-[var(--muted)]">
-              Keep the author order shown in the source. Semicolons also separate names.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="citation-year" className={labelClass}>
-                Publication year
-              </label>
-              <input
-                id="citation-year"
-                maxLength={20}
-                value={year}
-                onChange={(event) => {
-                  setYear(event.target.value);
-                  setOut('');
-                }}
-                placeholder="e.g. 2026"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="citation-pages" className={labelClass}>
-                Page range
-              </label>
-              <input
-                id="citation-pages"
-                maxLength={50}
-                value={pages}
-                onChange={(event) => {
-                  setPages(event.target.value);
-                  setOut('');
-                }}
-                placeholder="e.g. 12-18"
-                className={inputClass}
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="citation-container" className={labelClass}>
-              Journal, website, or publisher
-            </label>
-            <input
-              id="citation-container"
-              maxLength={300}
-              value={container}
-              onChange={(event) => {
-                setContainer(event.target.value);
-                setOut('');
-              }}
-              placeholder="Where the source was published"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="citation-url" className={labelClass}>
-              Source URL
-            </label>
-            <input
-              id="citation-url"
-              type="url"
-              maxLength={2000}
-              value={url}
-              onChange={(event) => {
-                setUrl(event.target.value);
-                setOut('');
-              }}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </div>
-        </div>
-        {error && (
-          <p role="alert" className="status-error">
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={busy || !title.trim()}
-          className="action-primary disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {busy ? 'Formatting...' : `Format ${style.toUpperCase()} citation`}
-        </button>
-        {out && (
-          <div className="rounded border border-[var(--line)] bg-[var(--mint)] p-4" role="status">
-            <p className="mb-2 text-xs font-semibold text-[var(--forest)]">Your formatted reference</p>
-            <p className="break-words text-sm leading-relaxed">{out}</p>
-            <p className="mt-3 text-xs text-[var(--muted)]">
-              Check the details and your course requirements before submitting.
-            </p>
-          </div>
-        )}
-      </form>
-    </section>
+    <div id="citations" className="scroll-mt-20">
+      {isLoaded && userId ? (
+        <BibliographyWorkspace key={userId} />
+      ) : (
+        <p role="status" className="surface surface-padded">
+          Loading your bibliography account.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -741,10 +471,8 @@ export default function ToolsPage() {
           </a>
         ))}
       </nav>
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <ClientOcr />
-        <CoverPdf />
-      </div>
+      <ClientOcr />
+      <CoverPdf />
       <CitationForm />
       <CodeReview />
       <Whiteboard />

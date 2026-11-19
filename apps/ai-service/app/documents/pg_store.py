@@ -217,6 +217,24 @@ class PgDocumentStore:
             return None
         return doc if doc.user_id == user_id else None
 
+    def owns_document(self, document_id: str, user_id: str) -> bool:
+        with self._connect_for_atomic() as conn:
+            row = conn.execute(
+                "SELECT EXISTS(SELECT 1 FROM documents WHERE id=%s AND user_id=%s)",
+                (document_id, user_id),
+            ).fetchone()
+        return bool(row[0]) if row else False
+
+    def list_library_documents(self, user_id: str, *, limit: int, offset: int) -> tuple[list[dict[str, str]], int]:
+        with self._connect_for_atomic() as conn:
+            rows = conn.execute(
+                "SELECT id, filename FROM documents WHERE user_id=%s "
+                "ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s",
+                (user_id, limit, offset),
+            ).fetchall()
+            count = conn.execute("SELECT count(*) FROM documents WHERE user_id=%s", (user_id,)).fetchone()
+        return [{"id": str(row[0]), "title": str(row[1])[:500]} for row in rows], int(count[0]) if count else 0
+
     def mark_parsed(self, document_id: str, *, markdown: str, page_count: int) -> None:
         with self._conn.cursor() as cur:
             cur.execute(

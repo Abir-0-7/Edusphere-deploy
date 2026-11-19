@@ -227,6 +227,18 @@ class InMemoryDocumentStore:
         doc = self._docs.get(document_id)
         return doc if doc is not None and doc.user_id == user_id else None
 
+    def owns_document(self, document_id: str, user_id: str) -> bool:
+        with self._lock:
+            doc = self._docs.get(document_id)
+            return doc is not None and doc.user_id == user_id
+
+    def list_library_documents(self, user_id: str, *, limit: int, offset: int) -> tuple[list[dict[str, str]], int]:
+        with self._lock:
+            rows = [doc for doc in self._docs.values() if doc.user_id == user_id]
+            rows.sort(key=lambda doc: doc.id, reverse=True)
+            documents = [{"id": doc.id, "title": doc.filename[:500]} for doc in rows[offset : offset + limit]]
+            return documents, len(rows)
+
     def get_internal(self, document_id: str) -> DocumentRecord:
         """Worker-side lookup by id (job payload already carries the owner)."""
         return self._docs[document_id]

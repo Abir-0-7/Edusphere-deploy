@@ -113,6 +113,27 @@
       "when": 1795050070335,
       "tag": "0015_concept_graphs",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795101430423,
+      "tag": "0016_bibliography_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795101430424,
+      "tag": "0017_bibliography_isbn",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795101430425,
+      "tag": "0018_source_versions",
+      "breakpoints": true
     }
   ]
 }

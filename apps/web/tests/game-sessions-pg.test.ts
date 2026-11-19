@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GameSessionSchema, type GameSession } from '@studyvault/types';
+import {
+  GameSessionSchema,
+  type GameId,
+  type GameSession,
+  type VersionedGameAction,
+} from '@studyvault/types';
+import { getAuthoredQuestion, getGameResult, restoreGame } from '@studyvault/game-engine';
 import { POST as createSession } from '../src/app/api/games/sessions/route';
 import {
   DELETE as deleteSession,
@@ -191,5 +197,79 @@ describe.skipIf(!testDatabaseUrl)('Postgres game-session migration, locking and 
     >`SELECT count(*)::int AS count FROM token_ledger`;
     expect(sessions?.count).toBe(0);
     expect(rewards?.count).toBe(0);
+  });
+
+  it('persists every expanded game through the existing schema and settles each owner/game once across clients', async () => {
+    const expanded = [
+      'DebuggingDetective',
+      'SQLDetective',
+      'GraphPath',
+      'ProofBuilder',
+      'DataDetective',
+      'AdaptiveQuiz',
+      'ExamEscape',
+    ] as const satisfies readonly GameId[];
+    for (const gameId of expanded) {
+      const created = await createSession(request({ game_id: gameId, difficulty: 'easy', practice: false }));
+      expect(created.status).toBe(201);
+      let session = GameSessionSchema.parse(await created.json());
+      const started = await commandSession(request({ revision: 0, command: 'start' }), context(session.id));
+      expect(started.status).toBe(200);
+      session = GameSessionSchema.parse(await started.json());
+      let lastAction: VersionedGameAction | undefined;
+      while (getGameResult(restoreGame(session.snapshot)).status === 'playing') {
+        const key = getAuthoredQuestion(restoreGame(session.snapshot))!;
+        const solution = key.solution;
+        lastAction =
+          typeof solution?.line === 'number' && typeof solution?.repair === 'number'
+            ? { type: 'debug', question_id: key.id, line: solution.line, repair: solution.repair }
+            : solution?.node_ids
+              ? { type: 'path', question_id: key.id, node_ids: [...solution.node_ids] }
+              : solution?.step_ids
+                ? { type: 'order', question_id: key.id, step_ids: [...solution.step_ids] }
+                : { type: 'answer', question_id: key.id, choice: key.answer };
+        const updated = await commandSession(
+          request({
+            revision: session.revision,
+            command: 'act',
+            action: { seq: session.snapshot.actions.length + 1, action: lastAction },
+          }),
+          context(session.id),
+        );
+        expect(updated.status).toBe(200);
+        session = GameSessionSchema.parse(await updated.json());
+      }
+      expect(session.status).toBe('won');
+      expect(session.tokens_awarded).toBeGreaterThan(0);
+      expect(session.tokens_awarded).toBeLessThanOrEqual(5);
+
+      // A new independent handle restores all domain-specific actions from JSONB.
+      testState.nextDatabase = () => drizzle(secondClient!);
+      const restored = GameSessionSchema.parse(
+        await (await readSession(new Request('https://study.test'), context(session.id))).json(),
+      );
+      expect(restored.snapshot).toEqual(session.snapshot);
+      expect(restored.status).toBe('won');
+      expect(
+        (
+          await commandSession(
+            request({
+              revision: session.revision - 1,
+              command: 'act',
+              action: { seq: session.snapshot.actions.length, action: lastAction },
+            }),
+            context(session.id),
+          )
+        ).status,
+      ).toBe(409);
+      const rewards = await firstClient!<{ amount: number }[]>`
+        SELECT amount FROM token_ledger WHERE user_id = ${alice} AND reason LIKE ${`game:${gameId}:%`}
+      `;
+      expect(rewards).toEqual([{ amount: session.tokens_awarded }]);
+    }
+    const [totals] = await firstClient!<
+      { count: number }[]
+    >`SELECT count(*)::int AS count FROM token_ledger WHERE user_id = ${alice}`;
+    expect(totals?.count).toBe(expanded.length);
   });
 });

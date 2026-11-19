@@ -33,6 +33,24 @@ describe('same-origin learning service proxy routes', () => {
     ).toBe(false);
     expect(isAllowedLearningRoute('POST', '/api/courses/python-foundations/%2e%2e')).toBe(false);
     expect(isAllowedLearningRoute('GET', '/api/learner-profile/track-plan/apply')).toBe(false);
+    expect(isAllowedLearningRoute('POST', '/api/source-versions/github/import')).toBe(false);
+    expect(
+      isAllowedLearningRoute('DELETE', '/api/source-versions/01234567-89ab-cdef-0123-456789abcdef'),
+    ).toBe(false);
+    expect(isAllowedLearningRoute('GET', '/api/bibliography/%2e%2e')).toBe(false);
+  });
+
+  it('allows only the completed bibliography and pinned-source endpoints', () => {
+    const id = '01234567-89ab-cdef-0123-456789abcdef';
+    expect(isAllowedLearningRoute('GET', '/api/bibliography')).toBe(true);
+    expect(isAllowedLearningRoute('GET', '/api/bibliography/library-documents')).toBe(true);
+    expect(isAllowedLearningRoute('POST', '/api/bibliography')).toBe(true);
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      expect(isAllowedLearningRoute(method, `/api/bibliography/${id}`)).toBe(true);
+    }
+    expect(isAllowedLearningRoute('POST', `/api/documents/${id}/source-versions`)).toBe(true);
+    expect(isAllowedLearningRoute('GET', `/api/source-versions/${id}`)).toBe(true);
+    expect(isAllowedLearningRoute('POST', `/api/source-versions/${id}/resolve`)).toBe(true);
   });
 
   it('sends course calls to the same-origin proxy with the caller session token', async () => {

@@ -1,0 +1,50 @@
+{
+  "document": {
+    "store": {
+      "page:legacy-page": {
+        "id": "page:legacy-page",
+        "name": "Page 1",
+        "index": "a1",
+        "typeName": "page",
+        "meta": {}
+      },
+      "shape:legacy-box": {
+        "id": "shape:legacy-box",
+        "typeName": "shape",
+        "type": "geo",
+        "x": 100,
+        "y": 120,
+        "rotation": 0,
+        "index": "a2",
+        "parentId": "page:legacy-page",
+        "isLocked": false,
+        "opacity": 1,
+        "props": {
+          "w": 160,
+          "h": 90,
+          "geo": "rectangle",
+          "dash": "draw",
+          "growY": 0,
+          "url": "",
+          "scale": 1,
+          "flipX": false,
+          "flipY": false,
+          "color": "black",
+          "labelColor": "black",
+          "fill": "none",
+          "size": "m",
+          "font": "draw",
+          "align": "middle",
+          "verticalAlign": "middle",
+          "richText": {
+            "type": "doc",
+            "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Legacy note" }] }]
+          }
+        },
+        "meta": {}
+      }
+    },
+    "schema": { "schemaVersion": 2, "sequences": {} }
+  },
+  "session": { "version": 1 }
+}

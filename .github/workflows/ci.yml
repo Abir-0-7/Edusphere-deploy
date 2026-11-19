@@ -54,6 +54,8 @@ jobs:
       - run: pnpm --filter @studyvault/web test:e2e:flashcard-studio
       - run: pnpm --filter @studyvault/web test:e2e:offline-decks
       - run: pnpm --filter @studyvault/web test:e2e:maps
+      - run: pnpm --filter @studyvault/web test:e2e:cover-builder
+      - run: pnpm --filter @studyvault/web test:e2e:bibliography
       - run: pnpm audit --prod
       - run: pnpm lint
       - run: pnpm typecheck
@@ -72,6 +74,19 @@ jobs:
 
   python:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: studyvault_test
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: studyvault_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U studyvault_test -d studyvault_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults: { run: { working-directory: apps/ai-service } }
     steps:
       - uses: actions/checkout@v4
@@ -81,3 +96,7 @@ jobs:
       - run: pip-audit -r requirements.txt
       - run: ruff check app tests
       - run: pytest -q
+      - name: Completed academic tools and source-version PostgreSQL checks
+        run: pytest -q tests/test_bibliography.py tests/test_source_versions_pg.py tests/test_phase8ef_migrations_pg.py
+        env:
+          STUDYVAULT_TEST_DATABASE_URL: postgresql://studyvault_test:test_only@127.0.0.1:5432/studyvault_test

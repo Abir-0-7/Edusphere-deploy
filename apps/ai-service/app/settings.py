@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # Bounded account/import/deck storage. These caps protect both durable and
     # development stores from unbounded rows or worker batches.
     max_documents_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_DOCUMENTS_PER_USER")
+    max_source_versions_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_SOURCE_VERSIONS_PER_USER")
     max_chunks_per_document: int = Field(5000, ge=1, le=100000, alias="AI_SERVICE_MAX_CHUNKS_PER_DOCUMENT")
     max_flashcards_per_deck: int = Field(2000, ge=1, le=100000, alias="AI_SERVICE_MAX_FLASHCARDS_PER_DECK")
     max_embedding_batch: int = Field(500, ge=1, le=5000, alias="AI_SERVICE_MAX_EMBEDDING_BATCH")

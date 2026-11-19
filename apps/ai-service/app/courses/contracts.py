@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr, model_validator
 
+from app.source_versions.contracts import EvidencePin
+
 Answer = StrictStr | StrictInt | StrictFloat | list[StrictStr]
 
 
@@ -35,6 +37,13 @@ class Evidence(Contract):
     source_id: str = Field(min_length=1)
     locator: str = Field(min_length=1)
     quote: str = Field(min_length=1)
+    source_pin: EvidencePin | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def matching_pin_quote(self):
+        if self.source_pin is not None and self.source_pin.quote != self.quote:
+            raise ValueError("pinned evidence quote must match the course evidence quote")
+        return self
 
 
 class Objective(Contract):
@@ -166,6 +175,8 @@ class CourseRelease(Contract):
             raise ValueError("private course release requires an owner")
         if self.visibility == "catalog" and self.user_id is not None:
             raise ValueError("private ownership cannot be published through catalog visibility")
+        if self.visibility == "catalog" and any(ref.source_pin is not None for ref in self.evidence):
+            raise ValueError("private source pins cannot enter the catalog before editorial review")
         sources = {source.id: source for source in self.sources}
         evidence = {ref.id: ref for ref in self.evidence}
         objectives = {objective.id: objective for objective in self.objectives}
@@ -274,6 +285,10 @@ class CourseRelease(Contract):
 
     def content_hash(self) -> str:
         content = self.model_dump(mode="json")
+        # Preserve hashes of releases authored before optional versioned pins.
+        for ref in content["evidence"]:
+            if ref.get("source_pin") is None:
+                ref.pop("source_pin", None)
         # Keep hashes of releases authored before labs/assignments were added stable.
         if not self.labs:
             content.pop("labs", None)

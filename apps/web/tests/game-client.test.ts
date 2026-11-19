@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { GameIdSchema } from '@studyvault/types';
 import {
   createGameSession,
   deleteGameSession,
@@ -70,15 +71,9 @@ describe('Game Vault API client', () => {
         new Response(
           JSON.stringify({
             sessions: [session],
-            progression: {
-              SortingRace: 3,
-              NQueens: 0,
-              TowersOfHanoi: 0,
-              FlashcardTowerDefense: 0,
-              ConceptMatch: 0,
-              RetrievalSprint: 0,
-              CodeTrace: 0,
-            },
+            progression: Object.fromEntries(
+              GameIdSchema.options.map((gameId) => [gameId, gameId === 'SortingRace' ? 3 : 0]),
+            ),
           }),
         ),
       );

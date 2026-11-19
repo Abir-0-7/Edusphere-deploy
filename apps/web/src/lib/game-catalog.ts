@@ -17,10 +17,22 @@ function markerForTitle(title: string): string {
     .slice(0, 4);
 }
 
+const CATEGORIES: Record<string, string> = {
+  DebuggingDetective: 'Debugging',
+  SQLDetective: 'SQL practice',
+  GraphPath: 'Graph algorithms',
+  ProofBuilder: 'Mathematical reasoning',
+  DataDetective: 'Data literacy',
+  AdaptiveQuiz: 'Adaptive practice',
+  ExamEscape: 'Puzzle adventure',
+};
+
 export const vaultGames = GAME_CATALOG.map((game) => ({
   ...game,
   slug: slugForGame(game.id),
-  category: game.objective.toLowerCase().includes('python') ? 'Python practice' : 'Logic puzzle',
+  category:
+    CATEGORIES[game.id] ??
+    (game.objective.toLowerCase().includes('python') ? 'Python practice' : 'Logic puzzle'),
   marker: markerForTitle(game.title),
 }));
 export type VaultGame = (typeof vaultGames)[number];

@@ -37,6 +37,22 @@ def _authorized(release: CourseRelease, user_id: str, *, published_only=False):
         raise InvalidInput("course release is not published")
 
 
+def _validate_source_pins(release: CourseRelease, source_versions, *, conn=None) -> None:
+    """Check each private pin against its exact authorized immutable snapshot."""
+    pins = [ref.source_pin for ref in release.evidence if ref.source_pin is not None]
+    if not pins:
+        return
+    if release.visibility != "private" or not release.user_id:
+        raise InvalidInput("private source pins cannot enter the catalog before editorial review")
+    if source_versions is None:
+        raise InvalidInput("source version resolver is required for pinned course evidence")
+    for pin in pins:
+        if conn is None:
+            source_versions.resolve(release.user_id, pin)
+        else:
+            source_versions.resolve(release.user_id, pin, conn=conn)
+
+
 def _material(release: CourseRelease, enrollment_id: str, document_id: str, user_id: str):
     chapters, chunks = [], []
     markdown = []
@@ -119,8 +135,9 @@ def _lab_action(enrollment, release: CourseRelease, request: LabRunRequest, user
 class MemoryCourseStore:
     """Explicit dev/test store; no production persistence fallback."""
 
-    def __init__(self, documents: InMemoryDocumentStore, releases=None):
+    def __init__(self, documents: InMemoryDocumentStore, releases=None, *, source_versions=None):
         self.documents = documents
+        self.source_versions = source_versions
         self._lock = threading.RLock()
         self._releases = {}
         self._enrollments = {}
@@ -130,6 +147,7 @@ class MemoryCourseStore:
 
     def save_release(self, release: CourseRelease):
         with self._lock:
+            _validate_source_pins(release, self.source_versions)
             identifier = str(release.id)
             old = self._releases.get(identifier)
             if old is not None and (old.course_id, old.user_id, old.version) != (
@@ -180,6 +198,7 @@ class MemoryCourseStore:
                 raise NotFound("course not found")
             release = candidates[-1]
             _authorized(release, user_id)
+            _validate_source_pins(release, self.source_versions)
             return release.model_copy(deep=True)
 
     def completed_slugs(self, user_id: str):
@@ -246,7 +265,9 @@ class MemoryCourseStore:
             raise NotFound("learning session not found")
         if self.documents.get_for_user(row["document_id"], user_id) is None:
             raise NotFound("learning source was removed")
-        return row, self._releases[row["release_id"]]
+        release = self._releases[row["release_id"]]
+        _validate_source_pins(release, self.source_versions)
+        return row, release
 
     def get_session(self, user_id: str, enrollment_id: str):
         with self._lock:
@@ -256,7 +277,7 @@ class MemoryCourseStore:
     def list_sessions(self, user_id: str):
         with self._lock:
             return [
-                engine.session_view(row, self._releases[row["release_id"]])
+                engine.session_view(*self._owned(user_id, row["id"]))
                 for row in self._enrollments.values()
                 if row["user_id"] == user_id and self.documents.get_for_user(row["document_id"], user_id) is not None
             ]
@@ -454,11 +475,12 @@ class MemoryCourseStore:
 class PgCourseStore:
     """Migrations own schema; each mutating operation uses an independent transaction."""
 
-    def __init__(self, database_url: str, *, max_documents_per_user: int = 100):
+    def __init__(self, database_url: str, *, max_documents_per_user: int = 100, source_versions=None):
         if max_documents_per_user < 1:
             raise ValueError("max_documents_per_user must be positive")
         self.database_url = database_url
         self.max_documents_per_user = max_documents_per_user
+        self.source_versions = source_versions
 
     def _connect(self):
         import psycopg
@@ -475,6 +497,7 @@ class PgCourseStore:
                 cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE", (release.user_id,))
                 if cur.fetchone() is None:
                     raise NotFound("course owner not found")
+            _validate_source_pins(release, self.source_versions, conn=conn)
             cur.execute(
                 "INSERT INTO courses (id,slug,user_id,title) VALUES (%s,%s,%s,%s) ON CONFLICT (id) DO NOTHING",
                 (str(release.course_id), release.slug, release.user_id, release.title),
@@ -552,6 +575,7 @@ class PgCourseStore:
             raise NotFound("course not found")
         release = CourseRelease.model_validate(row[0])
         _authorized(release, user_id)
+        _validate_source_pins(release, self.source_versions)
         return release
 
     def completed_slugs(self, user_id: str):
@@ -570,6 +594,7 @@ class PgCourseStore:
             cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE", (user_id,))
             if cur.fetchone() is None:
                 raise NotFound("course learner not found")
+            _validate_source_pins(release, self.source_versions, conn=conn)
             cur.execute(
                 "SELECT id,document_id,state,revision,status FROM course_enrollments"
                 " WHERE user_id=%s AND release_id=%s",
@@ -630,7 +655,7 @@ class PgCourseStore:
             )
             return engine.session_view(enrollment, release)
 
-    def _owned(self, cur, user_id, enrollment_id, *, lock=False):
+    def _owned(self, cur, user_id, enrollment_id, *, lock=False, conn=None):
         cur.execute(
             "SELECT e.id,e.document_id,e.state,e.revision,e.status,r.content FROM course_enrollments e"
             " JOIN course_releases r ON r.id=e.release_id"
@@ -645,6 +670,7 @@ class PgCourseStore:
         if row is None:
             raise NotFound("learning session not found")
         release = CourseRelease.model_validate(row[5])
+        _validate_source_pins(release, self.source_versions, conn=conn)
         return _enrollment(row[0], user_id, release.id, row[1], row[2], row[3], row[4]), release
 
     def get_session(self, user_id: str, enrollment_id: str):
@@ -751,7 +777,7 @@ class PgCourseStore:
             cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE", (user_id,))
             if cur.fetchone() is None:
                 raise NotFound("learner not found")
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             cur.execute(
                 "SELECT enrollment_id,kind,request,result FROM course_attempts WHERE id=%s AND user_id=%s",
                 (request["id"], user_id),
@@ -802,28 +828,28 @@ class PgCourseStore:
 
     def advance(self, user_id: str, enrollment_id: str, revision: int):
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             engine.advance(row, release, revision)
             self._write_session(cur, user_id, row)
             return engine.session_view(row, release)
 
     def update_study_notes(self, user_id: str, enrollment_id: str, request: StudyNotesRequest):
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             engine.save_study_notes(row, release, request)
             self._write_session(cur, user_id, row)
             return engine.session_view(row, release)
 
     def save_assignment(self, user_id: str, enrollment_id: str, request: AssignmentDraftRequest):
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             result = _assignment_action(row, release, request)
             self._write_session(cur, user_id, row)
             return result
 
     def run_lab(self, user_id: str, enrollment_id: str, request: LabRunRequest):
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             result = _lab_action(row, release, request, user_id)
             self._write_session(cur, user_id, row)
             return result
@@ -849,7 +875,7 @@ class PgCourseStore:
         from app.courses.tutor import answer_course_question
 
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
-            row, release = self._owned(cur, user_id, enrollment_id, lock=True)
+            row, release = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             state = row["state"]
             actions = state.setdefault("chat_actions", {})
             fingerprint = {

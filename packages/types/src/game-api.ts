@@ -8,6 +8,13 @@ export const GameIdSchema = z.enum([
   'ConceptMatch',
   'RetrievalSprint',
   'CodeTrace',
+  'DebuggingDetective',
+  'SQLDetective',
+  'GraphPath',
+  'ProofBuilder',
+  'DataDetective',
+  'AdaptiveQuiz',
+  'ExamEscape',
 ]);
 export type GameId = z.infer<typeof GameIdSchema>;
 export const GameDifficultySchema = z.enum(['easy', 'medium', 'hard']);
@@ -53,7 +60,7 @@ export type GameRewardResponse = z.infer<typeof GameRewardResponseSchema>;
 function hasValidObjectiveScope(value: { game_id: GameId; objective_id?: GameObjective }): boolean {
   return (
     value.objective_id === undefined ||
-    (value.game_id !== 'SortingRace' && value.game_id !== 'NQueens' && value.game_id !== 'TowersOfHanoi')
+    ['FlashcardTowerDefense', 'ConceptMatch', 'RetrievalSprint', 'CodeTrace'].includes(value.game_id)
   );
 }
 
@@ -105,6 +112,28 @@ export const VersionedGameActionSchema = z.discriminatedUnion('type', [
     .strict(),
   z.object({ type: z.literal('undo') }).strict(),
   z.object({ type: z.literal('hint') }).strict(),
+  z
+    .object({
+      type: z.literal('debug'),
+      question_id: z.string().min(1).max(128),
+      line: z.number().int().min(0).max(15),
+      repair: z.number().int().min(0).max(15),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('path'),
+      question_id: z.string().min(1).max(128),
+      node_ids: z.array(z.string().min(1).max(24)).max(12),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('order'),
+      question_id: z.string().min(1).max(128),
+      step_ids: z.array(z.string().min(1).max(24)).min(1).max(12),
+    })
+    .strict(),
 ]);
 export type VersionedGameAction = z.infer<typeof VersionedGameActionSchema>;
 export const OrderedGameActionSchema = z
@@ -116,14 +145,75 @@ export const GameSnapshotSchema = z
   .strict();
 export type GameSnapshot = z.infer<typeof GameSnapshotSchema>;
 
+const GameActivitySchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('debug'),
+      lines: z.array(z.string().max(160)).min(1).max(16),
+      repairs: z.array(z.string().max(240)).min(2).max(16),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('sql'),
+      columns: z.array(z.string().max(60)).min(1).max(8),
+      rows: z.array(z.array(z.string().max(100)).max(8)).max(12),
+      query: z.string().max(1000),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('graph'),
+      nodes: z.array(z.string().min(1).max(24)).min(1).max(12),
+      edges: z.array(z.tuple([z.string().max(24), z.string().max(24)])).max(40),
+      start: z.string().max(24),
+      goal: z.string().max(24),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('proof'),
+      steps: z
+        .array(z.object({ id: z.string().min(1).max(24), text: z.string().max(500) }).strict())
+        .min(1)
+        .max(12),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('data'),
+      columns: z.array(z.string().max(60)).min(1).max(8),
+      rows: z.array(z.array(z.string().max(100)).max(8)).max(12),
+      units: z.string().max(120),
+    })
+    .strict(),
+  z
+    .object({ kind: z.literal('adaptive'), level: GameDifficultySchema, reason: z.string().max(300) })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('escape'),
+      room: z.string().max(100),
+      position: z.number().int().min(1).max(12),
+      total: z.number().int().min(1).max(12),
+    })
+    .strict(),
+]);
+
 export const GamePublicQuestionSchema = z
   .object({
     id: z.string().min(1).max(128),
     prompt: z.string().max(2_000),
     choices: z.array(z.string().max(500)).max(16),
     source: z.object({ label: z.string().max(120), url: z.string().url() }).strict(),
+    activity: GameActivitySchema.optional(),
+    progress: z
+      .object({ current: z.number().int().min(1).max(12), total: z.number().int().min(1).max(12) })
+      .strict()
+      .optional(),
   })
   .strict();
+export type GamePublicQuestion = z.infer<typeof GamePublicQuestionSchema>;
 export const GameFeedbackSchema = z
   .object({
     question_id: z.string().min(1).max(128),

@@ -1,0 +1,5 @@
+{
+  "key": "studyvault:whiteboard:v1",
+  "expected": "ignored-without-owner",
+  "reason": "legacy shared storage key has no trusted account identity"
+}

@@ -19,6 +19,15 @@ logger = logging.getLogger("studyvault.privacy")
 # Tables owned by a user, in dependency order (children first is not needed
 # thanks to ON DELETE CASCADE, but ordering keeps the export readable).
 _OWNED_TABLES = [
+    ("source_versions", ["id", "document_id", "content_hash", "snapshot", "created_at", "updated_at"]),
+    (
+        "bibliography_items",
+        [
+            "id", "kind", "title", "authors", "issued", "container_title", "edition", "volume", "issue",
+            "item_pages", "publisher", "doi", "isbn", "url", "accessed", "repository_commit", "source_document_id",
+            "metadata_provenance", "metadata_suggestions", "revision", "created_at", "updated_at",
+        ],
+    ),
     ("concept_graphs", ["id", "document_id", "revision", "graph", "created_at", "updated_at"]),
     (
         "flashcard_quiz_sessions",

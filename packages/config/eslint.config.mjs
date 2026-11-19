@@ -12,6 +12,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/public/ocr/**',
       '**/public/games/cyberverse/**',
+      // Pinned third-party source distributed solely for license attribution.
+      '**/public/licenses/**',
     ],
   },
   eslint.configs.recommended,

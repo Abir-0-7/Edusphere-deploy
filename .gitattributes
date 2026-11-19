@@ -1,2 +1,6 @@
 apps/web/public/games/cyberverse/** -text -diff
 apps/web/public/games/cyberverse/build-manifest.json text eol=lf diff
+# CSL assets have pinned byte hashes and must not change on Windows checkout.
+apps/web/public/csl/** text eol=lf
+# Preserve upstream notices/source, including original whitespace and final lines.
+apps/web/public/licenses/** text eol=lf -whitespace

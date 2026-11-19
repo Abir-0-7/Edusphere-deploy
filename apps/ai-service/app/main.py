@@ -24,6 +24,8 @@ from app.ai.outline import Outline
 from app.ai.structure import build_outline
 from app.ai.summaries import LEVELS, stream_summary
 from app.auth import TokenVerifier, verifier_from_settings
+from app.bibliography.router import bibliography_router
+from app.bibliography.store import MemoryBibliographyStore, PgBibliographyStore
 from app.concept_graph.router import create_concept_graph_router
 from app.concept_graph.store import MemoryConceptGraphStore, PgConceptGraphStore
 from app.contracts import (
@@ -82,6 +84,8 @@ from app.privacy import PrivacyStore
 from app.rag.chat import answer_question
 from app.rag.embeddings import embedder_from_settings
 from app.settings import get_settings
+from app.source_versions.router import source_version_router
+from app.source_versions.store import MemorySourceVersionStore, PgSourceVersionStore
 from app.study.readiness import ReadinessInputs, breakdown
 from app.study.store import FOCUS_KINDS, InMemoryStudyStore, PgStudyStore
 from app.study.tokens import settle
@@ -340,10 +344,20 @@ async def reject_oversized_bodies(request: Request, call_next: Any) -> Response:
 # existing document store; memory mode keeps local fixtures database-free.
 memory_mode = settings.job_store == "memory"
 learner_profiles = MemoryLearnerStore() if memory_mode else PgLearnerStore(settings.database_url)
-course_store = (
-    MemoryCourseStore(documents)
+source_version_store = (
+    MemorySourceVersionStore(documents, max_versions_per_user=settings.max_source_versions_per_user)
     if memory_mode
-    else PgCourseStore(settings.database_url, max_documents_per_user=settings.max_documents_per_user)
+    else PgSourceVersionStore(settings.database_url, max_versions_per_user=settings.max_source_versions_per_user)
+)
+app.include_router(source_version_router(current_user_id, source_version_store, documents))
+course_store = (
+    MemoryCourseStore(documents, source_versions=source_version_store)
+    if memory_mode
+    else PgCourseStore(
+        settings.database_url,
+        max_documents_per_user=settings.max_documents_per_user,
+        source_versions=source_version_store,
+    )
 )
 if isinstance(course_store, PgCourseStore):
     course_store.ensure_catalog()
@@ -373,6 +387,8 @@ app.include_router(
     )
 )
 app.include_router(profile_router(current_user_id, learner_profiles))
+bibliography_store = MemoryBibliographyStore() if memory_mode else PgBibliographyStore(settings.database_url)
+app.include_router(bibliography_router(current_user_id, bibliography_store, documents))
 track_plan_store = MemoryTrackPlanStore() if memory_mode else PgTrackPlanStore(settings.database_url)
 recommendation_snapshot_store = (
     MemoryRecommendationStore() if memory_mode else PgRecommendationStore(settings.database_url)

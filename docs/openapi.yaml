@@ -3,7 +3,7 @@
   "info": {
     "title": "StudyVault learning and study tools API",
     "version": "0.1.0",
-    "description": "Generated from FastAPI response/request models with python -m scripts.export_openapi. Scope: learner profiles, optional diagnostics, learning JSON, summary/TTS streams, focus, progress, plans, bibliography records and academic tools. Named/data SSE event payloads are documented in x-event-schemas. Health and privacy export remain in the runtime /openapi.json. Requests are authenticated with a Clerk bearer token."
+    "description": "Generated from FastAPI response/request models with python -m scripts.export_openapi. Scope: learner profiles, optional diagnostics, learning JSON, summary/TTS streams, focus, progress, plans, bibliography records, pinned source versions and academic tools. Named/data SSE event payloads are documented in x-event-schemas. Health and privacy export remain in the runtime /openapi.json. Requests are authenticated with a Clerk bearer token."
   },
   "security": [
     {
@@ -11,6 +11,1259 @@
     }
   ],
   "paths": {
+    "/api/bibliography": {
+      "get": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "List Items",
+        "operationId": "list_items_api_bibliography_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibliographyListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "Create Item",
+        "operationId": "create_item_api_bibliography_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BibliographyItemInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibliographyItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bibliography/{item_id}": {
+      "get": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "Get Item",
+        "operationId": "get_item_api_bibliography__item_id__get",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibliographyItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "Update Item",
+        "operationId": "update_item_api_bibliography__item_id__put",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BibliographyItemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibliographyItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "Delete Item",
+        "operationId": "delete_item_api_bibliography__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibliographyDeleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bibliography/library-documents": {
+      "get": {
+        "tags": [
+          "Academic bibliography"
+        ],
+        "summary": "List Library Documents",
+        "operationId": "list_library_documents_api_bibliography_library_documents_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryDocumentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Item revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bibliography storage is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{document_id}/source-versions": {
+      "post": {
+        "tags": [
+          "source-versions"
+        ],
+        "summary": "Snapshot Pdf",
+        "operationId": "snapshot_pdf_api_documents__document_id__source_versions_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PdfSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceVersion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Source version mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/source-versions/{version_id}": {
+      "get": {
+        "tags": [
+          "source-versions"
+        ],
+        "summary": "Get Version",
+        "operationId": "get_version_api_source_versions__version_id__get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceVersion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Source version mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/source-versions/{version_id}/resolve": {
+      "post": {
+        "tags": [
+          "source-versions"
+        ],
+        "summary": "Resolve",
+        "operationId": "resolve_api_source_versions__version_id__resolve_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidencePin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedEvidence"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or not owned by caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AI usage limit reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected service response; clients must also handle non-JSON errors"
+          },
+          "409": {
+            "description": "Source version mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/learner-profile": {
       "get": {
         "tags": [
@@ -6726,6 +7979,736 @@
         ],
         "title": "AttemptResponse"
       },
+      "BibliographyAuthor": {
+        "properties": {
+          "family": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "given": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given"
+          },
+          "literal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Literal"
+          },
+          "suffix": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suffix"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BibliographyAuthor"
+      },
+      "BibliographyDate": {
+        "properties": {
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "month": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "literal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Literal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BibliographyDate"
+      },
+      "BibliographyDeleteResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "deleted": {
+            "type": "boolean",
+            "const": true,
+            "title": "Deleted",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "BibliographyDeleteResponse"
+      },
+      "BibliographyItemInput": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "book",
+              "book_chapter",
+              "journal_article",
+              "website",
+              "repository"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Title",
+            "default": ""
+          },
+          "authors": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyAuthor"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Authors"
+          },
+          "issued": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "container_title": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Container Title",
+            "default": ""
+          },
+          "edition": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Edition",
+            "default": ""
+          },
+          "volume": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Volume",
+            "default": ""
+          },
+          "issue": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Issue",
+            "default": ""
+          },
+          "item_pages": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Item Pages",
+            "default": ""
+          },
+          "publisher": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Publisher",
+            "default": ""
+          },
+          "doi": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Doi",
+            "default": ""
+          },
+          "isbn": {
+            "type": "string",
+            "maxLength": 17,
+            "title": "Isbn",
+            "default": ""
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "default": ""
+          },
+          "accessed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repository_commit": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Repository Commit",
+            "default": ""
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "metadata_provenance": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyProvenance"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Provenance"
+          },
+          "metadata_suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyMetadataSuggestion"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Suggestions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "BibliographyItemInput"
+      },
+      "BibliographyItemResponse": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "book",
+              "book_chapter",
+              "journal_article",
+              "website",
+              "repository"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Title",
+            "default": ""
+          },
+          "authors": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyAuthor"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Authors"
+          },
+          "issued": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "container_title": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Container Title",
+            "default": ""
+          },
+          "edition": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Edition",
+            "default": ""
+          },
+          "volume": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Volume",
+            "default": ""
+          },
+          "issue": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Issue",
+            "default": ""
+          },
+          "item_pages": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Item Pages",
+            "default": ""
+          },
+          "publisher": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Publisher",
+            "default": ""
+          },
+          "doi": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Doi",
+            "default": ""
+          },
+          "isbn": {
+            "type": "string",
+            "maxLength": 17,
+            "title": "Isbn",
+            "default": ""
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "default": ""
+          },
+          "accessed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repository_commit": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Repository Commit",
+            "default": ""
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "metadata_provenance": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyProvenance"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Provenance"
+          },
+          "metadata_suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyMetadataSuggestion"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Suggestions"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BibliographyItemResponse"
+      },
+      "BibliographyItemUpdate": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "book",
+              "book_chapter",
+              "journal_article",
+              "website",
+              "repository"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Title",
+            "default": ""
+          },
+          "authors": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyAuthor"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Authors"
+          },
+          "issued": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "container_title": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Container Title",
+            "default": ""
+          },
+          "edition": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Edition",
+            "default": ""
+          },
+          "volume": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Volume",
+            "default": ""
+          },
+          "issue": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Issue",
+            "default": ""
+          },
+          "item_pages": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Item Pages",
+            "default": ""
+          },
+          "publisher": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Publisher",
+            "default": ""
+          },
+          "doi": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Doi",
+            "default": ""
+          },
+          "isbn": {
+            "type": "string",
+            "maxLength": 17,
+            "title": "Isbn",
+            "default": ""
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "default": ""
+          },
+          "accessed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BibliographyDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repository_commit": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Repository Commit",
+            "default": ""
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "metadata_provenance": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyProvenance"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Provenance"
+          },
+          "metadata_suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyMetadataSuggestion"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Metadata Suggestions"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "expected_revision"
+        ],
+        "title": "BibliographyItemUpdate"
+      },
+      "BibliographyListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BibliographyItemResponse"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Items"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total_count"
+        ],
+        "title": "BibliographyListResponse"
+      },
+      "BibliographyMetadataSuggestion": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "title",
+              "authors",
+              "issued",
+              "container_title",
+              "edition",
+              "volume",
+              "issue",
+              "item_pages",
+              "publisher",
+              "doi",
+              "url",
+              "accessed",
+              "repository_commit",
+              "isbn"
+            ],
+            "title": "Field"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "bibtex",
+              "ris",
+              "csl_json",
+              "doi",
+              "url",
+              "isbn"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "value",
+          "source"
+        ],
+        "title": "BibliographyMetadataSuggestion"
+      },
+      "BibliographyProvenance": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "title",
+              "authors",
+              "issued",
+              "container_title",
+              "edition",
+              "volume",
+              "issue",
+              "item_pages",
+              "publisher",
+              "doi",
+              "url",
+              "accessed",
+              "repository_commit",
+              "isbn"
+            ],
+            "title": "Field"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "bibtex",
+              "ris",
+              "csl_json",
+              "doi",
+              "url",
+              "isbn"
+            ],
+            "title": "Source"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "source",
+          "confirmed"
+        ],
+        "title": "BibliographyProvenance"
+      },
       "BlockedRecommendation": {
         "properties": {
           "course_slug": {
@@ -8221,6 +10204,16 @@
             "type": "string",
             "minLength": 1,
             "title": "Quote"
+          },
+          "source_pin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencePin"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -8232,6 +10225,60 @@
           "quote"
         ],
         "title": "Evidence"
+      },
+      "EvidencePin": {
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Version Id"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash"
+          },
+          "segment_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Segment Id"
+          },
+          "locator": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PdfLocator"
+              },
+              {
+                "$ref": "#/components/schemas/GithubLocator"
+              }
+            ],
+            "title": "Locator",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "github": "#/components/schemas/GithubLocator",
+                "pdf": "#/components/schemas/PdfLocator"
+              }
+            }
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Quote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version_id",
+          "content_hash",
+          "segment_id",
+          "locator",
+          "quote"
+        ],
+        "title": "EvidencePin"
       },
       "Exercise": {
         "properties": {
@@ -8710,6 +10757,122 @@
           "count"
         ],
         "title": "GenerationSettings"
+      },
+      "GithubFileProvenance": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Path"
+          },
+          "git_blob_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$",
+            "title": "Git Blob Sha"
+          },
+          "raw_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Raw Sha256"
+          },
+          "byte_count": {
+            "type": "integer",
+            "maximum": 262144.0,
+            "minimum": 1.0,
+            "title": "Byte Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "git_blob_sha",
+          "raw_sha256",
+          "byte_count"
+        ],
+        "title": "GithubFileProvenance"
+      },
+      "GithubLocator": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "github",
+            "title": "Kind",
+            "default": "github"
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Path"
+          },
+          "start_line": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Start Line"
+          },
+          "end_line": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "End Line"
+          },
+          "notebook_cell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotebookCellLocator"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "start_line",
+          "end_line"
+        ],
+        "title": "GithubLocator"
+      },
+      "GithubOrigin": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "github",
+            "title": "Kind",
+            "default": "github"
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$",
+            "title": "Owner"
+          },
+          "repository": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Repository"
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$",
+            "title": "Commit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner",
+          "repository",
+          "commit"
+        ],
+        "title": "GithubOrigin"
       },
       "HTTPValidationError": {
         "properties": {
@@ -9498,6 +11661,65 @@
         ],
         "title": "LessonView"
       },
+      "LibraryDocumentListResponse": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryDocumentResponse"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Documents"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documents",
+          "limit",
+          "offset",
+          "total_count"
+        ],
+        "title": "LibraryDocumentListResponse"
+      },
+      "LibraryDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "LibraryDocumentResponse"
+      },
       "MaterialEvidence": {
         "properties": {
           "id": {
@@ -9519,6 +11741,16 @@
             "type": "string",
             "minLength": 1,
             "title": "Quote"
+          },
+          "source_pin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencePin"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "document_id": {
             "type": "string",
@@ -9646,6 +11878,31 @@
           "lesson_ids"
         ],
         "title": "Module"
+      },
+      "NotebookCellLocator": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "maximum": 255.0,
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "cell_type": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "code"
+            ],
+            "title": "Cell Type"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "cell_type"
+        ],
+        "title": "NotebookCellLocator"
       },
       "Objective": {
         "properties": {
@@ -9838,6 +12095,169 @@
         ],
         "title": "ObjectiveMastery"
       },
+      "PdfLocator": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "pdf",
+            "title": "Kind",
+            "default": "pdf"
+          },
+          "pdf_page_index": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Pdf Page Index"
+          },
+          "printed_page_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printed Page Label"
+          },
+          "chunk_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chunk Id"
+          },
+          "chapter_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pdf_page_index",
+          "chunk_id"
+        ],
+        "title": "PdfLocator"
+      },
+      "PdfOrigin": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "pdf",
+            "title": "Kind",
+            "default": "pdf"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Id"
+          },
+          "page_count": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Page Count"
+          },
+          "book_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book Title"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document_id",
+          "page_count"
+        ],
+        "title": "PdfOrigin"
+      },
+      "PdfSnapshotRequest": {
+        "properties": {
+          "book_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book Title"
+          },
+          "edition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition"
+          },
+          "printed_page_labels": {
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 1
+            },
+            "type": "object",
+            "maxProperties": 2000,
+            "title": "Printed Page Labels"
+          },
+          "rights_statement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rights Statement"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PdfSnapshotRequest"
+      },
       "PinnedRelease": {
         "properties": {
           "enrollment_id": {
@@ -9867,6 +12287,81 @@
           "release_id"
         ],
         "title": "PinnedRelease"
+      },
+      "Provenance": {
+        "properties": {
+          "adapter": {
+            "type": "string",
+            "enum": [
+              "legacy_pdf_chunks",
+              "github_selected_text"
+            ],
+            "title": "Adapter"
+          },
+          "parser_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parser Name"
+          },
+          "parser_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parser Version"
+          },
+          "original_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Sha256"
+          },
+          "rights": {
+            "$ref": "#/components/schemas/Rights"
+          },
+          "repository_files": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GithubFileProvenance"
+                },
+                "type": "array",
+                "maxItems": 16,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository Files"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "adapter"
+        ],
+        "title": "Provenance"
       },
       "QuizAnswer": {
         "properties": {
@@ -10340,6 +12835,80 @@
         ],
         "title": "ReplaceCard"
       },
+      "ResolvedEvidence": {
+        "properties": {
+          "pin": {
+            "$ref": "#/components/schemas/EvidencePin"
+          },
+          "source_title": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source Title"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 16000,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "canonical_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Url"
+          },
+          "source_version_url": {
+            "type": "string",
+            "title": "Source Version Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pin",
+          "source_title",
+          "content",
+          "canonical_url",
+          "source_version_url"
+        ],
+        "title": "ResolvedEvidence"
+      },
+      "Rights": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "user_declared",
+              "public_license"
+            ],
+            "title": "Status",
+            "default": "unknown"
+          },
+          "statement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Rights"
+      },
       "SavedTrackPlan": {
         "properties": {
           "revision": {
@@ -10586,6 +13155,140 @@
           "last_action"
         ],
         "title": "SessionResponse"
+      },
+      "SourceSegment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Id"
+          },
+          "locator": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PdfLocator"
+              },
+              {
+                "$ref": "#/components/schemas/GithubLocator"
+              }
+            ],
+            "title": "Locator",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "github": "#/components/schemas/GithubLocator",
+                "pdf": "#/components/schemas/PdfLocator"
+              }
+            }
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 16000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Text Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "locator",
+          "text",
+          "text_sha256"
+        ],
+        "title": "SourceSegment"
+      },
+      "SourceSnapshot": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "origin": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PdfOrigin"
+              },
+              {
+                "$ref": "#/components/schemas/GithubOrigin"
+              }
+            ],
+            "title": "Origin",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "github": "#/components/schemas/GithubOrigin",
+                "pdf": "#/components/schemas/PdfOrigin"
+              }
+            }
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSegment"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "origin",
+          "provenance",
+          "segments"
+        ],
+        "title": "SourceSnapshot"
+      },
+      "SourceVersion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SourceSnapshot"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "content_hash",
+          "snapshot",
+          "created_at"
+        ],
+        "title": "SourceVersion"
       },
       "StudyNotesRequest": {
         "properties": {
