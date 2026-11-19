@@ -53,6 +53,23 @@ def test_timeout_fails_over() -> None:
 
 
 @respx.mock
+def test_configured_huggingface_fallback_runs_only_after_primary_and_groq_fail() -> None:
+    primary = Provider("logfare:model-a", "https://a.test/v1", "model-a", "a-key")
+    groq = Provider("groq", "https://b.test/v1", "model-b", "b-key")
+    huggingface = Provider("huggingface", "https://hf.test/v1", "org/model", "hf-key")
+    primary_route = respx.post("https://a.test/v1/chat/completions").mock(return_value=httpx.Response(503))
+    groq_route = respx.post("https://b.test/v1/chat/completions").mock(return_value=httpx.Response(429))
+    hf_route = respx.post("https://hf.test/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json=OK_BODY)
+    )
+
+    router = make_router([primary, groq, huggingface])
+
+    assert router.complete(MSGS) == "hello"
+    assert primary_route.call_count == groq_route.call_count == hf_route.call_count == 1
+
+
+@respx.mock
 def test_retries_then_fails_over_on_5xx() -> None:
     a = Provider("primary", "https://a.test/v1", "m-a", None)
     b = Provider("groq", "https://b.test/v1", "m-b", None)

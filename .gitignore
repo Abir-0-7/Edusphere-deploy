@@ -15,6 +15,8 @@ coverage/
 .husky/_/
 *.tsbuildinfo
 test-results/
+.playwright-tmp/
+.phase8ab-postgres/
 playwright-report/
 *.log
 ci-logs.zip

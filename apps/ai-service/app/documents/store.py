@@ -5,12 +5,112 @@ In-memory until the Postgres store lands (needs task 1.7 migrations verified);
 every read is scoped by user_id, matching the privacy rule.
 """
 
+import hashlib
+import json
 import threading
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Literal
 
+from app.errors import InvalidInput, NotFound
+
 DocumentStatus = Literal["pending", "parsed", "failed"]
+
+
+def _review_now(now: datetime | None) -> datetime:
+    value = now or datetime.now(UTC)
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise InvalidInput("review timestamp must include a timezone")
+    return value.astimezone(UTC)
+
+
+def _review_key(review_id: str | None) -> str:
+    if review_id is None:
+        return str(uuid.uuid4())
+    try:
+        return str(uuid.UUID(review_id))
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise InvalidInput("review_id must be a UUID") from exc
+
+
+def _review_schedule(card: dict, grade: int, now: datetime) -> dict:
+    from app.ai.sm2 import Sm2State, due_date, review
+
+    state = review(Sm2State(float(card["ease_factor"]), int(card["interval_days"]), int(card["repetitions"])), grade)
+    return {
+        "id": str(card["id"]),
+        "ease_factor": state.ease_factor,
+        "interval_days": state.interval_days,
+        "repetitions": state.repetitions,
+        "due_date": due_date(now.date(), state.interval_days),
+        "replayed": False,
+    }
+
+
+def _source_revision(document_id: str, chapter_id: str, chunk_id: str, source_text: str, quote: str) -> str:
+    payload = json.dumps(
+        [document_id, chapter_id, chunk_id, source_text, quote], ensure_ascii=False, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _bounded_page(limit: int, offset: int, max_page_size: int) -> tuple[int, int]:
+    if type(limit) is not int or limit < 1:
+        raise InvalidInput("page limit must be a positive integer")
+    if type(offset) is not int or offset < 0:
+        raise InvalidInput("page offset must be a non-negative integer")
+    return min(limit, max_page_size), offset
+
+
+def _validated_cards(cards: list[dict], document: "DocumentRecord") -> list[dict]:
+    chapters = {
+        chapter.id
+        for chapter in document.chapters
+        if chapter.document_id == document.id and chapter.user_id == document.user_id
+    }
+    chunks = {
+        chunk.id: chunk
+        for chunk in document.chunks
+        if chunk.document_id == document.id and chunk.user_id == document.user_id
+    }
+    result: list[dict] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for card in cards:
+        if not isinstance(card, dict) or not isinstance(card.get("id"), str) or not card["id"]:
+            raise InvalidInput("generated card requires a stable id")
+        chapter_id, chunk_id = card.get("chapter_id"), card.get("source_chunk_id")
+        chunk = chunks.get(chunk_id) if isinstance(chunk_id, str) else None
+        if chapter_id not in chapters or chunk is None or chunk.chapter_id != chapter_id or not chunk.content.strip():
+            raise InvalidInput("generated card source does not belong to this document and chapter")
+        front, back = card.get("front"), card.get("back")
+        if not isinstance(front, str) or not front.strip() or not isinstance(back, str) or not back.strip():
+            raise InvalidInput("generated card question and answer cannot be empty")
+        quote = card.get("source_quote")
+        if quote is None:
+            quote = chunk.content[:1600]
+        if not isinstance(quote, str) or not quote.strip() or quote not in chunk.content:
+            raise InvalidInput("generated card quote is not present in its source")
+        revision = _source_revision(document.id, chapter_id, chunk_id, chunk.content, quote)
+        provided_revision = card.get("source_revision")
+        if provided_revision is not None and provided_revision != revision:
+            raise InvalidInput("generated card source revision does not match its evidence")
+        fingerprint = (chapter_id, chunk_id, " ".join(front.split()), " ".join(back.split()))
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        result.append(
+            {
+                "id": card["id"],
+                "chapter_id": chapter_id,
+                "source_chunk_id": chunk_id,
+                "source_quote": quote,
+                "source_revision": revision,
+                "front": front.strip(),
+                "back": back.strip(),
+            }
+        )
+    return result
 
 
 @dataclass
@@ -51,14 +151,37 @@ class DocumentRecord:
 
 
 class InMemoryDocumentStore:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        max_documents_per_user: int = 100,
+        max_chunks_per_document: int = 5000,
+        max_flashcards_per_deck: int = 2000,
+        max_embedding_batch: int = 500,
+        max_page_size: int = 100,
+    ) -> None:
+        limits = (
+            max_documents_per_user,
+            max_chunks_per_document,
+            max_flashcards_per_deck,
+            max_embedding_batch,
+            max_page_size,
+        )
+        if any(type(limit) is not int or limit <= 0 for limit in limits):
+            raise ValueError("document, batch, and page limits must be positive integers")
         self._docs: dict[str, DocumentRecord] = {}
+        self._max_documents_per_user = max_documents_per_user
+        self._max_chunks_per_document = max_chunks_per_document
+        self._max_flashcards_per_deck = max_flashcards_per_deck
+        self._max_embedding_batch = max_embedding_batch
+        self._max_page_size = max_page_size
         self._lock = threading.Lock()
         self._summaries: dict[tuple[str, str], dict[str, object]] = {}
         self._embedded: dict[str, list[float]] = {}
         self._flashcards: dict[tuple[str, str], list[dict]] = {}
         self._reviews: list[dict] = []
         self._review_ids: set[str] = set()
+        self._review_results: dict[tuple[str, str], tuple[str, int, dict]] = {}
         self._source_bytes: dict[str, bytes] = {}
         self._plans: dict[str, dict] = {}
 
@@ -69,6 +192,8 @@ class InMemoryDocumentStore:
             id=str(uuid.uuid4()), user_id=user_id, filename=filename, mime_type=mime_type, size_bytes=size_bytes
         )
         with self._lock:
+            if sum(item.user_id == user_id for item in self._docs.values()) >= self._max_documents_per_user:
+                raise InvalidInput("document limit reached for this account")
             self._docs[doc.id] = doc
             if source_bytes is not None:
                 self._source_bytes[doc.id] = source_bytes
@@ -77,6 +202,12 @@ class InMemoryDocumentStore:
     def take_source_bytes(self, document_id: str) -> bytes | None:
         with self._lock:
             return self._source_bytes.pop(document_id, None)
+
+    def read_source_bytes(self, document_id: str, user_id: str) -> bytes | None:
+        """Keep original bytes until parsed text has committed successfully."""
+        with self._lock:
+            doc = self._docs.get(document_id)
+            return self._source_bytes.get(document_id) if doc is not None and doc.user_id == user_id else None
 
     def get_for_user(self, document_id: str, user_id: str) -> DocumentRecord | None:
         doc = self._docs.get(document_id)
@@ -90,16 +221,17 @@ class InMemoryDocumentStore:
         with self._lock:
             doc = self._docs[document_id]
             doc.markdown, doc.page_count, doc.status, doc.error_reason = markdown, page_count, "parsed", None
+            self._source_bytes.pop(document_id, None)
 
     def mark_failed(self, document_id: str, reason: str) -> None:
         with self._lock:
             doc = self._docs[document_id]
             doc.status, doc.error_reason = "failed", reason
 
-    def replace_structure(
-        self, document_id: str, chapters: list[ChapterRecord], chunks: list[ChunkRecord]
-    ) -> None:
+    def replace_structure(self, document_id: str, chapters: list[ChapterRecord], chunks: list[ChunkRecord]) -> None:
         """Idempotent: a retried structure job overwrites, never duplicates."""
+        if len(chunks) > self._max_chunks_per_document:
+            raise InvalidInput("document chunk limit reached")
         with self._lock:
             doc = self._docs[document_id]
             doc.chapters, doc.chunks = chapters, chunks
@@ -132,8 +264,10 @@ class InMemoryDocumentStore:
         return None
 
     def chunks_missing_embeddings(self, document_id: str, limit: int = 500) -> list[ChunkRecord]:
+        if type(limit) is not int or limit < 1:
+            raise InvalidInput("embedding batch size must be a positive integer")
         doc = self._docs[document_id]
-        return [c for c in doc.chunks if c.id not in self._embedded][:limit]
+        return [c for c in doc.chunks if c.id not in self._embedded][: min(limit, self._max_embedding_batch)]
 
     def set_embedding(self, chunk_id: str, embedding: list[float]) -> None:
         self._embedded[chunk_id] = embedding
@@ -143,25 +277,69 @@ class InMemoryDocumentStore:
         self._flashcards.pop((document_id, user_id), None)
 
     def add_flashcards(self, cards: list[dict], *, document_id: str, user_id: str, due_date: str) -> int:
-        rows = [
-            {
-                "ease_factor": 2.5,
-                "interval_days": 0,
-                "repetitions": 0,
-                **c,
-                "due_date": due_date,
-                "document_id": document_id,
-                "user_id": user_id,
+        with self._lock:
+            doc = self._docs.get(document_id)
+            if doc is None or doc.user_id != user_id:
+                raise NotFound("document not found")
+            drafts = _validated_cards(cards, doc)
+            existing = self._flashcards.get((document_id, user_id), [])
+            by_id = {card["id"]: card for values in self._flashcards.values() for card in values}
+            by_fingerprint = {
+                (
+                    card["chapter_id"],
+                    card["source_chunk_id"],
+                    " ".join(card["front"].split()),
+                    " ".join(card["back"].split()),
+                )
+                for card in existing
             }
-            for c in cards
-        ]
-        self._flashcards.setdefault((document_id, user_id), []).extend(rows)
-        return len(rows)
+            rows = []
+            for draft in drafts:
+                identity = (
+                    draft["chapter_id"],
+                    draft["source_chunk_id"],
+                    " ".join(draft["front"].split()),
+                    " ".join(draft["back"].split()),
+                )
+                existing_by_id = by_id.get(draft["id"])
+                if existing_by_id is not None:
+                    if existing_by_id.get("source_revision") == draft["source_revision"] and identity in by_fingerprint:
+                        continue
+                    raise InvalidInput("generated card id is already in use")
+                if identity in by_fingerprint:
+                    continue
+                rows.append(
+                    {
+                        "ease_factor": 2.5,
+                        "interval_days": 0,
+                        "repetitions": 0,
+                        **draft,
+                        "due_date": due_date,
+                        "document_id": document_id,
+                        "user_id": user_id,
+                    }
+                )
+                by_fingerprint.add(identity)
+                by_id[draft["id"]] = rows[-1]
+            if len(existing) + len(rows) > self._max_flashcards_per_deck:
+                raise InvalidInput("flashcard deck limit reached for this account and document")
+            self._flashcards.setdefault((document_id, user_id), []).extend(rows)
+            return len(rows)
 
-    def list_flashcards(self, document_id: str, user_id: str) -> list[dict]:
-        return self._flashcards.get((document_id, user_id), [])
+    def list_flashcards(self, document_id: str, user_id: str, *, limit: int = 100, offset: int = 0) -> list[dict]:
+        limit, offset = _bounded_page(limit, offset, self._max_page_size)
+        cards = sorted(
+            self._flashcards.get((document_id, user_id), []), key=lambda card: (card["due_date"], card["id"])
+        )
+        return cards[offset : offset + limit]
 
-    def due_flashcards(self, user_id: str, today: str) -> list[dict]:
+    def merge_flashcards(self, cards: list[dict], *, document_id: str, user_id: str, due_date: str) -> int:
+        """Additive, idempotent publication preserves every old card and review schedule."""
+        self.add_flashcards(cards, document_id=document_id, user_id=user_id, due_date=due_date)
+        return len(self._flashcards.get((document_id, user_id), []))
+
+    def due_flashcards(self, user_id: str, today: str, *, limit: int = 100, offset: int = 0) -> list[dict]:
+        limit, offset = _bounded_page(limit, offset, self._max_page_size)
         out = [
             c
             for (_doc_id, uid), cards in self._flashcards.items()
@@ -169,7 +347,7 @@ class InMemoryDocumentStore:
             for c in cards
             if c["due_date"] <= today
         ]
-        return sorted(out, key=lambda c: c["due_date"])
+        return sorted(out, key=lambda c: (c["due_date"], c["id"]))[offset : offset + limit]
 
     def get_flashcard_for_user(self, card_id: str, user_id: str) -> dict | None:
         for (_doc_id, uid), cards in self._flashcards.items():
@@ -188,11 +366,104 @@ class InMemoryDocumentStore:
 
     def add_review(self, *, card_id: str, user_id: str, grade: int, client_review_id: str | None = None) -> bool:
         if client_review_id is not None:
-            if client_review_id in self._review_ids:
+            key = _review_key(client_review_id)
+            if key in self._review_ids:
                 return False
-            self._review_ids.add(client_review_id)
-        self._reviews.append({"flashcard_id": card_id, "user_id": user_id, "grade": grade})
+            self._review_ids.add(key)
+        else:
+            key = None
+        self._reviews.append({"flashcard_id": card_id, "user_id": user_id, "grade": grade, "client_review_id": key})
         return True
+
+    def atomic_review(
+        self, *, card_id: str, user_id: str, grade: int, review_id: str | None = None, now: datetime | None = None
+    ) -> dict:
+        if type(grade) is not int or not 0 <= grade <= 5:
+            raise InvalidInput("grade must be an integer from 0 to 5")
+        key, timestamp = _review_key(review_id), _review_now(now)
+        with self._lock:
+            card = self.get_flashcard_for_user(card_id, user_id)
+            if card is None:
+                raise NotFound("flashcard not found")
+            saved = self._review_results.get((user_id, key))
+            if saved is not None:
+                saved_card, saved_grade, result = saved
+                if saved_card != card_id or saved_grade != grade:
+                    raise InvalidInput("review_id was already used for another review")
+                return {**result, "replayed": True}
+            if key in self._review_ids:
+                prior = next(
+                    (row for row in self._reviews if row.get("client_review_id") == key and row["user_id"] == user_id),
+                    None,
+                )
+                if prior is None or prior["flashcard_id"] != card_id or prior["grade"] != grade:
+                    raise InvalidInput("review_id is already in use; refresh the review queue")
+                result = {
+                    "id": card_id,
+                    "ease_factor": card["ease_factor"],
+                    "interval_days": card["interval_days"],
+                    "repetitions": card["repetitions"],
+                    "due_date": card["due_date"],
+                    "replayed": False,
+                }
+                self._review_results[(user_id, key)] = (card_id, grade, result)
+                prior["result"] = result
+                return {**result, "replayed": True}
+            result = _review_schedule(card, grade, timestamp)
+            card.update({name: result[name] for name in ("ease_factor", "interval_days", "repetitions", "due_date")})
+            self._review_ids.add(key)
+            self._reviews.append(
+                {
+                    "flashcard_id": card_id,
+                    "user_id": user_id,
+                    "grade": grade,
+                    "client_review_id": key,
+                    "result": dict(result),
+                }
+            )
+            self._review_results[(user_id, key)] = (card_id, grade, dict(result))
+            return result
+
+    def get_flashcard_source_for_user(self, card_id: str, user_id: str) -> dict | None:
+        card = self.get_flashcard_for_user(card_id, user_id)
+        if card is None:
+            return None
+        document = self.get_for_user(str(card.get("document_id", "")), user_id)
+        if document is None:
+            return None
+        chunk = next(
+            (
+                item
+                for item in document.chunks
+                if item.id == card.get("source_chunk_id")
+                and item.chapter_id == card.get("chapter_id")
+                and item.user_id == user_id
+            ),
+            None,
+        )
+        quote = card.get("source_quote")
+        if (
+            chunk is None
+            or not isinstance(quote, str)
+            or not quote.strip()
+            or quote not in chunk.content
+            or card.get("source_revision")
+            != _source_revision(
+                document.id, str(card["chapter_id"]), str(card["source_chunk_id"]), chunk.content, quote
+            )
+        ):
+            return None
+        return {
+            "card_id": card_id,
+            "document_id": document.id,
+            "chapter_id": chunk.chapter_id,
+            "source_chunk_id": chunk.id,
+            "front": card["front"],
+            "back": card["back"],
+            "source_text": chunk.content[:4000],
+            "source_quote": quote,
+            "page": chunk.page,
+        }
 
     def get_chapter(self, chapter_id: str) -> ChapterRecord | None:
         for doc in self._docs.values():

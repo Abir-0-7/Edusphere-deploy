@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, Request, UploadFile
+from fastapi import Depends, FastAPI, Header, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -22,12 +22,28 @@ from app.ai.outline import Outline
 from app.ai.structure import build_outline
 from app.ai.summaries import LEVELS, stream_summary
 from app.auth import TokenVerifier, verifier_from_settings
+from app.courses.router import create_course_router
+from app.courses.store import MemoryCourseStore, PgCourseStore
+from app.courses.tutor import answer_with_router, stream_answer_with_router
 from app.documents.pg_store import PgDocumentStore
 from app.documents.store import InMemoryDocumentStore
 from app.errors import ApiError, InvalidInput, NotFound, TooLarge, Unauthorized, api_error_handler, error_body
 from app.jobs.postgres_store import PgJobStore
 from app.jobs.worker import InMemoryJobStore, Job, JobStore, Worker
+from app.llm.admission import (
+    AdmissionGuard,
+    MemoryDailyQuota,
+    MemoryMinuteLimiter,
+    PgDailyQuota,
+    PgMinuteLimiter,
+    ai_scope,
+)
+from app.llm.budgets import MemoryBudgetStore, PgBudgetStore
+from app.llm.cache_scope import PrivateResponseCache
+from app.llm.operations import MemoryOperations, PgOperations, operation_scope
+from app.llm.response_cache import MemoryResponseCache, PgResponseCache
 from app.llm.router import router_from_settings
+from app.llm.usage_ledger import MemoryUsageLedger, PgUsageLedger
 from app.logging_config import configure_logging
 from app.parsing.pages import Page
 from app.parsing.pdf import TesseractOcrBackend, validate_pdf
@@ -70,7 +86,10 @@ configure_logging(settings.log_level)
 verifier: TokenVerifier = verifier_from_settings(settings)
 
 
-async def current_user_id(authorization: Annotated[str | None, Header()] = None) -> str:
+async def current_user_id(
+    authorization: Annotated[str | None, Header()] = None,
+    idempotency_key: Annotated[str | None, Header()] = None,
+) -> AsyncIterator[str]:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise Unauthorized()
     token = authorization.split(" ", 1)[1].strip()
@@ -80,9 +99,17 @@ async def current_user_id(authorization: Annotated[str | None, Header()] = None)
     # Postgres rows are scoped by the internal users.id (uuid); the Clerk `sub`
     # is a string, so resolve it once per request. In-memory (dev/test) stores
     # keep the raw subject.
-    if isinstance(documents, PgDocumentStore):
-        return documents.resolve_user(subject)
-    return subject
+    try:
+        user_id = documents.resolve_user(subject) if isinstance(documents, PgDocumentStore) else subject
+    except Exception as exc:  # noqa: BLE001 - identity resolution must fail closed
+        raise ApiError("Identity storage is temporarily unavailable", status_code=503) from exc
+    if idempotency_key is not None:
+        try:
+            uuid.UUID(idempotency_key)
+        except ValueError as exc:
+            raise InvalidInput("Idempotency-Key must be a UUID") from exc
+    with ai_scope(user_id), operation_scope(idempotency_key or str(uuid.uuid4())):
+        yield user_id
 
 
 # --- Stores ------------------------------------------------------------------
@@ -93,13 +120,7 @@ async def current_user_id(authorization: Annotated[str | None, Header()] = None)
 def _job_store() -> JobStore:
     if settings.job_store == "memory":
         return InMemoryJobStore()
-    try:
-        return PgJobStore(settings.database_url)
-    except Exception:  # noqa: BLE001 - fall back to in-memory if DB is unreachable at boot
-        if settings.job_store == "postgres":
-            raise
-        logger.warning("postgres job store unavailable; falling back to in-memory", exc_info=True)
-        return InMemoryJobStore()
+    return PgJobStore(settings.database_url)
 
 
 job_store: JobStore = _job_store()
@@ -109,12 +130,21 @@ embedder = embedder_from_settings(settings)
 def _document_store():
     # Postgres in production; in-memory for dev/tests (set AI_SERVICE_JOB_STORE=memory).
     if settings.job_store == "memory":
-        return InMemoryDocumentStore()
-    try:
-        return PgDocumentStore(settings.database_url)
-    except Exception:  # noqa: BLE001
-        logger.warning("postgres document store unavailable; using in-memory", exc_info=True)
-        return InMemoryDocumentStore()
+        return InMemoryDocumentStore(
+            max_documents_per_user=settings.max_documents_per_user,
+            max_chunks_per_document=settings.max_chunks_per_document,
+            max_flashcards_per_deck=settings.max_flashcards_per_deck,
+            max_embedding_batch=settings.max_embedding_batch,
+            max_page_size=settings.max_page_size,
+        )
+    return PgDocumentStore(
+        settings.database_url,
+        max_documents_per_user=settings.max_documents_per_user,
+        max_chunks_per_document=settings.max_chunks_per_document,
+        max_flashcards_per_deck=settings.max_flashcards_per_deck,
+        max_embedding_batch=settings.max_embedding_batch,
+        max_page_size=settings.max_page_size,
+    )
 
 
 documents = _document_store()
@@ -136,17 +166,40 @@ def _ocr_backend() -> TesseractOcrBackend | None:
     return backend
 
 
-llm_router = router_from_settings(settings)
+ai_admission = AdmissionGuard(
+    MemoryDailyQuota() if settings.job_store == "memory" else PgDailyQuota(settings.database_url),
+    MemoryMinuteLimiter(settings.ai_rate_limit_per_min)
+    if settings.job_store == "memory"
+    else PgMinuteLimiter(settings.database_url),
+    settings.ai_daily_limit,
+    minute_limit=settings.ai_rate_limit_per_min,
+)
+response_cache_store = (
+    MemoryResponseCache(
+        max_content_chars=settings.llm_cache_max_content_chars,
+        max_entries_per_user=settings.llm_cache_max_entries_per_user,
+    )
+    if settings.job_store == "memory"
+    else PgResponseCache(
+        settings.database_url,
+        max_content_chars=settings.llm_cache_max_content_chars,
+        max_entries_per_user=settings.llm_cache_max_entries_per_user,
+    )
+) if settings.llm_cache_enabled else None
+llm_router = router_from_settings(
+    settings,
+    admission=ai_admission,
+    usage_ledger=MemoryUsageLedger() if settings.job_store == "memory" else PgUsageLedger(settings.database_url),
+    operations=MemoryOperations() if settings.job_store == "memory" else PgOperations(settings.database_url),
+    budget_store=MemoryBudgetStore() if settings.job_store == "memory" else PgBudgetStore(settings.database_url),
+    cache=PrivateResponseCache(response_cache_store, settings.llm_cache_ttl_seconds) if response_cache_store else None,
+)
 
 
 def _study_store():
     if settings.job_store == "memory":
         return InMemoryStudyStore()
-    try:
-        return PgStudyStore(settings.database_url)
-    except Exception:  # noqa: BLE001
-        logger.warning("postgres study store unavailable; using in-memory", exc_info=True)
-        return InMemoryStudyStore()
+    return PgStudyStore(settings.database_url)
 
 
 study = _study_store()
@@ -166,7 +219,7 @@ worker = Worker(
     job_store,
     handlers={
         "parse_pdf": make_parse_handler(
-            docs=documents, enqueue=enqueue, ocr=_ocr_backend(), max_pages=settings.max_pages
+            docs=documents, enqueue=enqueue, ocr=_ocr_backend(), max_pages=settings.max_pages, job_store=job_store
         ),
         "structure_chapters": make_structure_handler(
             docs=documents,
@@ -175,8 +228,10 @@ worker = Worker(
             chunk_overlap_chars=settings.chunk_overlap_chars,
             enqueue=enqueue,
         ),
-        "embed_chunks": make_embed_handler(docs=documents, embedder=embedder),
-        "generate_flashcards": make_flashcard_handler(docs=documents, router=llm_router),
+        "embed_chunks": make_embed_handler(
+            docs=documents, embedder=embedder, batch_size=settings.max_embedding_batch
+        ),
+        "generate_flashcards": make_flashcard_handler(docs=documents, router=llm_router, job_store=job_store),
     },
 )
 
@@ -194,7 +249,9 @@ async def _worker_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    global _worker_task
     task = asyncio.create_task(_worker_loop()) if settings.worker_enabled else None
+    _worker_task = task
     try:
         yield
     finally:
@@ -202,6 +259,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        _worker_task = None
 
 
 app = FastAPI(title="EduSphere AI Service", version="0.1.0", lifespan=lifespan)
@@ -209,8 +267,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list(),
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+    expose_headers=["Retry-After"],
     max_age=600,
 )
 app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
@@ -237,12 +296,74 @@ async def reject_oversized_bodies(request: Request, call_next: Any) -> Response:
     return response
 
 
+# Pre-authored mini courses are available without learner-created documents.
+course_store = (
+    MemoryCourseStore(documents)
+    if settings.job_store == "memory"
+    else PgCourseStore(settings.database_url, max_documents_per_user=settings.max_documents_per_user)
+)
+if isinstance(course_store, PgCourseStore):
+    course_store.ensure_catalog()
+
+
+def _course_tutor_answer(user_id: str, session: Any, question: str) -> Any:
+    source = documents.get_for_user(str(session.document_id), user_id)
+    if source is None:
+        raise NotFound("learning source was removed")
+    return answer_with_router(llm_router, session, question, source)
+
+
+def _course_tutor_stream(user_id: str, session: Any, question: str) -> Any:
+    source = documents.get_for_user(str(session.document_id), user_id)
+    if source is None:
+        raise NotFound("learning source was removed")
+    return stream_answer_with_router(llm_router, session, question, source)
+
+
+app.include_router(
+    create_course_router(
+        current_user_id,
+        course_store,
+        _course_tutor_answer,
+        course_tutor_streamer=_course_tutor_stream,
+    )
+)
+
+
 # --- Routes -----------------------------------------------------------------
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+_worker_task: asyncio.Task[None] | None = None
+
+
+@app.get("/ready", response_model=None)
+def ready() -> Any:
+    """Keep process liveness separate from durable-store and worker readiness."""
+    worker_live = settings.worker_enabled and _worker_task is not None and not _worker_task.done()
+    if settings.job_store == "memory":
+        if worker_live:
+            return {"status": "ready", "storage": "memory-test", "worker": "in-process"}
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "storage": "memory-test", "worker": "unavailable"},
+        )
+    if not worker_live:
+        return JSONResponse(status_code=503, content={"status": "not_ready", "storage": "postgres"})
+    try:
+        for store in (job_store, documents, study):
+            check = getattr(store, "healthcheck", None)
+            if check is None:
+                raise RuntimeError("durable store has no health check")
+            check()
+    except Exception as exc:  # noqa: BLE001 - readiness only exposes a safe health signal
+        logger.warning("durable readiness check failed: %s", type(exc).__name__)
+        return JSONResponse(status_code=503, content={"status": "not_ready", "storage": "postgres"})
+    return {"status": "ready", "storage": "postgres", "worker": "durable"}
 
 
 @app.post("/api/parse-pdf", status_code=202)
@@ -285,6 +406,13 @@ async def job_status(job_id: str, user_id: Annotated[str, Depends(current_user_i
         "error_reason": job.error_reason,
         "result": job.result,
     }
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str, user_id: Annotated[str, Depends(current_user_id)]) -> dict[str, str]:
+    if not job_store.request_cancel(job_id, user_id):
+        raise NotFound("job not found or no longer cancellable")
+    return {"id": job_id, "status": "cancelled"}
 
 
 @app.post("/api/chapters/{chapter_id}/summary")
@@ -371,18 +499,27 @@ async def enqueue_flashcards(document_id: str, user_id: Annotated[str, Depends(c
 
 
 @app.get("/api/documents/{document_id}/flashcards")
-async def list_flashcards(document_id: str, user_id: Annotated[str, Depends(current_user_id)]) -> list[dict[str, Any]]:
+async def list_flashcards(
+    document_id: str,
+    user_id: Annotated[str, Depends(current_user_id)],
+    limit: int = Query(100, ge=1, le=settings.max_page_size),
+    offset: int = Query(0, ge=0, le=100000),
+) -> list[dict[str, Any]]:
     doc = documents.get_for_user(document_id, user_id)
     if doc is None:
         raise NotFound("document not found")
-    return documents.list_flashcards(document_id, user_id)
+    return documents.list_flashcards(document_id, user_id, limit=limit, offset=offset)
 
 
 @app.get("/api/flashcards/review-queue")
-async def review_queue(user_id: Annotated[str, Depends(current_user_id)]) -> list[dict[str, Any]]:
+async def review_queue(
+    user_id: Annotated[str, Depends(current_user_id)],
+    limit: int = Query(100, ge=1, le=settings.max_page_size),
+    offset: int = Query(0, ge=0, le=100000),
+) -> list[dict[str, Any]]:
     """SM-2 due queue for today (task 2.12)."""
     today = datetime.now(UTC).date().isoformat()
-    return documents.due_flashcards(user_id, today)
+    return documents.due_flashcards(user_id, today, limit=limit, offset=offset)
 
 
 @app.post("/api/flashcards/{card_id}/review")
@@ -397,51 +534,20 @@ async def review_flashcard(
     if not 0 <= grade <= 5:
         raise InvalidInput("grade must be an integer 0..5")
 
-    card = documents.get_flashcard_for_user(card_id, user_id)
-    if card is None:
-        raise NotFound("flashcard not found")
-
-    from app.ai.sm2 import Sm2State, review
-    from app.ai.sm2 import due_date as _due
-
-    prev = Sm2State(
-        ease_factor=float(card["ease_factor"]),
-        interval_days=int(card["interval_days"]),
-        repetitions=int(card["repetitions"]),
-    )
-
-    # Record the review FIRST. `review_id` is the offline queue's idempotency key
-    # (task 3.4): if it was already stored, this is a replay and SM-2 must not
-    # advance a second time.
     review_id = (body or {}).get("review_id")
-    recorded = documents.add_review(
+    if review_id is not None and not isinstance(review_id, str):
+        raise InvalidInput("review_id must be a UUID")
+    if review_id is not None:
+        try:
+            uuid.UUID(review_id)
+        except ValueError as exc:
+            raise InvalidInput("review_id must be a UUID") from exc
+    return documents.atomic_review(
         card_id=card_id,
         user_id=user_id,
         grade=grade,
-        client_review_id=str(review_id) if review_id else None,
+        review_id=review_id,
     )
-    if not recorded:
-        return {
-            "id": card_id,
-            "ease_factor": prev.ease_factor,
-            "interval_days": prev.interval_days,
-            "repetitions": prev.repetitions,
-            "due_date": card["due_date"],
-            "replayed": True,
-        }
-
-    nxt = review(prev, grade)
-    due = _due(datetime.now(UTC).date(), nxt.interval_days)
-    documents.update_flashcard_sm2(
-        card_id, ease=nxt.ease_factor, interval_days=nxt.interval_days, reps=nxt.repetitions, due=due
-    )
-    return {
-        "id": card_id,
-        "ease_factor": nxt.ease_factor,
-        "interval_days": nxt.interval_days,
-        "repetitions": nxt.repetitions,
-        "due_date": due,
-    }
 
 
 @app.post("/api/documents/{document_id}/chat")

@@ -20,6 +20,49 @@ logger = logging.getLogger("studyvault.privacy")
 # thanks to ON DELETE CASCADE, but ordering keeps the export readable).
 _OWNED_TABLES = [
     (
+        "ai_usage",
+        [
+            "operation_id", "feature", "outcome", "cache_hit", "provider_attempts", "prompt_tokens",
+            "completion_tokens", "started_at", "finished_at", "created_at",
+        ],
+    ),
+    (
+        "ai_usage_attempts",
+        [
+            "id", "operation_id", "attempt_no", "provider", "model", "outcome", "prompt_tokens",
+            "completion_tokens", "latency_ms", "created_at",
+        ],
+    ),
+    (
+        "ai_operations",
+        ["id", "document_id", "operation_key", "state", "result", "expires_at", "created_at", "updated_at"],
+    ),
+    (
+        "ai_budget_reservations",
+        [
+            "operation_id", "feature", "budget_day", "reserved_tokens", "actual_tokens", "state",
+            "expires_at", "created_at", "updated_at",
+        ],
+    ),
+    ("ai_minute_limits", ["window_start", "count"]),
+    ("ai_response_cache", ["id", "document_id", "cache_key", "content", "expires_at", "created_at", "updated_at"]),
+    (
+        "courses",
+        ["id", "slug", "title", "created_at", "updated_at"],
+    ),
+    (
+        "course_releases",
+        ["id", "course_id", "version", "status", "visibility", "content", "content_hash", "created_at", "updated_at"],
+    ),
+    (
+        "course_enrollments",
+        ["id", "user_id", "release_id", "document_id", "state", "revision", "status", "created_at", "updated_at"],
+    ),
+    (
+        "course_attempts",
+        ["id", "user_id", "enrollment_id", "exercise_id", "kind", "request", "result", "created_at"],
+    ),
+    (
         "documents",
         ["id", "filename", "mime_type", "size_bytes", "page_count", "status", "markdown", "created_at"],
     ),
@@ -35,6 +78,8 @@ _OWNED_TABLES = [
             "chapter_id",
             "front",
             "back",
+            "source_quote",
+            "source_revision",
             "ease_factor",
             "interval_days",
             "repetitions",
@@ -42,7 +87,7 @@ _OWNED_TABLES = [
             "created_at",
         ],
     ),
-    ("reviews", ["id", "flashcard_id", "grade", "reviewed_at"]),
+    ("reviews", ["id", "flashcard_id", "grade", "result", "reviewed_at"]),
     (
         "focus_sessions",
         [

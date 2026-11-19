@@ -80,3 +80,4 @@ export type Guild = z.infer<typeof GuildSchema>;
 
 export * from './game-api';
 export * from './cyberverse-api';
+export * from './course-api';

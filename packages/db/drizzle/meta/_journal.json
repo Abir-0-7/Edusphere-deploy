@@ -64,6 +64,13 @@
       "when": 1795033285801,
       "tag": "0008_game_vault_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795043386175,
+      "tag": "0009_phase8_ai_courses",
+      "breakpoints": true
     }
   ]
 }

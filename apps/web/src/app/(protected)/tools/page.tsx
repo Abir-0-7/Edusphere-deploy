@@ -3,6 +3,7 @@
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Tldraw, getSnapshot, loadSnapshot, type Editor } from 'tldraw';
 import { z } from 'zod';
 import 'tldraw/tldraw.css';
@@ -19,7 +20,8 @@ const reviewSchema = z.object({
 });
 
 function serviceError(status: number, tool: string) {
-  if (status === 401 || status === 403) return 'Your session could not be verified. Sign in again, then retry.';
+  if (status === 401 || status === 403)
+    return 'Your session could not be verified. Sign in again, then retry.';
   if (status === 429) return 'You have reached the current request limit. Please try again later.';
   return `${tool} is unavailable right now (HTTP ${status}). Please retry in a moment.`;
 }
@@ -41,7 +43,9 @@ function Whiteboard() {
       setSaved(true);
       setError('');
     } catch {
-      setError('Could not save this board. Your browser may have disabled local storage or run out of space.');
+      setError(
+        'Could not save this board. Your browser may have disabled local storage or run out of space.',
+      );
     }
   };
   const load = () => {
@@ -72,19 +76,38 @@ function Whiteboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="section-heading">Think on a whiteboard</h2>
-          <p className="section-caption">Sketch a diagram or work through a problem. Boards stay in this browser.</p>
+          <p className="section-caption">
+            Sketch a diagram or work through a problem. Boards stay in this browser.
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={save} disabled={!editor} className="action-secondary disabled:opacity-50">Save</button>
-          <button onClick={load} disabled={!editor} className="action-secondary disabled:opacity-50">Load</button>
-          <button onClick={clear} disabled={!editor} className="action-secondary disabled:opacity-50">Clear</button>
+          <button onClick={save} disabled={!editor} className="action-secondary disabled:opacity-50">
+            Save
+          </button>
+          <button onClick={load} disabled={!editor} className="action-secondary disabled:opacity-50">
+            Load
+          </button>
+          <button onClick={clear} disabled={!editor} className="action-secondary disabled:opacity-50">
+            Clear
+          </button>
         </div>
       </div>
-      <div className="relative mt-4 h-[min(65vh,560px)] min-h-[360px] overflow-hidden rounded border border-[var(--line)]" aria-label="Whiteboard canvas">
+      <div
+        className="relative mt-4 h-[min(65vh,560px)] min-h-[360px] overflow-hidden rounded border border-[var(--line)]"
+        aria-label="Whiteboard canvas"
+      >
         <Tldraw onMount={setEditor} persistenceKey="studyvault-whiteboard" />
       </div>
-      {saved && <p role="status" className="mt-3 text-xs text-[var(--forest)]">Saved in this browser.</p>}
-      {error && <p role="alert" className="status-error mt-3">{error}</p>}
+      {saved && (
+        <p role="status" className="mt-3 text-xs text-[var(--forest)]">
+          Saved in this browser.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="status-error mt-3">
+          {error}
+        </p>
+      )}
     </section>
   );
 }
@@ -105,9 +128,25 @@ function CoverPdf() {
       const doc = await PDFDocument.create();
       const page = doc.addPage([612, 792]);
       const font = await doc.embedFont(StandardFonts.HelveticaBold);
-      page.drawText(title.trim(), { x: 70, y: 650, size: 32, font, maxWidth: 472, lineHeight: 38, color: rgb(0.06, 0.3, 0.23) });
+      page.drawText(title.trim(), {
+        x: 70,
+        y: 650,
+        size: 32,
+        font,
+        maxWidth: 472,
+        lineHeight: 38,
+        color: rgb(0.06, 0.3, 0.23),
+      });
       const small = await doc.embedFont(StandardFonts.Helvetica);
-      page.drawText(meta.trim(), { x: 70, y: 495, size: 16, font: small, maxWidth: 472, lineHeight: 23, color: rgb(0.35, 0.4, 0.37) });
+      page.drawText(meta.trim(), {
+        x: 70,
+        y: 495,
+        size: 16,
+        font: small,
+        maxWidth: 472,
+        lineHeight: 23,
+        color: rgb(0.35, 0.4, 0.37),
+      });
       const bytes = await doc.save();
       const blob = new Blob([bytes.slice().buffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -130,16 +169,44 @@ function CoverPdf() {
       <p className="section-caption">Create a simple PDF cover with your own title and details.</p>
       <form onSubmit={(event) => void build(event)} className="mt-5 space-y-4">
         <div>
-          <label htmlFor="cover-title" className={labelClass}>Assignment title</label>
-          <input id="cover-title" required maxLength={90} value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} />
+          <label htmlFor="cover-title" className={labelClass}>
+            Assignment title
+          </label>
+          <input
+            id="cover-title"
+            required
+            maxLength={90}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label htmlFor="cover-byline" className={labelClass}>Your name, course, or year</label>
-          <input id="cover-byline" maxLength={150} value={meta} onChange={(event) => setMeta(event.target.value)} placeholder="e.g. Your name / CSE 101 / 2026" className={inputClass} />
+          <label htmlFor="cover-byline" className={labelClass}>
+            Your name, course, or year
+          </label>
+          <input
+            id="cover-byline"
+            maxLength={150}
+            value={meta}
+            onChange={(event) => setMeta(event.target.value)}
+            placeholder="e.g. Your name / CSE 101 / 2026"
+            className={inputClass}
+          />
         </div>
         <p className="text-xs text-[var(--muted)]">The cover font supports Latin characters.</p>
-        {error && <p role="alert" className="status-error">{error}</p>}
-        <button type="submit" disabled={busy || !title.trim()} className="action-primary disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Creating PDF...' : 'Download cover.pdf'}</button>
+        {error && (
+          <p role="alert" className="status-error">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy || !title.trim()}
+          className="action-primary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? 'Creating PDF...' : 'Download cover.pdf'}
+        </button>
       </form>
     </section>
   );
@@ -153,13 +220,19 @@ function ClientOcr() {
   const [error, setError] = useState('');
 
   const run = async (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Choose an image file. For a PDF, upload it to your Library instead.'); return; }
-    if (file.size > 15 * 1024 * 1024) { setError('Choose an image that is 15 MB or smaller.'); return; }
+    if (!file.type.startsWith('image/')) {
+      setError('Choose an image file. For a PDF, upload it to your Library instead.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Choose an image that is 15 MB or smaller.');
+      return;
+    }
     setBusy(true);
     setText('');
     setError('');
     setProgress(0);
-    let worker: Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>> | undefined;
+    let worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>> | undefined;
     try {
       const { createWorker } = await import('tesseract.js');
       // Tesseract.js 7 accepts an array when a page contains multiple languages.
@@ -174,15 +247,22 @@ function ClientOcr() {
         },
       });
       const { data } = await worker.recognize(file);
-      if (!data.text.trim()) setError('No text was found. Try a sharper image and check the selected language.');
+      if (!data.text.trim())
+        setError('No text was found. Try a sharper image and check the selected language.');
       setText(data.text);
     } catch {
-      setError('Could not read this image. Check your connection so the OCR language files can load, then try a clear JPG or PNG.');
+      setError(
+        'Could not read this image. Check your connection so the OCR language files can load, then try a clear JPG or PNG.',
+      );
     } finally {
       try {
         await worker?.terminate();
       } catch {
-        setError((current) => current || 'OCR finished, but could not release its browser resources. Refresh before trying another image.');
+        setError(
+          (current) =>
+            current ||
+            'OCR finished, but could not release its browser resources. Refresh before trying another image.',
+        );
       }
       setBusy(false);
     }
@@ -192,28 +272,79 @@ function ClientOcr() {
     <section id="ocr" className="surface surface-padded scroll-mt-20">
       <p className="page-kicker">FROM IMAGE TO NOTES</p>
       <h2 className="section-heading">English & Bangla OCR</h2>
-      <p className="section-caption">Extract text from an image in your browser. Review the result before using it.</p>
+      <p className="section-caption">
+        Extract text from an image in your browser. Review the result before using it.
+      </p>
       <div className="mt-5 space-y-4">
         <div>
-          <label htmlFor="ocr-language" className={labelClass}>Text language</label>
-          <select id="ocr-language" value={language} disabled={busy} onChange={(event) => setLanguage(event.target.value)} className={inputClass}>
+          <label htmlFor="ocr-language" className={labelClass}>
+            Text language
+          </label>
+          <select
+            id="ocr-language"
+            value={language}
+            disabled={busy}
+            onChange={(event) => setLanguage(event.target.value)}
+            className={inputClass}
+          >
             <option value="eng">English</option>
             <option value="ben">Bangla</option>
             <option value="both">English + Bangla</option>
           </select>
         </div>
         <div>
-          <label htmlFor="ocr-image" className={labelClass}>Choose an image</label>
-          <input id="ocr-image" type="file" accept="image/*" disabled={busy} onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void run(file);
-            event.target.value = '';
-          }} className="w-full text-xs file:mr-3 file:rounded file:border file:border-[var(--line)] file:bg-[var(--mint)] file:px-3 file:py-2 file:text-[var(--forest)]" />
-          <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">Images up to 15 MB. Language files download on first use. For PDF chapters, use your <Link href="/library" className="font-semibold text-[var(--forest)] underline">Library</Link>.</p>
+          <label htmlFor="ocr-image" className={labelClass}>
+            Choose an image
+          </label>
+          <input
+            id="ocr-image"
+            type="file"
+            accept="image/*"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void run(file);
+              event.target.value = '';
+            }}
+            className="w-full text-xs file:mr-3 file:rounded file:border file:border-[var(--line)] file:bg-[var(--mint)] file:px-3 file:py-2 file:text-[var(--forest)]"
+          />
+          <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+            Images up to 15 MB. Language files download on first use. For PDF chapters, use your{' '}
+            <Link href="/library" className="font-semibold text-[var(--forest)] underline">
+              Library
+            </Link>
+            .
+          </p>
         </div>
-        {busy && <div role="status" className="text-xs text-[var(--forest)]"><p>{progress === 0 ? 'Preparing OCR...' : `Reading image: ${progress}%`}</p><progress value={progress} max={100} aria-label="Image recognition progress" className="mt-2 h-2 w-full accent-[var(--forest)]" /></div>}
-        {error && <p role="alert" className="status-error">{error}</p>}
-        {text && <div><label htmlFor="ocr-result" className={labelClass}>Extracted text</label><textarea id="ocr-result" readOnly value={text} className={`${inputClass} min-h-44 resize-y leading-relaxed`} /></div>}
+        {busy && (
+          <div role="status" className="text-xs text-[var(--forest)]">
+            <p>{progress === 0 ? 'Preparing OCR...' : `Reading image: ${progress}%`}</p>
+            <progress
+              value={progress}
+              max={100}
+              aria-label="Image recognition progress"
+              className="mt-2 h-2 w-full accent-[var(--forest)]"
+            />
+          </div>
+        )}
+        {error && (
+          <p role="alert" className="status-error">
+            {error}
+          </p>
+        )}
+        {text && (
+          <div>
+            <label htmlFor="ocr-result" className={labelClass}>
+              Extracted text
+            </label>
+            <textarea
+              id="ocr-result"
+              readOnly
+              value={text}
+              className={`${inputClass} min-h-44 resize-y leading-relaxed`}
+            />
+          </div>
+        )}
       </div>
     </section>
   );
@@ -245,8 +376,15 @@ function CitationForm() {
         headers: { authorization: `Bearer ${token ?? ''}`, 'content-type': 'application/json' },
         body: JSON.stringify({
           style,
-          authors: authors.split(/\r?\n|;/).map((author) => author.trim()).filter(Boolean),
-          title: title.trim(), year: year.trim(), container: container.trim(), url: url.trim(), pages: pages.trim(),
+          authors: authors
+            .split(/\r?\n|;/)
+            .map((author) => author.trim())
+            .filter(Boolean),
+          title: title.trim(),
+          year: year.trim(),
+          container: container.trim(),
+          url: url.trim(),
+          pages: pages.trim(),
         }),
       });
       if (!response.ok) throw new Error(serviceError(response.status, 'Citation formatting'));
@@ -264,34 +402,157 @@ function CitationForm() {
     <section id="citations" className="surface surface-padded scroll-mt-20">
       <p className="page-kicker">CREDIT YOUR SOURCES</p>
       <h2 className="section-heading">Citation formatter</h2>
-      <p className="section-caption">Enter the details from your source, then format an APA, MLA, or IEEE reference.</p>
+      <p className="section-caption">
+        Enter the details from your source, then format an APA, MLA, or IEEE reference.
+      </p>
       <form onSubmit={(event) => void cite(event)} className="mt-5 space-y-4">
         <fieldset>
           <legend className={labelClass}>Citation style</legend>
           <div className="flex flex-wrap gap-2">
-            {['apa', 'mla', 'ieee'].map((option) => <button type="button" key={option} onClick={() => { setStyle(option); setOut(''); }} aria-pressed={style === option} className={`${style === option ? 'action-primary' : 'action-secondary'} uppercase`}>{option}</button>)}
+            {['apa', 'mla', 'ieee'].map((option) => (
+              <button
+                type="button"
+                key={option}
+                onClick={() => {
+                  setStyle(option);
+                  setOut('');
+                }}
+                aria-pressed={style === option}
+                className={`${style === option ? 'action-primary' : 'action-secondary'} uppercase`}
+              >
+                {option}
+              </button>
+            ))}
           </div>
         </fieldset>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <label htmlFor="citation-title" className={labelClass}>Source title <span className="font-normal text-[var(--muted)]">(required)</span></label>
-            <input id="citation-title" required maxLength={500} value={title} onChange={(event) => { setTitle(event.target.value); setOut(''); }} placeholder="Article, book, or webpage title" className={inputClass} />
+            <label htmlFor="citation-title" className={labelClass}>
+              Source title <span className="font-normal text-[var(--muted)]">(required)</span>
+            </label>
+            <input
+              id="citation-title"
+              required
+              maxLength={500}
+              value={title}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setOut('');
+              }}
+              placeholder="Article, book, or webpage title"
+              className={inputClass}
+            />
           </div>
           <div>
-            <label htmlFor="citation-authors" className={labelClass}>Authors</label>
-            <textarea id="citation-authors" rows={2} maxLength={1000} value={authors} onChange={(event) => { setAuthors(event.target.value); setOut(''); }} placeholder="One full name per line" aria-describedby="citation-authors-help" className={`${inputClass} resize-y`} />
-            <p id="citation-authors-help" className="mt-1.5 text-xs text-[var(--muted)]">Keep the author order shown in the source. Semicolons also separate names.</p>
+            <label htmlFor="citation-authors" className={labelClass}>
+              Authors
+            </label>
+            <textarea
+              id="citation-authors"
+              rows={2}
+              maxLength={1000}
+              value={authors}
+              onChange={(event) => {
+                setAuthors(event.target.value);
+                setOut('');
+              }}
+              placeholder="One full name per line"
+              aria-describedby="citation-authors-help"
+              className={`${inputClass} resize-y`}
+            />
+            <p id="citation-authors-help" className="mt-1.5 text-xs text-[var(--muted)]">
+              Keep the author order shown in the source. Semicolons also separate names.
+            </p>
           </div>
           <div className="space-y-4">
-            <div><label htmlFor="citation-year" className={labelClass}>Publication year</label><input id="citation-year" maxLength={20} value={year} onChange={(event) => { setYear(event.target.value); setOut(''); }} placeholder="e.g. 2026" className={inputClass} /></div>
-            <div><label htmlFor="citation-pages" className={labelClass}>Page range</label><input id="citation-pages" maxLength={50} value={pages} onChange={(event) => { setPages(event.target.value); setOut(''); }} placeholder="e.g. 12-18" className={inputClass} /></div>
+            <div>
+              <label htmlFor="citation-year" className={labelClass}>
+                Publication year
+              </label>
+              <input
+                id="citation-year"
+                maxLength={20}
+                value={year}
+                onChange={(event) => {
+                  setYear(event.target.value);
+                  setOut('');
+                }}
+                placeholder="e.g. 2026"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="citation-pages" className={labelClass}>
+                Page range
+              </label>
+              <input
+                id="citation-pages"
+                maxLength={50}
+                value={pages}
+                onChange={(event) => {
+                  setPages(event.target.value);
+                  setOut('');
+                }}
+                placeholder="e.g. 12-18"
+                className={inputClass}
+              />
+            </div>
           </div>
-          <div><label htmlFor="citation-container" className={labelClass}>Journal, website, or publisher</label><input id="citation-container" maxLength={300} value={container} onChange={(event) => { setContainer(event.target.value); setOut(''); }} placeholder="Where the source was published" className={inputClass} /></div>
-          <div><label htmlFor="citation-url" className={labelClass}>Source URL</label><input id="citation-url" type="url" maxLength={2000} value={url} onChange={(event) => { setUrl(event.target.value); setOut(''); }} placeholder="https://..." className={inputClass} /></div>
+          <div>
+            <label htmlFor="citation-container" className={labelClass}>
+              Journal, website, or publisher
+            </label>
+            <input
+              id="citation-container"
+              maxLength={300}
+              value={container}
+              onChange={(event) => {
+                setContainer(event.target.value);
+                setOut('');
+              }}
+              placeholder="Where the source was published"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="citation-url" className={labelClass}>
+              Source URL
+            </label>
+            <input
+              id="citation-url"
+              type="url"
+              maxLength={2000}
+              value={url}
+              onChange={(event) => {
+                setUrl(event.target.value);
+                setOut('');
+              }}
+              placeholder="https://..."
+              className={inputClass}
+            />
+          </div>
         </div>
-        {error && <p role="alert" className="status-error">{error}</p>}
-        <button type="submit" disabled={busy || !title.trim()} className="action-primary disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Formatting...' : `Format ${style.toUpperCase()} citation`}</button>
-        {out && <div className="rounded border border-[var(--line)] bg-[var(--mint)] p-4" role="status"><p className="mb-2 text-xs font-semibold text-[var(--forest)]">Your formatted reference</p><p className="break-words text-sm leading-relaxed">{out}</p><p className="mt-3 text-xs text-[var(--muted)]">Check the details and your course requirements before submitting.</p></div>}
+        {error && (
+          <p role="alert" className="status-error">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy || !title.trim()}
+          className="action-primary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? 'Formatting...' : `Format ${style.toUpperCase()} citation`}
+        </button>
+        {out && (
+          <div className="rounded border border-[var(--line)] bg-[var(--mint)] p-4" role="status">
+            <p className="mb-2 text-xs font-semibold text-[var(--forest)]">Your formatted reference</p>
+            <p className="break-words text-sm leading-relaxed">{out}</p>
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Check the details and your course requirements before submitting.
+            </p>
+          </div>
+        )}
       </form>
     </section>
   );
@@ -333,14 +594,93 @@ function CodeReview() {
     <section id="complexity" className="surface surface-padded scroll-mt-20">
       <p className="page-kicker">UNDERSTAND YOUR ALGORITHM</p>
       <h2 className="section-heading">Big-O reviewer</h2>
-      <p className="section-caption">Explore time and space complexity with an AI explanation. This tool reviews code without executing it.</p>
+      <p className="section-caption">
+        Explore time and space complexity with an AI explanation. This tool reviews code without executing it.
+      </p>
       <form onSubmit={(event) => void analyze(event)} className="mt-5 space-y-4">
-        <div className="max-w-xs"><label htmlFor="code-language" className={labelClass}>Code language</label><select id="code-language" value={language} onChange={(event) => { setLanguage(event.target.value); setReview(null); }} className={inputClass}><option value="python">Python</option><option value="javascript">JavaScript</option><option value="typescript">TypeScript</option><option value="other">Other</option></select></div>
-        <div><label htmlFor="code-input" className={labelClass}>Code to review</label><textarea id="code-input" required maxLength={6000} value={code} onChange={(event) => { setCode(event.target.value); setReview(null); }} placeholder="Paste the algorithm you want to understand..." className={`${inputClass} min-h-52 resize-y font-mono text-xs leading-relaxed`} /><p className="mt-1.5 text-right text-xs text-[var(--muted)]">{code.length.toLocaleString()} / 6,000 characters</p></div>
-        {error && <p role="alert" className="status-error">{error}</p>}
-        <button type="submit" disabled={busy || !code.trim()} className="action-primary disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Reviewing complexity...' : 'Analyse complexity'}</button>
+        <div className="max-w-xs">
+          <label htmlFor="code-language" className={labelClass}>
+            Code language
+          </label>
+          <select
+            id="code-language"
+            value={language}
+            onChange={(event) => {
+              setLanguage(event.target.value);
+              setReview(null);
+            }}
+            className={inputClass}
+          >
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="code-input" className={labelClass}>
+            Code to review
+          </label>
+          <textarea
+            id="code-input"
+            required
+            maxLength={6000}
+            value={code}
+            onChange={(event) => {
+              setCode(event.target.value);
+              setReview(null);
+            }}
+            placeholder="Paste the algorithm you want to understand..."
+            className={`${inputClass} min-h-52 resize-y font-mono text-xs leading-relaxed`}
+          />
+          <p className="mt-1.5 text-right text-xs text-[var(--muted)]">
+            {code.length.toLocaleString()} / 6,000 characters
+          </p>
+        </div>
+        {error && (
+          <p role="alert" className="status-error">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy || !code.trim()}
+          className="action-primary disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? 'Reviewing complexity...' : 'Analyse complexity'}
+        </button>
       </form>
-      {review && <div className="mt-5 rounded border border-[var(--line)] bg-[var(--mint)] p-4" role="status"><div className="flex flex-wrap gap-x-8 gap-y-3"><div><p className="text-xs text-[var(--muted)]">Time complexity</p><p className="mt-1 font-mono text-lg font-semibold text-[var(--forest)]">{review.time_complexity}</p></div><div><p className="text-xs text-[var(--muted)]">Space complexity</p><p className="mt-1 font-mono text-lg font-semibold text-[var(--forest)]">{review.space_complexity}</p></div></div><p className="mt-4 text-sm leading-relaxed">{review.explanation}</p>{review.improvements.length > 0 && <div className="mt-4"><h3 className="text-xs font-semibold">Ways to improve</h3><ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">{review.improvements.map((improvement, index) => <li key={index}>{improvement}</li>)}</ul></div>}</div>}
+      {review && (
+        <div className="mt-5 rounded border border-[var(--line)] bg-[var(--mint)] p-4" role="status">
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            <div>
+              <p className="text-xs text-[var(--muted)]">Time complexity</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-[var(--forest)]">
+                {review.time_complexity}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--muted)]">Space complexity</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-[var(--forest)]">
+                {review.space_complexity}
+              </p>
+            </div>
+          </div>
+          <MarkdownRenderer markdown={review.explanation} className="mt-4 text-sm leading-relaxed" />
+          {review.improvements.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold">Ways to improve</h3>
+              <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+                {review.improvements.map((improvement, index) => (
+                  <li key={index}>
+                    <MarkdownRenderer markdown={improvement} className="text-sm leading-relaxed" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -349,13 +689,34 @@ export default function ToolsPage() {
   return (
     <main className="workspace-page space-y-6">
       <header className="page-heading-row flex-wrap">
-        <div><p className="page-kicker">ACADEMIC TOOLKIT</p><h1 className="page-heading">Make room for your best work.</h1><p className="page-subtitle">Read text from images, reference your sources, prepare an assignment, and work through ideas.</p></div>
-        <Link href="/library" className="action-secondary">Open Library</Link>
+        <div>
+          <p className="page-kicker">ACADEMIC TOOLKIT</p>
+          <h1 className="page-heading">Make room for your best work.</h1>
+          <p className="page-subtitle">
+            Read text from images, reference your sources, prepare an assignment, and work through ideas.
+          </p>
+        </div>
+        <Link href="/library" className="action-secondary">
+          Open Library
+        </Link>
       </header>
       <nav aria-label="Academic tools" className="flex flex-wrap gap-2">
-        {[['#ocr', 'Image to text'], ['#citations', 'Citations'], ['#cover', 'Cover page'], ['#complexity', 'Big-O review'], ['#whiteboard', 'Whiteboard']].map(([href, label]) => <a key={href} href={href} className="action-secondary">{label}</a>)}
+        {[
+          ['#ocr', 'Image to text'],
+          ['#citations', 'Citations'],
+          ['#cover', 'Cover page'],
+          ['#complexity', 'Big-O review'],
+          ['#whiteboard', 'Whiteboard'],
+        ].map(([href, label]) => (
+          <a key={href} href={href} className="action-secondary">
+            {label}
+          </a>
+        ))}
       </nav>
-      <div className="grid items-start gap-6 lg:grid-cols-2"><ClientOcr /><CoverPdf /></div>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <ClientOcr />
+        <CoverPdf />
+      </div>
       <CitationForm />
       <CodeReview />
       <Whiteboard />

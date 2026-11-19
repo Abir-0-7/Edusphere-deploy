@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Chapter } from '@/lib/ai-types';
 
@@ -151,9 +152,13 @@ export function SummaryPanel({ chapter }: { chapter: Chapter }) {
           />
         </div>
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-sm text-neutral-800">
-        {text || (streaming ? 'Generating…' : 'No summary yet.')}
-      </p>
+      {text ? (
+        <MarkdownRenderer markdown={text} className="mt-3 text-sm text-neutral-800" />
+      ) : (
+        <p className="mt-3 whitespace-pre-wrap text-sm text-neutral-800">
+          {streaming ? 'Generating…' : 'No summary yet.'}
+        </p>
+      )}
     </div>
   );
 }
