@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  esbuild: { jsx: 'automatic' },
   // Playwright specs under e2e/ are run by the Playwright runner, not vitest.
   test: {
     include: ['tests/**/*.test.ts'],

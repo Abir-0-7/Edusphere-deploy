@@ -1,4 +1,4 @@
-"""Local Playwright server. Only this fixture promotes C05 drafts to test releases."""
+"""Local Playwright server using the actual published four-course catalog."""
 
 import os
 
@@ -18,13 +18,7 @@ os.environ.update(
     AI_SERVICE_LLM_LOGFARE_API_KEY="",
 )
 
-from app.courses.catalog_candidates import candidates  # noqa: E402
-from app.courses.catalog import catalog  # noqa: E402
 from app.courses.store import MemoryCourseStore  # noqa: E402
 from app.main import app, course_store  # noqa: E402,F401 - app is the ASGI entrypoint.
 
 assert isinstance(course_store, MemoryCourseStore)
-for candidate in candidates():
-    course_store.save_release(candidate.model_copy(update={"status": "published"}, deep=True))
-for release in catalog():
-    course_store.save_release(release)

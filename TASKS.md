@@ -2,6 +2,12 @@
 
 **CURRENT PHASE: 8.G** (Game Vault and Cyberverse integration.)
 
+## User-requested course publication repair (2026-11-19)
+
+- [x] Publish all four authored courses (Python, PyTorch, SQL and Git) with their existing labs and assignments. Applied canonical migrations 0009/0010 to the existing Neon database; seeded twice and verified exactly four published v2 releases without duplicates. Upstash stays the rate-limit store. The user explicitly authorized this Phase 8.B/8.C release repair while 8.G remains the broader phase.
+- [x] Restore the merged backend tutor imports and shared Markdown/math renderer; correct catalog error/retry handling. Verified 400 backend tests, 125 web tests, 7 course browser cases, TypeScript, source lint and a clean default production build. Optional database integration tests remain skipped; the production Neon verification did not create learner-owned test rows.
+- [ ] Deploy the updated API on the existing Render service and verify hosted catalog/profile routes. The inspected image still lacks those routes; auto-deploy is disabled and the Render connection is not yet available. A GitHub push alone is not a backend deployment.
+
 ## Phase 8.G: Game Vault
 
 - [x] **8.G01 Shared versioned game contracts** (G01). Config validation, seeded create/apply/result/serialize/restore; bounded ordered actions and idempotent server reward settlement. Check: malformed/out-of-order/replayed inputs fail and client/server vectors agree. (2026-11-18: engine, contract and route tests pass, including actual PostgreSQL concurrency and rollback. Explicit save deletion preserves tokens and the daily cap.)

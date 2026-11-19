@@ -615,7 +615,12 @@ def pytorch_fundamentals():
 
 
 def catalog() -> tuple[CourseRelease, ...]:
-    return python_foundations(), pytorch_fundamentals()
+    # Import after the shared builders are defined: the authored SQL/Git module
+    # reuses those builders, while its draft fixtures retain publication gates.
+    from app.courses.catalog_candidates import candidates
+
+    promoted = tuple(release.model_copy(update={"status": "published"}, deep=True) for release in candidates())
+    return python_foundations(), pytorch_fundamentals(), *promoted
 
 
 # Diagnostic permits an experienced learner to enter PyTorch without fabricating

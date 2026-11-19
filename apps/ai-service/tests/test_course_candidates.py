@@ -1,4 +1,4 @@
-"""C05 curriculum drafts validate but remain unpublished pending human review."""
+"""SQL/Git publication, isolated draft gates, and complete course acceptance."""
 
 import hashlib
 import json
@@ -59,7 +59,11 @@ def test_candidates_are_valid_five_lesson_static_drafts_with_server_keys():
             checkpoints = {exercises[identifier].prompt for identifier in lesson.checkpoint_ids}
             assert len(checkpoints) == len(lesson.checkpoint_ids)
             assert not checkpoints.intersection(exercises[identifier].prompt for identifier in lesson.practice_ids)
-    assert {item.slug for item in drafts}.isdisjoint(item.slug for item in catalog())
+    published = {item.slug: item for item in catalog()}
+    for draft in drafts:
+        assert published[draft.slug].status == "published"
+        assert published[draft.slug].id == draft.id
+        assert published[draft.slug].model_dump(exclude={"status"}) == draft.model_dump(exclude={"status"})
 
 
 def test_published_catalog_releases_include_versioned_practice_in_content_hashes():
@@ -83,8 +87,8 @@ def test_candidate_requires_recorded_editorial_publication_before_enrollment(can
     assert store.list_courses("learner") == []
     with pytest.raises(NotFound):
         store.enroll("learner", candidate.slug)
-    # This promotion exists only in this isolated acceptance fixture. Production
-    # catalog content remains the reviewed releases returned by catalog().
+    # Isolated draft stores must still enforce publication explicitly, even
+    # after catalog() ships published copies of the authored definitions.
     published = candidate.model_copy(update={"status": "published"}, deep=True)
     store.save_release(published)
     assert store.list_courses("learner")[0].slug == candidate.slug
@@ -113,12 +117,9 @@ def test_first_unaided_checkpoint_matches_golden_answer(exercise_id, correct_ans
 
 
 @pytest.mark.parametrize("candidate", candidates(), ids=lambda item: item.slug)
-def test_published_fixture_completes_independent_course_review_resume_progress_flow(candidate):
-    """Exercise the B10 core on a disposable fixture without publishing the draft."""
-    store = MemoryCourseStore(
-        InMemoryDocumentStore(),
-        releases=[candidate.model_copy(update={"status": "published"}, deep=True)],
-    )
+def test_published_catalog_completes_independent_course_review_resume_progress_flow(candidate):
+    """Run the shipped SQL/Git releases through the complete deterministic journey."""
+    store = MemoryCourseStore(InMemoryDocumentStore())
     user = "c05-acceptance-learner"
     session = store.enroll(user, candidate.slug)
     assert session.lesson.blocks and session.evidence

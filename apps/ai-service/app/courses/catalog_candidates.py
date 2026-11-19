@@ -1,7 +1,8 @@
-"""C05 reviewed-course candidates kept outside the shipped catalog.
+"""Authored SQL/Git course definitions and their isolated draft fixtures.
 
-These drafts need human editorial/source review and the complete B10 acceptance
-journey before they may be added to catalog().
+catalog() promotes copies for the four-course release explicitly requested by
+the user on 2026-11-19. Draft definitions remain available for publication-gate
+tests; assessment keys and lab targets stay server-only in both states.
 """
 
 from app.courses.catalog import _choice, _course, _numeric

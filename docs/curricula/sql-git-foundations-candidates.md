@@ -1,11 +1,12 @@
-# SQL Query Foundations and Git Foundations candidates
+# SQL Query Foundations and Git Foundations
 
-Prepared for Phase 8.C05. Status: **authored curriculum candidates,
-not published courses**. This document and the corresponding server-side course
-drafts require human content/editorial approval plus the full guided-course
-8.B10 acceptance journey before either course can be promoted.
+Prepared for Phase 8.C05. Publication update, 2026-11-19: **published in the
+four-course catalog at the user's explicit request**. The catalog now includes
+Python Foundations, PyTorch Fundamentals, SQL Query Foundations, and Git
+Foundations. This records publication authorization, not a claim that a named
+curriculum reviewer has completed the editorial checklist below.
 
-Both are five-lesson Mini candidates with bounded deterministic choice/number
+Both are five-lesson Mini courses with bounded deterministic choice/number
 practice, independent checkpoints, a hands-on lab and a project assignment. They
 use original short explanations and static examples. SQL practice compares a
 single read-only query against a fixed authored target; the Git Practice Shell
@@ -16,8 +17,11 @@ state; they never count as checkpoint mastery, create flashcards, or schedule
 reviews. Assignment text remains private to the learner, is not sent to an
 instructor, and is not automatically graded. Answer keys live only in
 `apps/ai-service/app/courses/catalog_candidates.py`; public lab/course payloads
-omit SQL targets and expected outputs. Their status remains `draft`, and the
-shipped `catalog()` does not include them.
+omit SQL targets and expected outputs. The shipped `catalog()` promotes copies
+of the authored definitions to `published`; isolated `candidates()` fixtures
+remain `draft` so publication and access-control gates continue to be tested.
+Course releases and owner-scoped enrollment state are stored in Neon Postgres;
+Upstash remains the rate-limit store and is not a separate course catalog.
 
 ## SQL Query Foundations
 
@@ -33,9 +37,9 @@ Primary references are the [PostgreSQL table-expression documentation](https://w
 [LIMIT](https://www.postgresql.org/docs/18/queries-limit.html), and
 [aggregate functions](https://www.postgresql.org/docs/18/functions-aggregate.html),
 and [comparisons and NULL](https://www.postgresql.org/docs/18/functions-comparison.html).
-Examples state their tables and assumptions locally. Human review should check
-the accuracy of original explanation-to-evidence locators and checkpoint keys
-against these references before publication.
+Examples state their tables and assumptions locally. The editorial follow-up
+should check the accuracy of original explanation-to-evidence locators and
+checkpoint keys against these references.
 
 ## Git Foundations
 
@@ -53,12 +57,12 @@ and the references for [diff](https://git-scm.com/docs/git-diff),
 should verify descriptions of the index, checkout/merge target, and conflict
 resolution against supported Git documentation and recorded version policy.
 
-## Publication gate
+## Publication record and editorial follow-up
 
-| Draft | Release ID | Draft SHA-256 | Human review |
+| Published release | Release ID | Published SHA-256 | Editorial review |
 |---|---|---|---|
-| SQL Query Foundations v1 | 92c888e9-ba99-57af-8a3c-87c8bb94e78e | 29e09683cb0f3f7f308f2dee1a43172d2b7f853b41d75f988a8680700266cd57 | Pending |
-| Git Foundations v1 | efed7462-6f7b-589f-a155-213e4e922ea3 | 87d40d1dfbeab2376c4589f801885ab87c0684ff55b3ab702b10b1901b80c7da | Pending |
+| SQL Query Foundations v2 | 60f6e498-dde7-579d-a35b-67fee0308395 | 8e5742c1fcff8e07b53cf0b1a1a061f1bbd6f431d5c41736e332a062e6ce9457 | Pending; publication explicitly requested 2026-11-19 |
+| Git Foundations v2 | d1bc90fb-d6ae-59b5-a565-04e2570dcb8c | 7346dc5de406df45938e1381f12500d9164070f4931ea9b5122301f9f5c9a32b | Pending; publication explicitly requested 2026-11-19 |
 
 For each course separately:
 
@@ -75,9 +79,9 @@ For each course separately:
    teaching claim, record its official supporting passage and mark it supported
    or unsupported. The 8.B10 target is at least 95% supported claims, with all
    locators resolving and no severe assessment-key errors.
-4. Record the verified draft as reviewed. Publish that version through the
-   reviewed catalog process only after the review and acceptance are recorded.
-   The published content hash is immutable; later edits require a new release.
+4. Record the editorial result against the published release. Its content hash
+   is immutable; corrections require a new release rather than rewriting an
+   existing learner's pinned lessons.
 
 The candidate tests cover accepted and incorrect assessment fixtures, hidden
 keys, exact source locators, owner isolation, all five lessons, source-linked
@@ -87,5 +91,7 @@ commands, verify that simulated Git changes stay within the fake repository,
 hide SQL expected results, and assert that lab/assignment writes do not add
 checkpoint attempts, mastery or cards. Assignment save/resume is owner-scoped.
 The isolated 390px browser flow completes the full lab and persists the
-assignment draft after reload. These checks are preliminary evidence. Named
-human review and the grounded-claim 8.B10 review remain pending.
+assignment draft after reload. Catalog/API regression tests require all four
+courses to be visible and include labs and assignments; the SQL/Git acceptance
+journeys now use the shipped catalog directly. Named human review and the
+grounded-claim 8.B10 review remain pending.

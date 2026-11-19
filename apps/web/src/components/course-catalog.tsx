@@ -3,7 +3,7 @@
 import { useAuth } from '@clerk/nextjs';
 import type { CourseSummary, SessionResponse } from '@studyvault/types';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getCourseSessions, listCourses } from '@/lib/course-client';
 
 export function CourseCatalog() {
@@ -14,16 +14,19 @@ export function CourseCatalog() {
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    const [catalog, saved] = await Promise.all([listCourses(getToken), getCourseSessions(getToken)]);
-    setCourses(catalog.courses);
-    setSessions(saved.sessions);
-  }, [getToken]);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     let active = true;
-    void refresh()
+    setLoading(true);
+    setError(null);
+    void Promise.all([listCourses(getToken), getCourseSessions(getToken)])
+      .then(([catalog, saved]) => {
+        if (!active) return;
+        setCourses(catalog.courses);
+        setSessions(saved.sessions);
+      })
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : 'Could not load the course catalog.');
       })
@@ -33,7 +36,7 @@ export function CourseCatalog() {
     return () => {
       active = false;
     };
-  }, [isLoaded, isSignedIn, refresh]);
+  }, [getToken, isLoaded, isSignedIn, loadAttempt]);
 
   async function start(slug: string) {
     setWorking(slug);
@@ -41,7 +44,7 @@ export function CourseCatalog() {
     window.location.assign(`/courses/${encodeURIComponent(slug)}`);
   }
 
-  if (!isLoaded || loading) {
+  if (!isLoaded || (isSignedIn && loading)) {
     return (
       <main className="mx-auto max-w-6xl px-5 py-12" aria-busy="true">
         Loading your courses…
@@ -64,13 +67,20 @@ export function CourseCatalog() {
       </div>
       {error ? (
         <div role="alert" className="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">
-          {error}
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="mt-3 rounded-lg bg-emerald-800 px-4 py-2.5 font-semibold text-white hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+          >
+            Retry loading courses
+          </button>
         </div>
       ) : null}
       {loading ? <p>Loading saved courses…</p> : null}
-      {courses.length === 0 ? (
+      {!error && courses.length === 0 ? (
         <p className="rounded-xl border bg-white p-6">There are no published courses yet.</p>
-      ) : (
+      ) : courses.length > 0 ? (
         <div className="grid gap-5 md:grid-cols-2">
           {courses.map((course) => {
             const session = sessions
@@ -128,7 +138,7 @@ export function CourseCatalog() {
             );
           })}
         </div>
-      )}
+      ) : null}
     </main>
   );
 }

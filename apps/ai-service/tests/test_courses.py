@@ -52,7 +52,12 @@ def complete(store, user, slug):
 
 
 def test_original_catalog_is_static_valid_and_keys_do_not_reach_learner(store):
-    assert [course.slug for course in store.list_courses("new")] == ["python-foundations", "pytorch-fundamentals"]
+    assert [course.slug for course in store.list_courses("new")] == [
+        "python-foundations",
+        "pytorch-fundamentals",
+        "sql-query-foundations",
+        "git-foundations",
+    ]
     for course in catalog():
         assert course.size == "mini" and course.origin == "prebuilt"
         assert len(course.lessons) == 5
@@ -127,7 +132,7 @@ def test_private_draft_owner_access_and_publishing_cannot_cross_catalog(store):
     release = CourseRelease.model_validate(draft)
     store.save_release(release)
     assert store.get_release("my-python", "a").size == "full"
-    assert len(store.list_courses("a")) == 2
+    assert len(store.list_courses("a")) == 4
     with pytest.raises(NotFound):
         store.get_release("my-python", "b")
     with pytest.raises(InvalidInput, match="not published"):
@@ -331,7 +336,17 @@ def test_routes_validate_requests_hide_keys_and_scope_sessions(store):
     app.add_exception_handler(ApiError, api_error_handler)
     app.include_router(create_course_router(user, store))
     with TestClient(app) as client:
-        assert client.get("/api/courses").status_code == 200
+        response = client.get("/api/courses")
+        assert response.status_code == 200
+        assert {course["slug"] for course in response.json()["courses"]} == {
+            "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+        }
+        for slug in ["python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"]:
+            public_detail = client.get(f"/api/courses/{slug}")
+            assert public_detail.status_code == 200
+            assert public_detail.json()["labs"] and public_detail.json()["assignments"]
+            for lab in public_detail.json()["labs"]:
+                assert not {"expected_columns", "expected_rows", "sql_targets"} & lab.keys()
         detail = client.get("/api/courses/pytorch-fundamentals").json()
         assert detail["prerequisites"] == ["python-foundations"] and not detail["prerequisite_met"]
         assert client.post("/api/courses/pytorch-fundamentals/enroll", json={}).status_code == 400

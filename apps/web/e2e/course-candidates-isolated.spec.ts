@@ -65,6 +65,58 @@ async function routeLearningServiceToFixture(page: Page) {
   });
 }
 
+const publishedCourseNames = [
+  'Python Foundations',
+  'PyTorch Fundamentals',
+  'SQL Query Foundations',
+  'Git Foundations',
+];
+
+async function expectPublishedCatalog(page: Page) {
+  await expect(page.getByRole('article')).toHaveCount(publishedCourseNames.length);
+  for (const name of publishedCourseNames) {
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  }
+}
+
+test('all four published courses are available in the catalog', async ({ page }) => {
+  await routeLearningServiceToFixture(page);
+  await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), `catalog-${randomUUID()}`);
+  await page.goto('/courses');
+
+  await expectPublishedCatalog(page);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByText('There are no published courses yet.')).toHaveCount(0);
+});
+
+test('catalog load failure offers retry without claiming that no courses are published', async ({ page }) => {
+  await routeLearningServiceToFixture(page);
+  let catalogRequests = 0;
+  await page.route('**/api/learning-service/api/courses', async (route) => {
+    catalogRequests += 1;
+    if (catalogRequests === 1) {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Not Found' }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+  await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), `retry-${randomUUID()}`);
+  await page.goto('/courses');
+
+  await expect(page.getByRole('alert')).toContainText('Course request failed (404).');
+  await expect(page.getByText('There are no published courses yet.')).toHaveCount(0);
+  await expect(page.getByRole('article')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retry loading courses' }).click();
+
+  await expectPublishedCatalog(page);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(catalogRequests).toBe(2);
+});
+
 async function checkAnswer(page: Page, answer: string | number) {
   const exercise = page.locator('section[aria-labelledby="exercise-title"]');
   if (typeof answer === 'number') {

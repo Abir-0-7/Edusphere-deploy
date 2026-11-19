@@ -41,9 +41,19 @@ def _receipt(
 
 def test_published_courses_include_coding_shell_labs_and_assignments():
     releases = catalog()
-    assert {release.slug for release in releases} == {"python-foundations", "pytorch-fundamentals"}
+    assert {release.slug for release in releases} == {
+        "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+    }
     for release in releases:
+        assert release.status == "published"
         assert release.version == "2"
+        assert release.labs and len(release.assignments) == 1
+        if release.slug == "sql-query-foundations":
+            assert {lab.kind for lab in release.labs} == {"sql_query"}
+            continue
+        if release.slug == "git-foundations":
+            assert {lab.kind for lab in release.labs} == {"git_shell"}
+            continue
         assert {lab.kind for lab in release.labs} == {"code_editor", "git_shell"}
         code_lab = next(lab for lab in release.labs if lab.kind == "code_editor")
         assert all(task.runner_problem_id for task in code_lab.tasks)
@@ -61,6 +71,8 @@ def test_published_courses_include_coding_shell_labs_and_assignments():
 
 def test_published_git_shell_is_usable_on_both_courses():
     for release in catalog():
+        if release.slug not in {"python-foundations", "pytorch-fundamentals"}:
+            continue
         docs = InMemoryDocumentStore()
         store = MemoryCourseStore(docs, releases=[release])
         diagnostic = {key: answer for key, (_, answer) in DIAGNOSTIC.items()} if release.prerequisites else None

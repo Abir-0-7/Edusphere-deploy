@@ -1,15 +1,18 @@
 # Python and PyTorch: authored mini courses
 
-Prepared 2026-11-18 for Phase 8.B. Status: **private editorial drafts; publication
-remains pending human review and the 8.B10 acceptance journey**.
-The authored releases remain hidden from learner catalog and enrollment until
-review approves the content, answer keys, evidence, and source use.
+Prepared 2026-11-18 for Phase 8.B. Publication update, 2026-11-19: **published
+version 2 releases**, alongside SQL Query Foundations and Git Foundations in
+the four-course catalog explicitly requested by the user. Publication does not
+claim completion of the named human editorial review or the claim-support
+benchmark; remaining follow-up is recorded below.
 The references below were opened on 2026-11-18. No PyTorch runtime, downloaded
-dataset, paid source or executable learner code is required by these drafts.
+dataset, paid source or executable learner code is required to read the lessons.
+Separate coding labs use the configured isolated sandbox; shell practice is a
+bounded simulation. Every course also includes a private project assignment.
 
 ## Publication and assessment contract
 
-The current catalog builds version `1` releases for `python-foundations` and
+The current catalog builds version `2` releases for `python-foundations` and
 `pytorch-fundamentals`. Both are Mini/prebuilt courses. Python is the starter;
 PyTorch enrollment requires Python Foundations completion or a passing optional
 diagnostic. Times are estimates, not completion guarantees or limits.
@@ -353,11 +356,12 @@ gradient arithmetic, and the optimizer update formula. Some teaching text mentio
 device/dtype, indexing, return semantics, gradient accumulation, and evaluation, but
 the active checkpoints do not assess several of those topics. The release also
 uses generated variants rather than the exact fixed checkpoint examples in this
-document's earlier draft. Keep the courses private until a human reviewer either
-approves this narrower assessment scope and aligns the stated outcomes, or the
-release exercises are expanded to cover the full teaching claims.
+document's earlier draft. A human reviewer should approve this narrower
+assessment scope and align the stated outcomes, or request a new release with
+exercises expanded to cover the full teaching claims. The current lessons must
+not be presented as measuring topics that their checkpoints do not assess.
 
-## Editorial QA before publication
+## Remaining editorial QA after authorized publication
 
 - [ ] Curriculum reviewer verifies every excerpt, example trace and answer key;
   records reviewer/date and fixes known errors before setting `reviewed`.
