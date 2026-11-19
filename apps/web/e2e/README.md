@@ -26,3 +26,13 @@ environment. The test is skipped with a clear reason when the test account or
 secret is absent, so anonymous guard specs remain runnable on contributor
 machines without credentials. `fixtures/lecture.pdf` is committed beside this
 README and contains two text pages for deterministic upload coverage.
+
+Phase 8D has three isolated Chromium suites that mount the actual UI with fixture
+transport. Run them with `test:e2e:flashcard-studio`, `test:e2e:offline-decks`, and
+`test:e2e:maps` on the web package. The fixtures use separate local ports 4332,
+4333, and 4334; no Clerk account or external API is needed. These suites cover
+Studio draft/merge/edit/quiz/CSV, bounded offline study without scheduled-review
+effects, and saved maps with full-label exports, learning actions, source checks,
+and explicit board insertion. Native Tldraw insertion and account-local snapshot
+isolation also have unit coverage in `concept-graph-board.test.ts` and
+`local-boards.test.ts`.

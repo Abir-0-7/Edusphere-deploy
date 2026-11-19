@@ -261,6 +261,22 @@ class MemoryCourseStore:
                 if row["user_id"] == user_id and self.documents.get_for_user(row["document_id"], user_id) is not None
             ]
 
+    def graph_lesson_context(self, user_id: str, document_id: str, chapter_id: str):
+        """Resolve a read-only graph handoff against this owner's pinned release."""
+        with self._lock:
+            for row in self._enrollments.values():
+                if row["user_id"] != user_id or row["document_id"] != document_id:
+                    continue
+                owned, release = self._owned(user_id, row["id"])
+                for lesson in release.lessons:
+                    if stable_id(f"{owned['id']}/chapter/{lesson.id}") == chapter_id:
+                        return {
+                            "enrollment_id": owned["id"], "course_slug": release.slug, "lesson_id": lesson.id,
+                            "objective_ids": lesson.objective_ids, "title": lesson.title,
+                            "content": "\n\n".join(block.content for block in lesson.blocks),
+                        }
+        return None
+
     def misconception_counts(self, user_id: str) -> dict[str, int]:
         """Count recent owner-scoped mistakes on unaided checkpoints only."""
         with self._lock:
@@ -645,6 +661,25 @@ class PgCourseStore:
             )
             identifiers = [row[0] for row in cur.fetchall()]
             return [engine.session_view(*self._owned(cur, user_id, identifier)) for identifier in identifiers]
+
+    def graph_lesson_context(self, user_id: str, document_id: str, chapter_id: str):
+        """Resolve a read-only graph handoff without changing the active lesson or enrollment."""
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM course_enrollments WHERE user_id=%s AND document_id=%s",
+                (user_id, document_id),
+            )
+            identifiers = [row[0] for row in cur.fetchall()]
+            for identifier in identifiers:
+                owned, release = self._owned(cur, user_id, identifier)
+                for lesson in release.lessons:
+                    if stable_id(f"{owned['id']}/chapter/{lesson.id}") == chapter_id:
+                        return {
+                            "enrollment_id": owned["id"], "course_slug": release.slug, "lesson_id": lesson.id,
+                            "objective_ids": lesson.objective_ids, "title": lesson.title,
+                            "content": "\n\n".join(block.content for block in lesson.blocks),
+                        }
+        return None
 
     def misconception_counts(self, user_id: str) -> dict[str, int]:
         with self._connect() as conn, conn.cursor() as cur:

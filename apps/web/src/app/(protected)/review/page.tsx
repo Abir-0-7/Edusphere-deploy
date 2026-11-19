@@ -1,14 +1,22 @@
 'use client';
 
-import { useAuth } from '@clerk/nextjs';
+import { useSession } from '@clerk/nextjs';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import { getReviewQueue, submitReview, type Flashcard } from '@/lib/ai-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getReviewQueue, submitReview, type Flashcard, type GetToken } from '@/lib/ai-client';
 import { pendingCount, queueReview, syncReviews } from '@/lib/offline-reviews';
 
 /** Grading remains server-side; the client only shows the review queue and submits a grade. */
 export default function ReviewPage() {
-  const { getToken } = useAuth();
+  const { isLoaded, session } = useSession();
+  const getToken = useCallback(() => session?.getToken() ?? Promise.resolve(null), [session]);
+  if (!isLoaded || !session) return <p role="status" className="p-6">Loading your review account.</p>;
+  return <AccountReviewPage key={`${session.user.id}:${session.id}`} ownerId={session.user.id} getToken={getToken} />;
+}
+
+function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: GetToken }) {
+  const active = useRef(true);
+  const grading = useRef(false);
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -17,27 +25,33 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(0);
 
-  const flush = useCallback(async () => {
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+
+  const accountToken = useCallback(async () => {
+    if (!active.current) throw new Error('Review account changed');
     const token = await getToken();
-    const result = await syncReviews(async (row) => {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000'}/api/flashcards/${row.cardId}/review`,
-        {
-          method: 'POST',
-          headers: { authorization: `Bearer ${token ?? ''}`, 'content-type': 'application/json' },
-          body: JSON.stringify({ grade: row.grade, review_id: row.uuid }),
-        },
-      ).catch(() => null);
-      return Boolean(response?.ok);
-    });
-    setPending(await pendingCount());
+    if (!active.current || !token) throw new Error('Review account changed');
+    return token;
+  }, [getToken]);
+
+  const flush = useCallback(async () => {
+    const result = await syncReviews(ownerId, async (row) => {
+      await submitReview(accountToken, row.cardId, row.grade, row.uuid);
+      return true;
+    }, () => active.current);
+    const count = await pendingCount(ownerId);
+    if (!active.current) return result;
+    setPending(count);
     setSyncError(null);
     return result;
-  }, [getToken]);
+  }, [accountToken, ownerId]);
 
   useEffect(() => {
     const sync = () => {
-      void flush().catch(() => setSyncError('Offline reviews could not be synced. We will try again when you reconnect.'));
+      void flush().catch(() => { if (active.current) setSyncError('Offline reviews could not be synced. We will try again when you reconnect.'); });
     };
     sync();
     window.addEventListener('online', sync);
@@ -48,15 +62,17 @@ export default function ReviewPage() {
     setLoading(true);
     setErr(null);
     try {
-      setCards(await getReviewQueue(getToken));
+      const queue = await getReviewQueue(accountToken);
+      if (!active.current) return;
+      setCards(queue);
       setIndex(0);
       setRevealed(false);
     } catch (error) {
-      setErr(error instanceof Error ? error.message : 'Your review queue could not be loaded.');
+      if (active.current) setErr(error instanceof Error ? error.message : 'Your review queue could not be loaded.');
     } finally {
-      setLoading(false);
+      if (active.current) setLoading(false);
     }
-  }, [getToken]);
+  }, [accountToken]);
 
   useEffect(() => {
     void load();
@@ -64,19 +80,20 @@ export default function ReviewPage() {
 
   const grade = async (value: number) => {
     const card = cards[index];
-    if (!card) return;
-    setRevealed(false);
-    setIndex((current) => current + 1);
+    if (!card || grading.current || !active.current) return;
+    grading.current = true;
     try {
-      await submitReview(getToken, card.id, value);
+      // Persist the same event UUID before the first attempt, including retries
+      // after a lost response, so one scheduled review has one server effect.
+      await queueReview(ownerId, card.id, value);
+      if (!active.current) return;
+      setRevealed(false);
+      setIndex((current) => current + 1);
+      await flush();
     } catch {
-      // Replays are deduplicated by the server when the offline queue reconnects.
-      try {
-        await queueReview(card.id, value);
-        setPending(await pendingCount());
-      } catch {
-        setSyncError('This review could not be saved offline. Refresh your queue after reconnecting.');
-      }
+      if (active.current) setSyncError('This review could not be saved offline. Refresh your queue after reconnecting.');
+    } finally {
+      grading.current = false;
     }
   };
 

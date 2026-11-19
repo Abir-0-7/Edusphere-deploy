@@ -1,9 +1,13 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { BoardLearningPreview, readBoardGraphHandoff } from '@/components/board-learning-preview';
+import { insertConceptIntoTldraw } from '@/lib/concept-graph-board';
+import { boardStorageKeys, clearLocalBoard, loadLocalBoard, saveLocalBoard } from '@/lib/local-boards';
 import { Tldraw, getSnapshot, loadSnapshot, type Editor } from 'tldraw';
 import { z } from 'zod';
 import 'tldraw/tldraw.css';
@@ -32,6 +36,16 @@ function failureMessage(error: unknown, fallback: string) {
 }
 
 function Whiteboard() {
+  const { isLoaded, userId, getToken } = useAuth();
+  if (!isLoaded || !userId) {
+    return <p id="whiteboard" role="status" className="surface surface-padded">Loading your whiteboard account.</p>;
+  }
+  return <AccountWhiteboard key={userId} ownerId={userId} getToken={getToken} />;
+}
+
+function AccountWhiteboard({ ownerId, getToken }: { ownerId: string; getToken: () => Promise<string | null> }) {
+  const searchParams = useSearchParams();
+  const handoff = readBoardGraphHandoff(searchParams);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +53,7 @@ function Whiteboard() {
   const save = () => {
     if (!editor) return;
     try {
-      localStorage.setItem('studyvault_whiteboard', JSON.stringify(getSnapshot(editor.store)));
+      saveLocalBoard(ownerId, JSON.stringify(getSnapshot(editor.store)));
       setSaved(true);
       setError('');
     } catch {
@@ -51,7 +65,7 @@ function Whiteboard() {
   const load = () => {
     if (!editor) return;
     try {
-      const raw = localStorage.getItem('studyvault_whiteboard');
+      const raw = loadLocalBoard(ownerId);
       if (!raw) {
         setError('There is no manually saved board in this browser yet.');
         return;
@@ -65,14 +79,28 @@ function Whiteboard() {
     }
   };
   const clear = () => {
-    editor?.selectAll();
-    editor?.deleteShapes(editor.getSelectedShapeIds());
-    setSaved(false);
-    setError('');
+    try {
+      clearLocalBoard(ownerId);
+      editor?.selectAll();
+      editor?.deleteShapes(editor.getSelectedShapeIds());
+      setSaved(false);
+      setError('');
+    } catch {
+      setError('Could not clear the saved board. Your current drawing is still open.');
+    }
   };
 
   return (
     <section id="whiteboard" className="surface surface-padded scroll-mt-20">
+      <BoardLearningPreview
+        ownerId={ownerId}
+        getToken={getToken}
+        handoff={handoff}
+        onInsert={(target, revision) => {
+          if (!editor) throw new Error('The whiteboard is still loading. Try again once it is ready.');
+          insertConceptIntoTldraw(editor, target, revision);
+        }}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="section-heading">Think on a whiteboard</h2>
@@ -96,7 +124,7 @@ function Whiteboard() {
         className="relative mt-4 h-[min(65vh,560px)] min-h-[360px] overflow-hidden rounded border border-[var(--line)]"
         aria-label="Whiteboard canvas"
       >
-        <Tldraw onMount={setEditor} persistenceKey="studyvault-whiteboard" />
+        <Tldraw onMount={setEditor} persistenceKey={boardStorageKeys(ownerId).persistence} />
       </div>
       {saved && (
         <p role="status" className="mt-3 text-xs text-[var(--forest)]">

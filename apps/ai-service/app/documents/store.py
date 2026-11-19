@@ -81,7 +81,13 @@ def _validated_cards(cards: list[dict], document: "DocumentRecord") -> list[dict
             raise InvalidInput("generated card requires a stable id")
         chapter_id, chunk_id = card.get("chapter_id"), card.get("source_chunk_id")
         chunk = chunks.get(chunk_id) if isinstance(chunk_id, str) else None
-        if chapter_id not in chapters or chunk is None or chunk.chapter_id != chapter_id or not chunk.content.strip():
+        if (
+            not isinstance(chapter_id, str)
+            or chapter_id not in chapters
+            or chunk is None
+            or chunk.chapter_id != chapter_id
+            or not chunk.content.strip()
+        ):
             raise InvalidInput("generated card source does not belong to this document and chapter")
         front, back = card.get("front"), card.get("back")
         if not isinstance(front, str) or not front.strip() or not isinstance(back, str) or not back.strip():
@@ -95,6 +101,11 @@ def _validated_cards(cards: list[dict], document: "DocumentRecord") -> list[dict
         provided_revision = card.get("source_revision")
         if provided_revision is not None and provided_revision != revision:
             raise InvalidInput("generated card source revision does not match its evidence")
+        tags = card.get("tags", [])
+        if not isinstance(tags, list) or len(tags) > 20 or any(
+            not isinstance(tag, str) or not tag.strip() or len(tag) > 40 for tag in tags
+        ):
+            raise InvalidInput("card tags must be at most 20 short text labels")
         fingerprint = (chapter_id, chunk_id, " ".join(front.split()), " ".join(back.split()))
         if fingerprint in seen:
             continue
@@ -108,6 +119,7 @@ def _validated_cards(cards: list[dict], document: "DocumentRecord") -> list[dict
                 "source_revision": revision,
                 "front": front.strip(),
                 "back": back.strip(),
+                "tags": list(tags),
             }
         )
     return result
@@ -180,6 +192,8 @@ class InMemoryDocumentStore:
         self._embedded: dict[str, list[float]] = {}
         self._flashcards: dict[tuple[str, str], list[dict]] = {}
         self._reviews: list[dict] = []
+        self._flashcard_versions: dict[str, list[dict[str, object]]] = {}
+        self._quality_reports: list[dict[str, object]] = []
         self._review_ids: set[str] = set()
         self._review_results: dict[tuple[str, str], tuple[str, int, dict]] = {}
         self._source_bytes: dict[str, bytes] = {}
@@ -272,6 +286,107 @@ class InMemoryDocumentStore:
     def set_embedding(self, chunk_id: str, embedding: list[float]) -> None:
         self._embedded[chunk_id] = embedding
 
+    def _snapshot_card(self, card: dict) -> None:
+        versions = self._flashcard_versions.setdefault(card["id"], [])
+        if not versions:
+            versions.append({
+                "version": 1,
+                "front": card["front"],
+                "back": card["back"],
+                "chapter_id": card.get("chapter_id"),
+                "source_chunk_id": card.get("source_chunk_id"),
+                "source_quote": card.get("source_quote"),
+                "source_revision": card.get("source_revision"),
+                "tags": list(card.get("tags", [])),
+            })
+
+
+    def edit_flashcard(
+        self, card_id: str, user_id: str, *, front: str | None = None, back: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict:
+        with self._lock:
+            card = self.get_flashcard_for_user(card_id, user_id)
+            if card is None:
+                raise NotFound("flashcard not found")
+            self._snapshot_card(card)
+            changed_content = (front is not None and front != card["front"]) or (
+                back is not None and back != card["back"]
+            )
+            if front is not None:
+                card["front"] = front
+            if back is not None:
+                card["back"] = back
+            if tags is not None:
+                card["tags"] = list(tags)
+            if changed_content:
+                versions = self._flashcard_versions.setdefault(card_id, [])
+                versions.append({
+                    "version": len(versions) + 1, "front": card["front"], "back": card["back"],
+                    "chapter_id": card.get("chapter_id"), "source_chunk_id": card.get("source_chunk_id"),
+                    "source_quote": card.get("source_quote"), "source_revision": card.get("source_revision"),
+                    "tags": list(card.get("tags", [])),
+                })
+                card["needs_review"] = True
+                card["due_date"] = datetime.now(UTC).date().isoformat()
+            return card
+
+
+    def retire_flashcard(self, card_id: str, user_id: str) -> dict:
+        with self._lock:
+            card = next(
+                (row for (_doc_id, owner), rows in self._flashcards.items() if owner == user_id for row in rows
+                 if row["id"] == card_id),
+                None,
+            )
+            if card is None:
+                raise NotFound("flashcard not found")
+            card["status"] = "retired"
+            return card
+
+
+    def delete_flashcard(self, card_id: str, user_id: str) -> bool:
+        with self._lock:
+            for key, rows in self._flashcards.items():
+                if key[1] != user_id:
+                    continue
+                before = len(rows)
+                rows[:] = [row for row in rows if row["id"] != card_id]
+                if len(rows) != before:
+                    removed_reviews = [
+                        row for row in self._reviews
+                        if row.get("flashcard_id") == card_id and row.get("user_id") == user_id
+                    ]
+                    self._reviews[:] = [row for row in self._reviews if row not in removed_reviews]
+                    for review in removed_reviews:
+                        review_id = review.get("client_review_id")
+                        if review_id is not None:
+                            self._review_ids.discard(review_id)
+                            self._review_results.pop((user_id, review_id), None)
+                    self._flashcard_versions.pop(card_id, None)
+                    self._quality_reports[:] = [row for row in self._quality_reports if row.get("card_id") != card_id]
+                    return True
+        return False
+
+
+    def report_flashcard(self, card_id: str, user_id: str, reason: str) -> dict[str, object]:
+        if self.get_flashcard_for_user(card_id, user_id) is None:
+            raise NotFound("flashcard not found")
+        report = {"card_id": card_id, "report_id": str(uuid.uuid4()), "reason": reason, "status": "received"}
+        with self._lock:
+            self._quality_reports.append(report)
+        return report
+
+
+    def due_review_count(self, user_id: str, today: str) -> int:
+        return sum(
+            card["due_date"] <= today and card.get("status", "active") == "active"
+            for (_, owner), cards in self._flashcards.items()
+            if owner == user_id
+            for card in cards
+        )
+
+
     # --- Flashcards (tasks 2.11, 2.12) — same surface as PgDocumentStore ----
     def delete_flashcards(self, document_id: str, user_id: str) -> None:
         self._flashcards.pop((document_id, user_id), None)
@@ -323,15 +438,28 @@ class InMemoryDocumentStore:
                 by_id[draft["id"]] = rows[-1]
             if len(existing) + len(rows) > self._max_flashcards_per_deck:
                 raise InvalidInput("flashcard deck limit reached for this account and document")
+            default_deck_id = str(uuid.uuid5(
+                uuid.NAMESPACE_URL, f"studyvault:deck:{user_id}:{document_id}:True:Default"
+            ))
+            for row in rows:
+                row.update(deck_id=default_deck_id, status="active", needs_review=False)
+                self._snapshot_card(row)
             self._flashcards.setdefault((document_id, user_id), []).extend(rows)
             return len(rows)
 
-    def list_flashcards(self, document_id: str, user_id: str, *, limit: int = 100, offset: int = 0) -> list[dict]:
+    def list_flashcards(
+        self, document_id: str, user_id: str, *, limit: int = 100, offset: int = 0,
+        deck_id: str | None = None, include_retired: bool = False,
+    ) -> list[dict]:
         limit, offset = _bounded_page(limit, offset, self._max_page_size)
-        cards = sorted(
-            self._flashcards.get((document_id, user_id), []), key=lambda card: (card["due_date"], card["id"])
-        )
-        return cards[offset : offset + limit]
+        cards = [
+            card for card in self._flashcards.get((document_id, user_id), [])
+            if (deck_id is None or card.get("deck_id") == deck_id)
+            and (include_retired or card.get("status", "active") == "active")
+        ]
+        for card in cards:
+            self._snapshot_card(card)
+        return sorted(cards, key=lambda card: (card["due_date"], card["id"]))[offset : offset + limit]
 
     def merge_flashcards(self, cards: list[dict], *, document_id: str, user_id: str, due_date: str) -> int:
         """Additive, idempotent publication preserves every old card and review schedule."""
@@ -345,7 +473,7 @@ class InMemoryDocumentStore:
             for (_doc_id, uid), cards in self._flashcards.items()
             if uid == user_id
             for c in cards
-            if c["due_date"] <= today
+            if c["due_date"] <= today and c.get("status", "active") == "active"
         ]
         return sorted(out, key=lambda c: (c["due_date"], c["id"]))[offset : offset + limit]
 
@@ -354,7 +482,7 @@ class InMemoryDocumentStore:
             if uid != user_id:
                 continue
             for c in cards:
-                if c["id"] == card_id:
+                if c["id"] == card_id and c.get("status", "active") == "active":
                     return c
         return None
 
@@ -411,6 +539,7 @@ class InMemoryDocumentStore:
                 return {**result, "replayed": True}
             result = _review_schedule(card, grade, timestamp)
             card.update({name: result[name] for name in ("ease_factor", "interval_days", "repetitions", "due_date")})
+            card["needs_review"] = False
             self._review_ids.add(key)
             self._reviews.append(
                 {

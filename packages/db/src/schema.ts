@@ -66,6 +66,30 @@ export const documents = pgTable(
   (t) => [unique('uq_documents_id_owner').on(t.id, t.userId), index('idx_documents_user').on(t.userId)],
 );
 
+export const conceptGraphs = pgTable(
+  'concept_graphs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').notNull(),
+    revision: integer('revision').notNull().default(1),
+    graph: jsonb('graph').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_concept_graph_document_owner').on(t.documentId, t.userId),
+    foreignKey({
+      name: 'fk_concept_graph_source_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    check('ck_concept_graph_revision', sql`${t.revision} > 0`),
+    check('ck_concept_graph_object', sql`jsonb_typeof(${t.graph}) = 'object'`),
+    index('idx_concept_graphs_user_updated').on(t.userId, t.updatedAt),
+  ],
+);
+
 export const chapters = pgTable(
   'chapters',
   {
@@ -132,6 +156,29 @@ export const chatSessions = pgTable(
   (t) => [index('idx_chat_sessions_user_doc').on(t.userId, t.documentId)],
 );
 
+export const flashcardDecks = pgTable(
+  'flashcard_decks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').notNull(),
+    name: text('name').notNull(),
+    isDefault: boolean('is_default').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: 'fk_flashcard_decks_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    unique('uq_flashcard_decks_id_document_owner').on(t.id, t.documentId, t.userId),
+    check('ck_flashcard_decks_name', sql`char_length(btrim(${t.name})) BETWEEN 1 AND 120`),
+    uniqueIndex('uq_flashcard_decks_default').on(t.userId, t.documentId).where(sql`${t.isDefault}`),
+    uniqueIndex('uq_flashcard_decks_named').on(t.userId, t.documentId, t.name).where(sql`NOT ${t.isDefault}`),
+  ],
+);
+
 export const flashcards = pgTable(
   'flashcards',
   {
@@ -139,10 +186,15 @@ export const flashcards = pgTable(
     documentId: uuid('document_id')
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
+    // Migration 0011 assigns a default deck to legacy inserts.
+    deckId: uuid('deck_id').notNull(),
     chapterId: uuid('chapter_id').references(() => chapters.id, { onDelete: 'set null' }),
     sourceChunkId: uuid('source_chunk_id'),
     sourceQuote: text('source_quote'),
     sourceRevision: varchar('source_revision', { length: 64 }),
+    tags: jsonb('tags').notNull().default([]),
+    status: text('status').notNull().default('active'),
+    needsReview: boolean('needs_review').notNull().default(false),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -166,8 +218,118 @@ export const flashcards = pgTable(
       columns: [t.documentId, t.userId],
       foreignColumns: [documents.id, documents.userId],
     }).onDelete('cascade'),
+    foreignKey({
+      name: 'fk_flashcards_deck_document_owner',
+      columns: [t.deckId, t.documentId, t.userId],
+      foreignColumns: [flashcardDecks.id, flashcardDecks.documentId, flashcardDecks.userId],
+    }).onDelete('cascade'),
     unique('uq_flashcards_id_owner').on(t.id, t.userId),
     index('idx_flashcards_due').on(t.userId, t.dueDate),
+    index('idx_flashcards_deck').on(t.deckId),
+    check('ck_flashcards_status', sql`${t.status} IN ('active','retired')`),
+    check('ck_flashcards_tags', sql`jsonb_typeof(${t.tags}) = 'array' AND jsonb_array_length(${t.tags}) <= 20`),
+  ],
+);
+
+export const flashcardQualityReports = pgTable(
+  'flashcard_quality_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    cardId: uuid('card_id').notNull(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    status: text('status').notNull().default('received'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: 'fk_flashcard_quality_reports_card_owner',
+      columns: [t.cardId, t.userId],
+      foreignColumns: [flashcards.id, flashcards.userId],
+    }).onDelete('cascade'),
+    index('idx_flashcard_quality_reports_user_created').on(t.userId, t.createdAt),
+  ],
+);
+
+export const flashcardQuizSessions = pgTable(
+  'flashcard_quiz_sessions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').notNull(),
+    deckId: uuid('deck_id').notNull(),
+    questions: jsonb('questions').notNull(),
+    answerKey: jsonb('answer_key').notNull(),
+    submittedAnswers: jsonb('submitted_answers'),
+    result: jsonb('result'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    gradedAt: timestamp('graded_at', { withTimezone: true }),
+  },
+  (t) => [
+    foreignKey({
+      name: 'fk_flashcard_quiz_sessions_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'fk_flashcard_quiz_sessions_deck_owner',
+      columns: [t.deckId, t.documentId, t.userId],
+      foreignColumns: [flashcardDecks.id, flashcardDecks.documentId, flashcardDecks.userId],
+    }).onDelete('cascade'),
+    index('idx_flashcard_quiz_sessions_user_created').on(t.userId, t.createdAt),
+  ],
+);
+
+export const flashcardVersions = pgTable(
+  'flashcard_versions',
+  {
+    cardId: uuid('card_id').notNull(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    front: text('front').notNull(),
+    back: text('back').notNull(),
+    // Historical locators must be resolved against the original source and revision.
+    chapterId: uuid('chapter_id'),
+    sourceChunkId: uuid('source_chunk_id'),
+    sourceQuote: text('source_quote'),
+    sourceRevision: text('source_revision'),
+    tags: jsonb('tags').notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_flashcard_versions', columns: [t.cardId, t.version] }),
+    foreignKey({
+      name: 'fk_flashcard_versions_card_owner',
+      columns: [t.cardId, t.userId],
+      foreignColumns: [flashcards.id, flashcards.userId],
+    }).onDelete('cascade'),
+    check('ck_flashcard_versions_positive', sql`${t.version} > 0`),
+    index('idx_flashcard_versions_user').on(t.userId),
+  ],
+);
+
+export const flashcardGenerationDrafts = pgTable(
+  'flashcard_generation_drafts',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').notNull(),
+    sourceRevision: text('source_revision').notNull(),
+    settings: jsonb('settings').notNull(),
+    cards: jsonb('cards').notNull(),
+    mergeResult: jsonb('merge_result'),
+    selectedIds: jsonb('selected_ids'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: 'fk_flashcard_generation_drafts_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    check('ck_flashcard_generation_drafts_revision', sql`${t.sourceRevision} ~ '^[0-9a-f]{64}$'`),
+    index('idx_flashcard_generation_drafts_user_created').on(t.userId, t.createdAt),
+    index('idx_flashcard_generation_drafts_document').on(t.documentId),
   ],
 );
 

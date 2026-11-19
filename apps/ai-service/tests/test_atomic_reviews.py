@@ -127,7 +127,7 @@ def test_pg_uses_one_transaction_owner_card_locks_and_stores_result_before_sched
     conn.transaction.assert_called_once()
     queries = [call.args for call in cur.execute.call_args_list]
     assert "users WHERE id=%s FOR UPDATE" in queries[0][0] and queries[0][1] == ("alice",)
-    assert "flashcards WHERE id=%s AND user_id=%s FOR UPDATE" in queries[1][0]
+    assert "flashcards WHERE id=%s AND user_id=%s AND status='active' FOR UPDATE" in queries[1][0]
     assert queries[1][1] == (CARD, "alice")
     assert "WHERE user_id=%s AND client_review_id=%s" in queries[2][0]
     assert "INSERT INTO reviews" in queries[3][0]

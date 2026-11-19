@@ -9,7 +9,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests && node --test scripts/prepare-ocr-assets.test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:games": "playwright test --config e2e/game-vault-isolated.config.ts"
+    "test:e2e:games": "playwright test --config e2e/game-vault-isolated.config.ts",
+    "test:e2e:flashcard-studio": "playwright test --config e2e/flashcard-studio-isolated.config.ts",
+    "test:e2e:offline-decks": "playwright test --config e2e/offline-deck-isolated.config.ts",
+    "test:e2e:maps": "playwright test --config e2e/map-isolated.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.0",
@@ -48,6 +51,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "fake-indexeddb": "^6.2.8",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.0",
     "vitest": "^5.1.0"

@@ -78,6 +78,41 @@
       "when": 1795049966335,
       "tag": "0010_phase8_ai_durability",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795050066335,
+      "tag": "0011_flashcard_studio",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795050067335,
+      "tag": "0012_flashcard_editor",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795050068335,
+      "tag": "0013_flashcard_editor_quality",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795050069335,
+      "tag": "0014_flashcard_quiz_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1795050070335,
+      "tag": "0015_concept_graphs",
+      "breakpoints": true
     }
   ]
 }

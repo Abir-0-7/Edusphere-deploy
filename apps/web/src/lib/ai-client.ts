@@ -1,7 +1,29 @@
 'use client';
 
 import type { ChatReply, Chapter, Flashcard, JobStatus } from './ai-types';
-import { ErrorEnvelopeSchema, type ParsePdfResponse } from '@studyvault/types';
+import {
+  ChapterListResponseSchema,
+  ChatReplySchema,
+  ChatRequestSchema,
+  ErrorEnvelopeSchema,
+  FlashcardGenerationResponseSchema,
+  FlashcardExplanationResponseSchema,
+  FlashcardResponseSchema,
+  FlashcardEditRequestSchema,
+  FlashcardDeleteResponseSchema,
+  FlashcardReportRequestSchema,
+  FlashcardReportResponseSchema,
+  FlashcardListResponseSchema,
+  ConceptGraphRecordSchema,
+  ConceptGraphNodeActionsSchema,
+  ConceptGraphRegenerateRequestSchema,
+  ConceptGraphSaveRequestSchema,
+  MindMapResponseSchema,
+  ReviewRequestSchema,
+  ReviewResultSchema,
+  type ParsePdfResponse,
+  type ReviewResult,
+} from '@studyvault/types';
 import { z } from 'zod';
 
 /**
@@ -9,6 +31,14 @@ import { z } from 'zod';
  * useAuth hook) so every call carries a real session token for verification.
  */
 export type GetToken = () => Promise<string | null>;
+
+/** HTTP errors retain status so the deck viewer can safely decide on offline fallback. */
+export class AiHttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'AiHttpError';
+  }
+}
 
 export async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
   const token = await getToken();
@@ -20,7 +50,7 @@ export async function authFetch(getToken: GetToken, path: string, init: RequestI
     });
   } catch {
     const origin = typeof window === 'undefined' ? 'this deployment' : window.location.origin;
-    throw new Error(
+    throw new TypeError(
       `Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`,
     );
   }
@@ -46,9 +76,15 @@ export async function readResponse<T>(
   label: string,
 ): Promise<T> {
   const payload: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(`${label} failed: ${response.status}`);
+  if (!response.ok) {
+    const failure = ErrorEnvelopeSchema.safeParse(payload);
+    throw new AiHttpError(
+      response.status,
+      failure.success ? failure.data.error.message : `${label} failed: ${response.status}`,
+    );
+  }
   const parsed = schema.safeParse(payload);
-  if (!parsed.success) throw new Error(`${label} returned an invalid response.`);
+  if (!parsed.success) throw new Error(`${label} failed: invalid service response`);
   return parsed.data;
 }
 
@@ -98,8 +134,69 @@ export async function getJob(getToken: GetToken, jobId: string): Promise<JobStat
 
 export async function getChapters(getToken: GetToken, documentId: string): Promise<Chapter[]> {
   const res = await authFetch(getToken, `/api/documents/${documentId}/chapters`);
-  if (!res.ok) throw new Error(`chapters failed: ${res.status}`);
-  return res.json();
+  return readResponse(res, ChapterListResponseSchema, 'chapters');
+}
+
+export async function getSavedConceptGraph(getToken: GetToken, documentId: string) {
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph`);
+  return readResponse(res, ConceptGraphRecordSchema, 'saved concept graph');
+}
+
+export async function getGeneratedMindMap(getToken: GetToken, documentId: string) {
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/mindmap`);
+  return readResponse(res, MindMapResponseSchema, 'mind map');
+}
+
+export async function saveConceptGraph(
+  getToken: GetToken,
+  documentId: string,
+  graph: unknown,
+  expectedRevision?: number,
+) {
+  const body = ConceptGraphSaveRequestSchema.parse({
+    graph,
+    ...(expectedRevision === undefined ? {} : { expected_revision: expectedRevision }),
+  });
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return readResponse(res, ConceptGraphRecordSchema, 'save concept graph');
+}
+
+export async function getConceptGraphNodeActions(
+  getToken: GetToken,
+  documentId: string,
+  nodeId: string,
+  revision: number,
+) {
+  const res = await authFetch(
+    getToken,
+    `/api/documents/${encodeURIComponent(documentId)}/concept-graph/nodes/${encodeURIComponent(nodeId)}/actions?revision=${revision}`,
+  );
+  const actions = await readResponse(res, ConceptGraphNodeActionsSchema, 'concept graph learning actions');
+  if (
+    actions.node_id !== nodeId || actions.graph_revision !== revision
+    || (actions.source && actions.source.document_id !== documentId)
+    || (actions.deck && actions.deck.document_id !== documentId)
+    || (actions.board && (actions.board.document_id !== documentId || actions.board.node_id !== nodeId))
+  ) throw new Error('Concept graph action does not match this source and revision.');
+  return actions;
+}
+
+export async function regenerateConceptGraph(
+  getToken: GetToken,
+  documentId: string,
+  expectedRevision: number,
+) {
+  const body = ConceptGraphRegenerateRequestSchema.parse({ expected_revision: expectedRevision });
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph/regenerate`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return readResponse(res, ConceptGraphRecordSchema, 'regenerate concept graph');
 }
 
 export async function askQuestion(
@@ -110,38 +207,75 @@ export async function askQuestion(
   const res = await authFetch(getToken, `/api/documents/${documentId}/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(ChatRequestSchema.parse({ question })),
   });
-  if (!res.ok) throw new Error(`chat failed: ${res.status}`);
-  return res.json();
+  return readResponse(res, ChatReplySchema, 'chat');
 }
 
 export async function generateFlashcards(getToken: GetToken, documentId: string): Promise<string> {
   const res = await authFetch(getToken, `/api/documents/${documentId}/flashcards`, { method: 'POST' });
-  if (!res.ok) throw new Error(`flashcard generation failed: ${res.status}`);
-  return ((await res.json()) as { job_id: string }).job_id;
+  return (await readResponse(res, FlashcardGenerationResponseSchema, 'flashcard generation')).job_id;
 }
 
-export async function listFlashcards(getToken: GetToken, documentId: string): Promise<Flashcard[]> {
-  const res = await authFetch(getToken, `/api/documents/${documentId}/flashcards`);
-  if (!res.ok) throw new Error(`flashcards failed: ${res.status}`);
-  return res.json();
+export async function listFlashcards(getToken: GetToken, documentId: string, deckId?: string): Promise<Flashcard[]> {
+  const params = deckId ? `?deck_id=${encodeURIComponent(deckId)}` : '';
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/flashcards${params}`);
+  return readResponse(res, FlashcardListResponseSchema, 'flashcards');
+}
+
+export async function explainFlashcard(getToken: GetToken, cardId: string) {
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/explain`);
+  return readResponse(res, FlashcardExplanationResponseSchema, 'card explanation');
+}
+
+export async function editFlashcard(
+  getToken: GetToken,
+  cardId: string,
+  input: { front?: string; back?: string; tags?: string[] },
+): Promise<Flashcard> {
+  const body = FlashcardEditRequestSchema.parse(input);
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  return readResponse(res, FlashcardResponseSchema, 'edit flashcard');
+}
+
+export async function retireFlashcard(getToken: GetToken, cardId: string): Promise<Flashcard> {
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/retire`, { method: 'POST' });
+  return readResponse(res, FlashcardResponseSchema, 'retire flashcard');
+}
+
+export async function deleteFlashcard(getToken: GetToken, cardId: string): Promise<void> {
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+  await readResponse(res, FlashcardDeleteResponseSchema, 'delete flashcard');
+}
+
+export async function reportFlashcard(getToken: GetToken, cardId: string, reason: string): Promise<void> {
+  const body = FlashcardReportRequestSchema.parse({ reason });
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/report`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  await readResponse(res, FlashcardReportResponseSchema, 'report flashcard');
 }
 
 export async function getReviewQueue(getToken: GetToken): Promise<Flashcard[]> {
   const res = await authFetch(getToken, '/api/flashcards/review-queue');
-  if (!res.ok) throw new Error(`review queue failed: ${res.status}`);
-  return res.json();
+  return readResponse(res, FlashcardListResponseSchema, 'review queue');
 }
 
-export async function submitReview(getToken: GetToken, cardId: string, grade: number): Promise<Flashcard> {
+export async function submitReview(
+  getToken: GetToken,
+  cardId: string,
+  grade: number,
+  reviewId?: string,
+): Promise<ReviewResult> {
+  const body = ReviewRequestSchema.parse({ grade, ...(reviewId === undefined ? {} : { review_id: reviewId }) });
   const res = await authFetch(getToken, `/api/flashcards/${cardId}/review`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ grade }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`review failed: ${res.status}`);
-  return res.json();
+  return readResponse(res, ReviewResultSchema, 'review');
 }
 
 /** Poll a job until it reaches a terminal state or times out (task 2.3). */

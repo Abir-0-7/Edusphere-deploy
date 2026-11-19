@@ -124,7 +124,15 @@ class PgDocumentStore:
         self._max_flashcards_per_deck = max_flashcards_per_deck
         self._max_embedding_batch = max_embedding_batch
         self._max_page_size = max_page_size
+        self._database_url = database_url
         self._conn = psycopg.connect(database_url, autocommit=True)
+
+    def _connect_for_atomic(self):
+        """Do not interleave transaction state on the legacy shared connection."""
+        import psycopg
+
+        return psycopg.connect(self._database_url, autocommit=True, connect_timeout=5)
+
 
     def healthcheck(self) -> None:
         with self._conn.cursor() as cur:
@@ -230,6 +238,22 @@ class PgDocumentStore:
             raise InvalidInput("document chunk limit reached")
         with self._conn.transaction():
             with self._conn.cursor() as cur:
+                cur.execute("SELECT user_id FROM documents WHERE id=%s", (document_id,))
+                owner = cur.fetchone()
+                if owner is None:
+                    raise NotFound("document not found")
+                user_id = str(owner[0])
+                cur.execute("SELECT id FROM users WHERE id=%s FOR KEY SHARE", (user_id,))
+                if cur.fetchone() is None:
+                    raise NotFound("document owner not found")
+                # Flashcard generation and merge lock this row while reading its
+                # chapters/chunks, so publication sees one complete source revision.
+                cur.execute(
+                    "SELECT id FROM documents WHERE id=%s AND user_id=%s FOR UPDATE",
+                    (document_id, user_id),
+                )
+                if cur.fetchone() is None:
+                    raise NotFound("document not found")
                 cur.execute("DELETE FROM chunks WHERE document_id=%s", (document_id,))
                 cur.execute("DELETE FROM chapters WHERE document_id=%s", (document_id,))
                 for c in chapters:
@@ -443,8 +467,8 @@ class PgDocumentStore:
                 for c in additions:
                     cur.execute(
                         "INSERT INTO flashcards (id, document_id, chapter_id, source_chunk_id, user_id,"
-                        " front, back, source_quote, source_revision, due_date)"
-                        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        " front, back, source_quote, source_revision, due_date, tags)"
+                        " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)",
                         (
                             c["id"],
                             document_id,
@@ -456,6 +480,7 @@ class PgDocumentStore:
                             c["source_quote"],
                             c["source_revision"],
                             due_date,
+                            json.dumps(c["tags"]),
                         ),
                     )
         return len(additions)
@@ -505,7 +530,7 @@ class PgDocumentStore:
             for card in additions:
                 cur.execute(
                     "INSERT INTO flashcards (id,document_id,chapter_id,source_chunk_id,user_id,front,back,"
-                    "source_quote,source_revision,due_date) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "source_quote,source_revision,due_date,tags) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb)",
                     (
                         card["id"],
                         document_id,
@@ -517,37 +542,36 @@ class PgDocumentStore:
                         card["source_quote"],
                         card["source_revision"],
                         due_date,
+                        json.dumps(card["tags"]),
                     ),
                 )
             cur.execute("SELECT count(*) FROM flashcards WHERE document_id=%s AND user_id=%s", (document_id, user_id))
             return int(cur.fetchone()[0])
 
     def list_flashcards(
-        self, document_id: str, user_id: str, *, limit: int = 100, offset: int = 0
+        self, document_id: str, user_id: str, *, deck_id: str | None = None,
+        include_retired: bool = False, limit: int = 100, offset: int = 0,
     ) -> list[dict[str, Any]]:
         limit, offset = _bounded_page(limit, offset, self._max_page_size)
         with self._conn.cursor() as cur:
             cur.execute(
-                "SELECT id, front, back, ease_factor, interval_days, repetitions, due_date,"
-                " chapter_id, source_chunk_id, source_quote, source_revision FROM flashcards"
-                " WHERE document_id=%s AND user_id=%s ORDER BY due_date, created_at,id LIMIT %s OFFSET %s",
-                (document_id, user_id, limit, offset),
+                "SELECT id,front,back,ease_factor,interval_days,repetitions,due_date,"
+                "chapter_id,source_chunk_id,source_quote,source_revision,deck_id,tags,status,needs_review "
+                "FROM flashcards WHERE document_id=%s AND user_id=%s "
+                "AND (%s::uuid IS NULL OR deck_id=%s) AND (%s OR status='active') "
+                "ORDER BY due_date,created_at,id LIMIT %s OFFSET %s",
+                (document_id, user_id, deck_id, deck_id, include_retired, limit, offset),
             )
             return [
                 {
-                    "id": str(r[0]),
-                    "front": r[1],
-                    "back": r[2],
-                    "ease_factor": r[3],
-                    "interval_days": r[4],
-                    "repetitions": r[5],
-                    "due_date": r[6],
-                    "chapter_id": str(r[7]) if r[7] else None,
-                    "source_chunk_id": str(r[8]) if r[8] else None,
-                    "source_quote": r[9],
-                    "source_revision": r[10],
+                    "id": str(row[0]), "front": row[1], "back": row[2], "ease_factor": row[3],
+                    "interval_days": row[4], "repetitions": row[5], "due_date": row[6],
+                    "chapter_id": str(row[7]) if row[7] else None,
+                    "source_chunk_id": str(row[8]) if row[8] else None,
+                    "source_quote": row[9], "source_revision": row[10], "deck_id": str(row[11]),
+                    "tags": row[12] or [], "status": row[13], "needs_review": row[14],
                 }
-                for r in cur.fetchall()
+                for row in cur.fetchall()
             ]
 
     def due_flashcards(self, user_id: str, today: str, *, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
@@ -556,7 +580,8 @@ class PgDocumentStore:
         with self._conn.cursor() as cur:
             cur.execute(
                 "SELECT id, front, back, ease_factor, interval_days, repetitions, due_date, document_id"
-                ", source_quote, source_revision FROM flashcards WHERE user_id=%s AND due_date <= %s "
+                ", source_quote, source_revision FROM flashcards "
+                "WHERE user_id=%s AND due_date <= %s AND status='active' "
                 "ORDER BY due_date,id LIMIT %s OFFSET %s",
                 (user_id, today, limit, offset),
             )
@@ -580,8 +605,8 @@ class PgDocumentStore:
         with self._conn.cursor() as cur:
             cur.execute(
                 "SELECT id,front,back,ease_factor,interval_days,repetitions,due_date,document_id,chapter_id,"
-                "source_chunk_id,source_quote,source_revision"
-                " FROM flashcards WHERE id=%s AND user_id=%s",
+                "source_chunk_id,source_quote,source_revision,deck_id,tags,status,needs_review"
+                " FROM flashcards WHERE id=%s AND user_id=%s AND status='active'",
                 (card_id, user_id),
             )
             r = cur.fetchone()
@@ -600,7 +625,88 @@ class PgDocumentStore:
             "source_chunk_id": str(r[9]) if r[9] else None,
             "source_quote": r[10],
             "source_revision": r[11],
+            "deck_id": str(r[12]),
+            "tags": r[13] or [],
+            "status": r[14],
+            "needs_review": r[15],
         }
+
+    def edit_flashcard(
+        self, card_id: str, user_id: str, *, front: str | None = None, back: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
+        with self._connect_for_atomic() as conn, conn.transaction(), conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,document_id,chapter_id,source_chunk_id,source_quote,source_revision,front,back,tags "
+                "FROM flashcards WHERE id=%s AND user_id=%s AND status='active' FOR UPDATE",
+                (card_id, user_id),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise NotFound("flashcard not found")
+            next_front, next_back = front or row[6], back or row[7]
+            changed_content = next_front != row[6] or next_back != row[7]
+            next_tags = tags if tags is not None else (row[8] or [])
+            cur.execute(
+                "UPDATE flashcards SET front=%s,back=%s,tags=%s::jsonb,needs_review=(needs_review OR %s),"
+                "due_date=CASE WHEN %s THEN CURRENT_DATE::text ELSE due_date END,updated_at=now() "
+                "WHERE id=%s AND user_id=%s RETURNING id,front,back,ease_factor,interval_days,repetitions,due_date,"
+                "tags,status,needs_review",
+                (next_front, next_back, json.dumps(next_tags), changed_content, changed_content, card_id, user_id),
+            )
+            result = cur.fetchone()
+        return {
+            "id": str(result[0]), "front": result[1], "back": result[2], "ease_factor": result[3],
+            "interval_days": result[4], "repetitions": result[5], "due_date": result[6],
+            "tags": result[7] or [], "status": result[8], "needs_review": result[9],
+        }
+
+
+    def retire_flashcard(self, card_id: str, user_id: str) -> dict[str, Any]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "UPDATE flashcards SET status='retired',updated_at=now() WHERE id=%s AND user_id=%s "
+                "AND status='active' RETURNING id,front,back,ease_factor,interval_days,repetitions,due_date,"
+                "tags,status,needs_review",
+                (card_id, user_id),
+            )
+            row = cur.fetchone()
+        if row is None:
+            raise NotFound("flashcard not found")
+        return {
+            "id": str(row[0]), "front": row[1], "back": row[2], "ease_factor": row[3],
+            "interval_days": row[4], "repetitions": row[5], "due_date": row[6], "tags": row[7] or [],
+            "status": row[8], "needs_review": row[9],
+        }
+
+
+    def delete_flashcard(self, card_id: str, user_id: str) -> bool:
+        with self._conn.cursor() as cur:
+            cur.execute("DELETE FROM flashcards WHERE id=%s AND user_id=%s RETURNING id", (card_id, user_id))
+            return cur.fetchone() is not None
+
+
+    def report_flashcard(self, card_id: str, user_id: str, reason: str) -> dict[str, object]:
+        with self._conn.cursor() as cur:
+            cur.execute("SELECT id FROM flashcards WHERE id=%s AND user_id=%s", (card_id, user_id))
+            if cur.fetchone() is None:
+                raise NotFound("flashcard not found")
+            cur.execute(
+                "INSERT INTO flashcard_quality_reports(card_id,user_id,reason) VALUES (%s,%s,%s) RETURNING id",
+                (card_id, user_id, reason),
+            )
+            report_id = cur.fetchone()[0]
+        return {"card_id": card_id, "report_id": str(report_id), "status": "received"}
+
+
+    def due_review_count(self, user_id: str, today: str) -> int:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM flashcards WHERE user_id=%s AND due_date <= %s AND status='active'",
+                (user_id, today),
+            )
+            return cur.fetchone()[0]
+
 
     def update_flashcard_sm2(self, card_id: str, *, ease: float, interval_days: int, reps: int, due: str) -> None:
         with self._conn.cursor() as cur:
@@ -636,7 +742,7 @@ class PgDocumentStore:
                 raise NotFound("flashcard owner not found")
             cur.execute(
                 "SELECT id,ease_factor,interval_days,repetitions,due_date FROM flashcards "
-                "WHERE id=%s AND user_id=%s FOR UPDATE",
+                "WHERE id=%s AND user_id=%s AND status='active' FOR UPDATE",
                 (card_id, user_id),
             )
             row = cur.fetchone()
@@ -671,7 +777,8 @@ class PgDocumentStore:
                     raise InvalidInput("review_id is already in use; refresh the review queue")
                 return self._replay_review(cur, saved, card, user_id, key, grade)
             cur.execute(
-                "UPDATE flashcards SET ease_factor=%s,interval_days=%s,repetitions=%s,due_date=%s,updated_at=%s "
+                "UPDATE flashcards SET ease_factor=%s,interval_days=%s,repetitions=%s,"
+                "due_date=%s,needs_review=false,updated_at=%s "
                 "WHERE id=%s AND user_id=%s",
                 (
                     result["ease_factor"],
@@ -706,7 +813,7 @@ class PgDocumentStore:
                 "JOIN chunks c ON c.id=f.source_chunk_id AND c.document_id=f.document_id "
                 "AND c.user_id=f.user_id AND c.chapter_id=f.chapter_id "
                 "JOIN chapters h ON h.id=c.chapter_id AND h.document_id=c.document_id AND h.user_id=c.user_id "
-                "WHERE f.id=%s AND f.user_id=%s",
+                "WHERE f.id=%s AND f.user_id=%s AND f.status='active'",
                 (card_id, user_id),
             )
             row = cur.fetchone()

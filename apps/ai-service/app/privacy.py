@@ -19,18 +19,60 @@ logger = logging.getLogger("studyvault.privacy")
 # Tables owned by a user, in dependency order (children first is not needed
 # thanks to ON DELETE CASCADE, but ordering keeps the export readable).
 _OWNED_TABLES = [
+    ("concept_graphs", ["id", "document_id", "revision", "graph", "created_at", "updated_at"]),
+    (
+        "flashcard_quiz_sessions",
+        ["id", "document_id", "deck_id", "questions", "submitted_answers", "result", "created_at", "graded_at"],
+    ),
+    ("flashcard_quality_reports", ["id", "card_id", "reason", "status", "created_at"]),
+    (
+        "flashcard_generation_drafts",
+        ["id", "document_id", "source_revision", "settings", "cards", "merge_result", "selected_ids", "created_at"],
+    ),
+    (
+        "flashcard_versions",
+        [
+            "card_id",
+            "version",
+            "tags",
+            "front",
+            "back",
+            "chapter_id",
+            "source_chunk_id",
+            "source_quote",
+            "source_revision",
+            "created_at",
+        ],
+    ),
+    ("flashcard_decks", ["id", "document_id", "name", "is_default", "created_at"]),
     (
         "ai_usage",
         [
-            "operation_id", "feature", "outcome", "cache_hit", "provider_attempts", "prompt_tokens",
-            "completion_tokens", "started_at", "finished_at", "created_at",
+            "operation_id",
+            "feature",
+            "outcome",
+            "cache_hit",
+            "provider_attempts",
+            "prompt_tokens",
+            "completion_tokens",
+            "started_at",
+            "finished_at",
+            "created_at",
         ],
     ),
     (
         "ai_usage_attempts",
         [
-            "id", "operation_id", "attempt_no", "provider", "model", "outcome", "prompt_tokens",
-            "completion_tokens", "latency_ms", "created_at",
+            "id",
+            "operation_id",
+            "attempt_no",
+            "provider",
+            "model",
+            "outcome",
+            "prompt_tokens",
+            "completion_tokens",
+            "latency_ms",
+            "created_at",
         ],
     ),
     (
@@ -40,8 +82,15 @@ _OWNED_TABLES = [
     (
         "ai_budget_reservations",
         [
-            "operation_id", "feature", "budget_day", "reserved_tokens", "actual_tokens", "state",
-            "expires_at", "created_at", "updated_at",
+            "operation_id",
+            "feature",
+            "budget_day",
+            "reserved_tokens",
+            "actual_tokens",
+            "state",
+            "expires_at",
+            "created_at",
+            "updated_at",
         ],
     ),
     ("ai_minute_limits", ["window_start", "count"]),
@@ -74,6 +123,10 @@ _OWNED_TABLES = [
         "flashcards",
         [
             "id",
+            "deck_id",
+            "tags",
+            "status",
+            "needs_review",
             "document_id",
             "chapter_id",
             "front",
@@ -108,8 +161,16 @@ _OWNED_TABLES = [
     (
         "course_releases",
         [
-            "id", "course_id", "user_id", "version", "status", "visibility", "content", "content_hash",
-            "created_at", "updated_at",
+            "id",
+            "course_id",
+            "user_id",
+            "version",
+            "status",
+            "visibility",
+            "content",
+            "content_hash",
+            "created_at",
+            "updated_at",
         ],
     ),
     (
@@ -120,15 +181,33 @@ _OWNED_TABLES = [
     (
         "learner_profiles",
         [
-            "user_id", "goal_kind", "goal", "familiarity", "weekly_minutes", "deadline", "language",
-            "accessibility", "role_variant", "explanation_depth", "pace", "diagnostic", "created_at", "updated_at",
+            "user_id",
+            "goal_kind",
+            "goal",
+            "familiarity",
+            "weekly_minutes",
+            "deadline",
+            "language",
+            "accessibility",
+            "role_variant",
+            "explanation_depth",
+            "pace",
+            "diagnostic",
+            "created_at",
+            "updated_at",
         ],
     ),
     (
         "learner_track_plan_revisions",
         [
-            "id", "user_id", "revision", "track_id", "required_course_slugs", "required_objective_ids",
-            "objective_mapping", "created_at",
+            "id",
+            "user_id",
+            "revision",
+            "track_id",
+            "required_course_slugs",
+            "required_objective_ids",
+            "objective_mapping",
+            "created_at",
         ],
     ),
     ("learner_recommendation_snapshots", ["user_id", "snapshot", "updated_at"]),
@@ -170,9 +249,7 @@ class PrivacyStore:
             account = cur.fetchone()
         data: dict[str, Any] = {
             "user_id": user_id,
-            "account": dict(zip(("id", "clerk_id", "email", "created_at"), account, strict=True))
-            if account
-            else None,
+            "account": dict(zip(("id", "clerk_id", "email", "created_at"), account, strict=True)) if account else None,
             "tables": {},
         }
         for table, columns in _OWNED_TABLES:
