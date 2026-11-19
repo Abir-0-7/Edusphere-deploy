@@ -38,6 +38,10 @@ class RateLimited(ApiError):
     status_code, code = 429, "rate_limited"
 
 
+class Conflict(ApiError):
+    status_code, code = 409, "conflict"
+
+
 def error_body(message: str, code: str, details: Any = None) -> dict[str, Any]:
     err: dict[str, Any] = {"code": code, "message": message}
     if details is not None:
@@ -46,4 +50,11 @@ def error_body(message: str, code: str, details: Any = None) -> dict[str, Any]:
 
 
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=error_body(exc.message, exc.code, exc.details))
+    headers = {}
+    if isinstance(exc, RateLimited) and isinstance(exc.details, dict):
+        retry = exc.details.get("retryAfterSeconds")
+        if type(retry) is int and retry > 0:
+            headers["Retry-After"] = str(retry)
+    return JSONResponse(
+        status_code=exc.status_code, content=error_body(exc.message, exc.code, exc.details), headers=headers
+    )

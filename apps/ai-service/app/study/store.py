@@ -36,6 +36,12 @@ class PgStudyStore:
 
         self._conn = psycopg.connect(database_url, autocommit=True)
 
+    def healthcheck(self) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            if cur.fetchone() != (1,):
+                raise RuntimeError("study database health check returned an invalid result")
+
     # --- focus sessions -----------------------------------------------------
     def start_session(
         self, user_id: str, kind: str, planned_seconds: int, now: datetime | None = None

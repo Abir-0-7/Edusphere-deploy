@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import {
   GameDifficultySchema,
   GameObjectiveSchema,
@@ -31,8 +31,35 @@ const OBJECTIVES = [
 ] as const;
 
 const PREF_KEY = 'studyvault:game-preferences';
+const DISK_COLORS = [
+  'linear-gradient(90deg,#eab308,#f59e0b)',
+  'linear-gradient(90deg,#f97316,#fb7185)',
+  'linear-gradient(90deg,#8b5cf6,#6366f1)',
+  'linear-gradient(90deg,#0ea5e9,#14b8a6)',
+  'linear-gradient(90deg,#22c55e,#10b981)',
+];
 
-function isQuestionGame(id: GameId): boolean {
+function QueenMark({ darkSquare }: { darkSquare: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 48 48"
+      fill="none"
+      className={`h-[70%] w-[70%] drop-shadow-[0_3px_2px_rgba(0,0,0,0.3)] ${darkSquare ? 'text-amber-200' : 'text-amber-700'}`}
+    >
+      <path d="M8 18 15 25 20 9 24 24 30 12 33 26 41 18 36 38H12L8 18Z" fill="currentColor" />
+      <path d="M13 41h23" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="8" cy="15" r="3" fill="currentColor" />
+      <circle cx="20" cy="7" r="3" fill="currentColor" />
+      <circle cx="31" cy="10" r="3" fill="currentColor" />
+      <circle cx="42" cy="15" r="3" fill="currentColor" />
+    </svg>
+  );
+}
+
+function isQuestionGame(
+  id: GameId,
+): id is Extract<GameId, 'FlashcardTowerDefense' | 'ConceptMatch' | 'RetrievalSprint' | 'CodeTrace'> {
   return (
     id === 'FlashcardTowerDefense' || id === 'ConceptMatch' || id === 'RetrievalSprint' || id === 'CodeTrace'
   );
@@ -301,7 +328,11 @@ function AccountGameVault({ game }: { game: VaultGame }) {
       );
     if (selected.snapshot.config.game_id === 'SortingRace') {
       return (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Sorting board">
+        <div
+          className="mx-auto grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
+          role="group"
+          aria-label="Sorting board"
+        >
           {state.values.map((value, index) => (
             <button
               key={index}
@@ -316,42 +347,113 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                     ? setSelectedIndex(null)
                     : (act({ type: 'swap', left: selectedIndex, right: index }), setSelectedIndex(null))
               }
-              className="min-h-20 rounded border bg-white p-3 text-2xl font-semibold shadow-sm aria-pressed:border-blue-600 aria-pressed:bg-blue-50"
+              className={`group relative grid min-h-24 place-items-center overflow-hidden rounded-2xl border border-amber-950/10 bg-gradient-to-br from-amber-50 to-orange-100 p-3 text-3xl font-black tabular-nums text-amber-950 shadow-[0_8px_20px_-15px_rgba(120,53,15,0.7)] aria-pressed:border-amber-500 aria-pressed:bg-amber-100 aria-pressed:ring-2 aria-pressed:ring-amber-400 disabled:cursor-default sm:min-h-28 sm:text-4xl ${reducedMotion ? '' : 'transition hover:-translate-y-0.5 hover:shadow-lg'}`}
             >
-              {value}
+              <span
+                aria-hidden="true"
+                className="absolute left-3 top-2 text-[10px] font-bold uppercase tracking-widest text-amber-900/45"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <span>{value}</span>
+              <span
+                aria-hidden="true"
+                className="absolute bottom-2 right-3 font-mono text-xs text-amber-900/40"
+              >
+                SWAP
+              </span>
             </button>
           ))}
         </div>
       );
     }
     if (selected.snapshot.config.game_id === 'NQueens') {
+      const size = state.columns.length;
+      const queensPlaced = state.columns.filter((column) => column >= 0).length;
       return (
-        <div
-          className="grid max-w-lg gap-1"
-          style={{ gridTemplateColumns: `repeat(${state.columns.length}, minmax(0, 1fr))` }}
-          aria-label="N-Queens board"
-        >
-          {state.columns.map((queenColumn, row) =>
-            Array.from({ length: state.columns.length }, (_, column) => (
-              <button
-                key={`${row}-${column}`}
-                type="button"
-                aria-label={`Row ${row + 1}, column ${column + 1}${queenColumn === column ? ', queen' : ''}`}
-                aria-pressed={queenColumn === column}
-                disabled={selected.status !== 'playing' || busy}
-                onClick={() => act({ type: 'place', row, column })}
-                className="aspect-square rounded border bg-slate-50 text-2xl aria-pressed:bg-amber-100"
-              >
-                {queenColumn === column ? '♛' : ''}
-              </button>
-            )),
-          )}
+        <div className="mx-auto w-full max-w-[34rem]">
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-900/10 bg-white px-4 py-3 shadow-sm">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Board progress</p>
+              <p className="mt-1 text-sm text-slate-600">Place one queen in every row.</p>
+            </div>
+            <span
+              role="status"
+              className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-bold tabular-nums text-emerald-900"
+              aria-label={`${queensPlaced} of ${size} queens placed`}
+              aria-live="polite"
+            >
+              {queensPlaced} / {size}
+            </span>
+          </div>
+          <div
+            className="overflow-hidden rounded-2xl border border-emerald-950/20 bg-[#183b32] p-2 shadow-[0_18px_45px_-26px_rgba(14,55,43,0.8)] sm:p-3"
+            role="group"
+            aria-label="N-Queens chessboard"
+          >
+            <div
+              className="grid items-center gap-1 sm:gap-1.5"
+              style={{ gridTemplateColumns: `1.25rem repeat(${size}, minmax(0, 1fr))` }}
+            >
+              <span aria-hidden="true" />
+              {Array.from({ length: size }, (_, column) => (
+                <span
+                  key={column}
+                  aria-hidden="true"
+                  className="pb-1 text-center text-[10px] font-bold tracking-wide text-emerald-100/75 sm:text-xs"
+                >
+                  {String.fromCharCode(65 + column)}
+                </span>
+              ))}
+              {state.columns.map((queenColumn, row) => (
+                <Fragment key={row}>
+                  <span
+                    aria-hidden="true"
+                    className="pr-1 text-right text-[10px] font-bold tabular-nums text-emerald-100/75 sm:text-xs"
+                  >
+                    {row + 1}
+                  </span>
+                  {Array.from({ length: size }, (_, column) => {
+                    const occupied = queenColumn === column;
+                    const darkSquare = (row + column) % 2 === 1;
+                    return (
+                      <button
+                        key={`${row}-${column}`}
+                        type="button"
+                        aria-label={`Row ${row + 1}, column ${column + 1}${occupied ? ', queen' : ''}`}
+                        aria-pressed={occupied}
+                        disabled={selected.status !== 'playing' || busy}
+                        onClick={() => act({ type: 'place', row, column })}
+                        className={`group grid aspect-square min-w-0 place-items-center overflow-hidden rounded-md border border-white/10 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-300 disabled:cursor-default ${darkSquare ? 'bg-[#39675a] hover:bg-[#477b6b]' : 'bg-[#e8efe4] hover:bg-[#d5e5d8]'} ${occupied ? 'ring-2 ring-inset ring-amber-300/80' : ''} ${reducedMotion ? '' : 'transition duration-150'}`}
+                      >
+                        {occupied ? (
+                          <QueenMark darkSquare={darkSquare} />
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="text-sm font-bold text-emerald-950/0 group-hover:text-emerald-950/40"
+                          >
+                            +
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-center text-xs font-medium text-slate-500">Place one queen in each row.</p>
         </div>
       );
     }
     if (selected.snapshot.config.game_id === 'TowersOfHanoi') {
       return (
-        <div className="grid grid-cols-3 gap-2" aria-label="Towers of Hanoi board">
+        <div
+          className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-3 sm:grid-cols-3"
+          role="group"
+          aria-label="Towers of Hanoi board"
+        >
           {state.towers.map((tower, peg) => (
             <button
               key={peg}
@@ -366,36 +468,95 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                     ? setSelectedIndex(null)
                     : (act({ type: 'move', from: selectedIndex, to: peg }), setSelectedIndex(null))
               }
-              className="flex min-h-48 flex-col justify-end gap-1 rounded border bg-slate-50 p-2 aria-pressed:border-blue-600"
+              className={`group relative flex min-h-52 flex-col items-center justify-end overflow-hidden rounded-2xl border border-emerald-950/10 bg-gradient-to-b from-emerald-50 via-white to-emerald-100/80 px-2 pb-3 pt-8 shadow-[0_12px_26px_-20px_rgba(15,75,57,0.75)] aria-pressed:border-emerald-600 aria-pressed:ring-2 aria-pressed:ring-emerald-300 disabled:cursor-default sm:min-h-60 ${reducedMotion ? '' : 'transition hover:-translate-y-0.5'}`}
             >
+              <span
+                aria-hidden="true"
+                className="absolute bottom-12 left-1/2 h-32 w-2 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-amber-600 shadow-sm"
+              />
               {[...tower].reverse().map((disk) => (
                 <span
                   key={disk}
-                  className="mx-auto block h-6 rounded bg-blue-500 text-center text-xs text-white"
-                  style={{ width: `${25 + disk * 13}%` }}
+                  className={`relative z-10 mx-auto block h-6 rounded-lg border border-white/50 text-center text-xs font-bold leading-6 text-slate-950 shadow-sm ${reducedMotion ? '' : 'transition-[width,transform] group-hover:brightness-105'}`}
+                  style={{
+                    background: DISK_COLORS[(disk - 1) % DISK_COLORS.length],
+                    width: `${25 + disk * 13}%`,
+                  }}
                 >
                   {disk}
                 </span>
               ))}
-              <span className="mt-2 text-sm">Peg {peg + 1}</span>
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-4 bottom-10 h-2 rounded-full bg-amber-800/70 shadow-sm"
+              />
+              <span className="relative z-10 mt-3 rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-900">
+                Peg {peg + 1}
+              </span>
             </button>
           ))}
         </div>
       );
     }
     if (!isQuestionGame(selected.snapshot.config.game_id) || !question) return null;
+    const questionTheme = {
+      FlashcardTowerDefense: {
+        eyebrow: 'text-orange-900',
+        panel: 'border-orange-900/10 bg-gradient-to-br from-orange-50 via-white to-rose-50',
+        badge: 'bg-orange-100 text-orange-900 group-hover:bg-orange-700',
+        option: 'hover:border-orange-300 hover:bg-orange-50',
+        prompt: 'Choose the answer to hold the line.',
+      },
+      ConceptMatch: {
+        eyebrow: 'text-violet-900',
+        panel: 'border-violet-900/10 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50',
+        badge: 'bg-violet-100 text-violet-900 group-hover:bg-violet-700',
+        option: 'hover:border-violet-300 hover:bg-violet-50',
+        prompt: 'Find the idea that fits.',
+      },
+      RetrievalSprint: {
+        eyebrow: 'text-cyan-900',
+        panel: 'border-cyan-900/10 bg-gradient-to-br from-cyan-50 via-white to-teal-50',
+        badge: 'bg-cyan-100 text-cyan-900 group-hover:bg-cyan-700',
+        option: 'hover:border-cyan-300 hover:bg-cyan-50',
+        prompt: 'Bring the answer back from memory.',
+      },
+      CodeTrace: {
+        eyebrow: 'text-emerald-300',
+        panel: 'border-slate-700 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950',
+        badge: 'bg-emerald-100 text-emerald-950 group-hover:bg-emerald-400',
+        option: 'hover:border-emerald-400 hover:bg-emerald-50',
+        prompt: 'Follow each line and predict the output.',
+      },
+    }[selected.snapshot.config.game_id];
+    const codeTraceQuestion = selected.snapshot.config.game_id === 'CodeTrace';
     return (
-      <div className="space-y-3" aria-label={`${game.title} question`}>
-        <pre className="whitespace-pre-wrap rounded bg-slate-50 p-3 text-sm">{question.prompt}</pre>
-        <div className="grid gap-2 sm:grid-cols-2">
+      <div className="mx-auto w-full max-w-3xl space-y-4" aria-label={`${game.title} question`}>
+        <div className={`rounded-2xl border p-5 shadow-sm sm:p-6 ${questionTheme.panel}`}>
+          <p className={`text-xs font-bold uppercase tracking-[0.16em] ${questionTheme.eyebrow}`}>
+            {questionTheme.prompt}
+          </p>
+          <pre
+            className={`mt-3 whitespace-pre-wrap rounded-xl p-4 text-base font-semibold leading-7 ${codeTraceQuestion ? 'bg-[#0b211b] font-mono text-emerald-100' : 'font-sans text-slate-900'}`}
+          >
+            {question.prompt}
+          </pre>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
           {question.choices.map((choice, choiceIndex) => (
             <button
               key={choice}
               type="button"
               disabled={selected.status !== 'playing' || busy}
               onClick={() => act({ type: 'answer', question_id: question.id, choice: choiceIndex })}
-              className="rounded border bg-white p-3 text-left hover:bg-blue-50"
+              className={`group flex min-h-16 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm font-semibold text-slate-800 shadow-sm disabled:cursor-default ${reducedMotion ? questionTheme.option : `transition hover:-translate-y-0.5 ${questionTheme.option} hover:shadow-md`}`}
             >
+              <span
+                aria-hidden="true"
+                className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-black ${questionTheme.badge} ${codeTraceQuestion ? 'text-emerald-950' : ''} ${reducedMotion ? '' : 'transition'} group-hover:text-white`}
+              >
+                {String.fromCharCode(65 + choiceIndex)}
+              </span>
               {choice}
             </button>
           ))}
@@ -407,25 +568,29 @@ function AccountGameVault({ game }: { game: VaultGame }) {
   return (
     <div
       ref={player}
-      className="mx-auto max-w-4xl space-y-5 bg-white px-4 py-6 text-slate-950 sm:px-6 fullscreen:max-w-none fullscreen:overflow-auto"
+      className="mx-auto max-w-5xl space-y-6 px-4 py-6 text-slate-950 sm:px-6 sm:py-8 fullscreen:max-w-none fullscreen:overflow-auto"
       aria-busy={busy}
     >
       <a
         href="/games"
-        className="inline-block text-sm font-semibold text-blue-800 underline hover:text-blue-950"
+        className="inline-flex items-center rounded-full border border-emerald-900/10 bg-white px-4 py-2 text-sm font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-50"
       >
         All games
       </a>
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#103f37] via-[#155d4c] to-[#1a765b] p-5 text-white shadow-[0_24px_60px_-34px_rgba(13,71,55,0.8)] sm:p-7">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border border-white/10"
+        />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-blue-800">
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-emerald-100/80">
               {game.category} · {game.duration}
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">{game.title}</h1>
-            <p className="mt-2 text-sm text-slate-700">{game.objective}</p>
-            <p className="mt-1 text-sm text-slate-700">{game.controls}</p>
-            <div className="mt-3">
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{game.title}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-emerald-50/90">{game.objective}</p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-emerald-100/75">{game.controls}</p>
+            <div className="mt-4 w-fit rounded-xl border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm [&_p]:!text-white">
               <GameTokenBalance
                 reward={selected?.status === 'won' && selected.tokens_awarded > 0 ? selected.id : undefined}
               />
@@ -435,24 +600,24 @@ function AccountGameVault({ game }: { game: VaultGame }) {
             type="button"
             onClick={() => void refresh()}
             disabled={busy}
-            className="rounded border px-3 py-2 text-sm"
+            className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50"
           >
             Refresh sessions
           </button>
           <button
             type="button"
             onClick={() => void fullscreen()}
-            className="rounded border px-3 py-2 text-sm"
+            className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
           >
             Full screen
           </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-4 text-sm">
-          <label className="flex items-center gap-2">
+        <div className="mt-5 flex flex-wrap gap-3 text-sm">
+          <label className="flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-emerald-50">
             <input type="checkbox" checked={sound} onChange={(event) => setSound(event.target.checked)} />{' '}
             Sound feedback
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-emerald-50">
             <input
               type="checkbox"
               checked={reducedMotion}
@@ -490,11 +655,11 @@ function AccountGameVault({ game }: { game: VaultGame }) {
         </div>
       )}
       <section aria-labelledby="setup-heading">
-        <h2 id="setup-heading" className="text-lg font-semibold">
-          Set up a session
+        <h2 id="setup-heading" className="text-lg font-extrabold tracking-tight text-slate-950">
+          Prepare your session
         </h2>
-        <div className="mt-4 flex flex-wrap items-end gap-3 rounded bg-slate-50 p-3">
-          <label className="text-sm">
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <label className="text-xs font-bold uppercase tracking-wide text-slate-600">
             Difficulty
             <select
               value={difficulty}
@@ -505,7 +670,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                     : 'easy',
                 )
               }
-              className="ml-2 rounded border p-2"
+              className="mt-1 block min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold normal-case tracking-normal text-slate-900"
             >
               {game.difficulties.map((level) => (
                 <option key={level} value={level}>
@@ -515,7 +680,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex min-h-10 items-center gap-2 rounded-xl bg-slate-50 px-3 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={practice}
@@ -529,7 +694,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
               <select
                 value={objectiveId}
                 onChange={(event) => setObjectiveId(event.target.value)}
-                className="ml-2 rounded border p-2"
+                className="mt-1 block min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold normal-case tracking-normal text-slate-900"
               >
                 <option value="">All Python foundations</option>
                 {OBJECTIVES.map((objective) => (
@@ -544,7 +709,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
             type="button"
             onClick={() => void create()}
             disabled={busy}
-            className="rounded bg-blue-600 px-4 py-2 text-sm text-white"
+            className="min-h-10 rounded-xl bg-emerald-800 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
             New {game.title}
           </button>
@@ -557,10 +722,13 @@ function AccountGameVault({ game }: { game: VaultGame }) {
         )}
       </section>
       {selected && state && (
-        <section aria-labelledby="active-game-heading" className="rounded border p-4">
+        <section
+          aria-labelledby="active-game-heading"
+          className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-emerald-50/60 p-4 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.42)] sm:p-6"
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 id="active-game-heading" className="text-xl font-semibold">
+              <h2 id="active-game-heading" className="text-xl font-extrabold tracking-tight text-slate-950">
                 Current session
               </h2>
               <p className="mt-1 text-sm text-neutral-600">
@@ -568,13 +736,31 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                 {selected.snapshot.config.practice ? 'Practice' : 'Reward eligible'}
               </p>
             </div>
-            <span role="status" className="rounded bg-slate-100 px-2 py-1 text-sm">
+            <span
+              role="status"
+              className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold capitalize text-emerald-900"
+            >
               {selected.status}
             </span>
           </div>
-          <p className="mt-3 text-sm" aria-live="polite">
-            Score {state.score} · Mistakes {state.mistakes} · Hints {state.hints}
-          </p>
+          <div
+            className="mt-4 grid grid-cols-3 gap-2 sm:max-w-xl"
+            aria-label="Session score"
+            aria-live="polite"
+          >
+            <div className="rounded-xl border border-emerald-900/10 bg-emerald-50 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Score</p>
+              <p className="mt-1 text-xl font-black tabular-nums text-emerald-950">{state.score}</p>
+            </div>
+            <div className="rounded-xl border border-rose-900/10 bg-rose-50 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-rose-800">Mistakes</p>
+              <p className="mt-1 text-xl font-black tabular-nums text-rose-950">{state.mistakes}</p>
+            </div>
+            <div className="rounded-xl border border-amber-900/10 bg-amber-50 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Hints</p>
+              <p className="mt-1 text-xl font-black tabular-nums text-amber-950">{state.hints}</p>
+            </div>
+          </div>
           {isQuestionGame(selected.snapshot.config.game_id) && (
             <p className="mt-2 text-sm text-neutral-700">
               Complete the question set with at least 60% correct, rounded up to a whole answer, to win. You
@@ -592,13 +778,13 @@ function AccountGameVault({ game }: { game: VaultGame }) {
               </a>
             </div>
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {selected.status === 'ready' && (
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => void run({ revision: selected.revision, command: 'start' })}
-                className="rounded bg-blue-600 px-4 py-2 text-white"
+                className="min-h-11 rounded-xl bg-emerald-800 px-5 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:opacity-50"
               >
                 Start
               </button>
@@ -608,7 +794,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                 type="button"
                 disabled={busy}
                 onClick={() => void run({ revision: selected.revision, command: 'pause' })}
-                className="rounded border px-4 py-2"
+                className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 py-2 font-bold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Pause
               </button>
@@ -618,7 +804,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                 type="button"
                 disabled={busy}
                 onClick={() => void run({ revision: selected.revision, command: 'resume' })}
-                className="rounded bg-blue-600 px-4 py-2 text-white"
+                className="min-h-11 rounded-xl bg-emerald-800 px-5 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:opacity-50"
               >
                 Resume
               </button>
@@ -630,7 +816,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
                 type="button"
                 disabled={busy}
                 onClick={() => void run({ revision: selected.revision, command: 'abandon' })}
-                className="rounded border border-red-300 px-4 py-2 text-red-700"
+                className="min-h-11 rounded-xl border border-rose-200 bg-white px-5 py-2 font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
               >
                 Abandon
               </button>

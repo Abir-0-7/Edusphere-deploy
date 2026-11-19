@@ -71,6 +71,13 @@
       "when": 1795048966335,
       "tag": "0009_phase8c",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795049966335,
+      "tag": "0010_phase8_ai_durability",
+      "breakpoints": true
     }
   ]
 }

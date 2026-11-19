@@ -1,14 +1,20 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
+  check,
   customType,
+  date,
+  foreignKey,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -57,7 +63,7 @@ export const documents = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_documents_user').on(t.userId)],
+  (t) => [unique('uq_documents_id_owner').on(t.id, t.userId), index('idx_documents_user').on(t.userId)],
 );
 
 export const chapters = pgTable(
@@ -135,6 +141,8 @@ export const flashcards = pgTable(
       .references(() => documents.id, { onDelete: 'cascade' }),
     chapterId: uuid('chapter_id').references(() => chapters.id, { onDelete: 'set null' }),
     sourceChunkId: uuid('source_chunk_id'),
+    sourceQuote: text('source_quote'),
+    sourceRevision: varchar('source_revision', { length: 64 }),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -148,7 +156,19 @@ export const flashcards = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_flashcards_due').on(t.userId, t.dueDate)],
+  (t) => [
+    check(
+      'ck_flashcards_evidence_pair',
+      sql`(${t.sourceQuote} IS NULL AND ${t.sourceRevision} IS NULL) OR (btrim(${t.sourceQuote}) <> '' AND ${t.sourceRevision} ~ '^[0-9a-f]{64}$')`,
+    ),
+    foreignKey({
+      name: 'fk_flashcards_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    unique('uq_flashcards_id_owner').on(t.id, t.userId),
+    index('idx_flashcards_due').on(t.userId, t.dueDate),
+  ],
 );
 
 export const reviews = pgTable(
@@ -162,11 +182,20 @@ export const reviews = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     grade: integer('grade').notNull(),
+    result: jsonb('result'),
     /** Client-generated idempotency key so an offline retry is recorded once. */
     clientReviewId: uuid('client_review_id'),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_reviews_card').on(t.flashcardId), unique('uq_reviews_client_id').on(t.clientReviewId)],
+  (t) => [
+    foreignKey({
+      name: 'fk_reviews_card_owner',
+      columns: [t.flashcardId, t.userId],
+      foreignColumns: [flashcards.id, flashcards.userId],
+    }).onDelete('cascade'),
+    index('idx_reviews_card').on(t.flashcardId),
+    unique('uq_reviews_client_id').on(t.clientReviewId),
+  ],
 );
 
 /** Chapter summaries (task 2.5). One row per (chapter, level); a regeneration
@@ -206,10 +235,173 @@ export const jobs = pgTable(
     errorReason: text('error_reason'),
     runAfter: timestamp('run_after', { withTimezone: true }).notNull().defaultNow(),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    leaseToken: uuid('lease_token'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
+    cancelRequested: boolean('cancel_requested').notNull().default(false),
+    dedupeKey: text('dedupe_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_jobs_poll').on(t.status, t.runAfter)],
+  (t) => [
+    index('idx_jobs_poll').on(t.status, t.runAfter),
+    index('idx_jobs_status_lease').on(t.status, t.leaseExpiresAt),
+    uniqueIndex('uq_jobs_kind_dedupe')
+      .on(t.kind, t.dedupeKey)
+      .where(sql`${t.dedupeKey} IS NOT NULL`),
+  ],
+);
+
+/** Owner-scoped private AI cache; keys contain only versioned hashes. */
+export const aiResponseCache = pgTable(
+  'ai_response_cache',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    cacheKey: varchar('cache_key', { length: 64 }).notNull(),
+    content: text('content').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_ai_response_cache_user_key').on(t.userId, t.cacheKey),
+    foreignKey({
+      name: 'fk_ai_response_cache_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    index('idx_ai_response_cache_user_expiry').on(t.userId, t.expiresAt),
+    index('idx_ai_response_cache_document').on(t.documentId),
+  ],
+);
+
+/** Router usage metadata stores provider accounting, never prompts or source text. */
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    operationId: uuid('operation_id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    feature: text('feature').notNull(),
+    outcome: text('outcome').notNull().default('pending'),
+    cacheHit: boolean('cache_hit').notNull().default(false),
+    providerAttempts: integer('provider_attempts').notNull().default(0),
+    promptTokens: integer('prompt_tokens').notNull().default(0),
+    completionTokens: integer('completion_tokens').notNull().default(0),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_ai_usage_operation_owner').on(t.operationId, t.userId),
+    index('idx_ai_usage_user_created').on(t.userId, t.createdAt),
+  ],
+);
+
+export const aiUsageAttempts = pgTable(
+  'ai_usage_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    operationId: uuid('operation_id')
+      .notNull()
+      .references(() => aiUsage.operationId, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    attemptNo: integer('attempt_no').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    outcome: text('outcome').notNull(),
+    promptTokens: integer('prompt_tokens').notNull().default(0),
+    completionTokens: integer('completion_tokens').notNull().default(0),
+    latencyMs: integer('latency_ms').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_ai_usage_attempt_operation_no').on(t.operationId, t.attemptNo),
+    foreignKey({
+      name: 'fk_ai_usage_attempts_operation_owner',
+      columns: [t.operationId, t.userId],
+      foreignColumns: [aiUsage.operationId, aiUsage.userId],
+    }).onDelete('cascade'),
+    index('idx_ai_usage_attempts_user_created').on(t.userId, t.createdAt),
+  ],
+);
+
+/** Provider-effect reservations: an uncertain result must not be retried as success. */
+export const aiOperations = pgTable(
+  'ai_operations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    operationKey: varchar('operation_key', { length: 64 }).notNull(),
+    state: text('state').notNull(),
+    result: text('result'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_ai_operations_owner_key').on(t.userId, t.operationKey),
+    foreignKey({
+      name: 'fk_ai_operations_document_owner',
+      columns: [t.documentId, t.userId],
+      foreignColumns: [documents.id, documents.userId],
+    }).onDelete('cascade'),
+    index('idx_ai_operations_owner_expiry').on(t.userId, t.expiresAt),
+  ],
+);
+
+export const aiBudgetReservations = pgTable(
+  'ai_budget_reservations',
+  {
+    operationId: uuid('operation_id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    feature: text('feature').notNull(),
+    budgetDay: date('budget_day').notNull(),
+    reservedTokens: integer('reserved_tokens').notNull(),
+    actualTokens: integer('actual_tokens'),
+    state: text('state').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_ai_budget_day_feature').on(t.budgetDay, t.feature),
+    index('idx_ai_budget_owner_day').on(t.userId, t.budgetDay),
+    index('idx_ai_budget_state_expiry').on(t.state, t.expiresAt),
+    check(
+      'ck_ai_budget_reservations_values',
+      sql`${t.reservedTokens} > 0 AND (${t.actualTokens} IS NULL OR ${t.actualTokens} BETWEEN 0 AND ${t.reservedTokens}) AND ${t.state} IN ('reserved','settled','released','expired')`,
+    ),
+  ],
+);
+
+/** Atomic per-owner UTC-minute admission window for deployment without Redis. */
+export const aiMinuteLimits = pgTable(
+  'ai_minute_limits',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
+    count: integer('count').notNull(),
+  },
+  (t) => [
+    primaryKey({ name: 'pk_ai_minute_limits', columns: [t.userId, t.windowStart] }),
+    check('ck_ai_minute_limits_count', sql`${t.count} BETWEEN 1 AND 100000`),
+    index('idx_ai_minute_limits_window').on(t.windowStart),
+  ],
 );
 
 /** Focus timer sessions (phase 3). `ended_at` is stored up front so the timer

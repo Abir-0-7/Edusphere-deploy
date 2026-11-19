@@ -4,6 +4,7 @@ Generates Q/A cards per chapter via the LLM router, validates against a schema,
 and links each card back to the chapter's chunks so a card can cite its source.
 """
 
+import hashlib
 import json
 import logging
 import uuid
@@ -23,13 +24,15 @@ class Flashcard:
     source_chunk_id: str | None
     front: str
     back: str
+    source_quote: str
+    source_revision: str
 
 
 _GEN_SYSTEM = (
     "Generate 3-5 concise flashcards (front/back) that test the key concepts in "
     "the provided chapter excerpt. Front = a question or term; back = a tight "
     "answer of one or two sentences. Return ONLY valid JSON: "
-    "{\"cards\": [{\"front\": \"...\", \"back\": \"...\"}]}."
+    '{"cards": [{"front": "...", "back": "..."}]}.'
 )
 
 
@@ -65,7 +68,7 @@ def _parse_cards(raw: str, chapter: ChapterRecord, chunks: list[ChunkRecord]) ->
             data = json.loads(text[start : end + 1])
         except ValueError:
             data = {}
-    chapter_chunk_ids = [c.id for c in chunks if c.chapter_id == chapter.id]
+    chapter_chunks = [c for c in chunks if c.chapter_id == chapter.id and c.content.strip()]
     out: list[Flashcard] = []
     for item in data.get("cards", []):
         front = str(item.get("front", "")).strip()
@@ -73,13 +76,28 @@ def _parse_cards(raw: str, chapter: ChapterRecord, chunks: list[ChunkRecord]) ->
         if not front or not back:
             continue
         # Link to the first chunk of the chapter so the card can cite a source.
+        source = chapter_chunks[0] if chapter_chunks else None
+        if source is None:
+            continue
+        quote = source.content[: min(500, len(source.content))]
+        revision_data = json.dumps(
+            [chapter.document_id, chapter.id, source.id, source.content, quote],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        revision = hashlib.sha256(revision_data.encode("utf-8")).hexdigest()
+        identity = json.dumps(
+            [chapter.id, source.id, " ".join(front.split()), " ".join(back.split())], ensure_ascii=False
+        )
         out.append(
             Flashcard(
-                id=str(uuid.uuid4()),
+                id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"studyvault:flashcard:{identity}")),
                 chapter_id=chapter.id,
-                source_chunk_id=chapter_chunk_ids[0] if chapter_chunk_ids else None,
+                source_chunk_id=source.id,
                 front=front,
                 back=back,
+                source_quote=quote,
+                source_revision=revision,
             )
         )
     return out

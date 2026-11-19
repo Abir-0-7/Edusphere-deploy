@@ -36,6 +36,7 @@ def complete_validated[T: BaseModel](
     system: str,
     user: str,
     max_attempts: int = 2,
+    cache_on_validated: bool = True,
 ) -> T:
     """Ask the LLM for JSON, validate against `schema`, retry once on failure."""
     messages: list[dict[str, str]] = [
@@ -48,7 +49,10 @@ def complete_validated[T: BaseModel](
         parsed = _extract_json(content)
         if parsed is not None:
             try:
-                return schema.model_validate(parsed)
+                value = schema.model_validate(parsed)
+                if cache_on_validated:
+                    router.accept_cache_candidate()
+                return value
             except ValidationError as exc:
                 validation_error = str(exc)
                 logger.warning("LLM output failed schema validation (attempt %d): %s", attempt + 1, validation_error)
