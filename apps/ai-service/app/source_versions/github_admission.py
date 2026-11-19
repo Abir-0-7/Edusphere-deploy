@@ -12,10 +12,14 @@ import threading
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import httpx
 
 from app.errors import ApiError, RateLimited
+
+if TYPE_CHECKING:
+    from app.settings import Settings
 
 _RESPONSE_BYTES = 4096
 
@@ -168,6 +172,20 @@ class UpstashGithubImportLimiter:
             raise ApiError("GitHub import usage checks are temporarily unavailable", status_code=503) from exc
         if result == 0:
             raise _denied(current)
+
+
+def github_import_limiter(settings: "Settings") -> MemoryGithubImportLimiter | UpstashGithubImportLimiter:
+    """Require shared admission only for enabled imports using durable storage.
+
+    Disabled routes reject before admission, so they must not require optional
+    Upstash credentials merely to start the existing PostgreSQL-backed API.
+    """
+    if settings.job_store == "memory" or not settings.github_import_enabled:
+        return MemoryGithubImportLimiter(settings.github_import_per_user_hour, settings.github_import_global_hour)
+    return UpstashGithubImportLimiter(
+        settings.upstash_redis_rest_url or "", settings.upstash_redis_rest_token or "",
+        settings.github_import_per_user_hour, settings.github_import_global_hour,
+    )
 
 
 class GithubImportSlots:

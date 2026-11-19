@@ -16,6 +16,12 @@ owner/repository, a full lowercase 40-character commit SHA, selected paths/range
 and the owner's permission statement for intended private study. It does not
 accept arbitrary URLs, branch names, credentials, provider keys or archive data.
 
+While the feature is disabled, the PostgreSQL API starts without optional
+Upstash credentials and import requests remain unavailable. Enabling imports in
+PostgreSQL mode requires both `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN`; it never falls back to an in-process limiter for
+enabled durable imports.
+
 ```json
 {
   "origin": {

@@ -95,8 +95,7 @@ from app.source_refresh.index import MemoryImpactIndex, PgImpactIndex
 from app.source_refresh.router import source_refresh_router
 from app.source_versions.github_admission import (
     GithubImportSlots,
-    MemoryGithubImportLimiter,
-    UpstashGithubImportLimiter,
+    github_import_limiter,
 )
 from app.source_versions.github_http import GithubHttp
 from app.source_versions.github_importer import GithubImporter
@@ -383,11 +382,7 @@ github_import_service = GithubImportService(
         total_timeout_seconds=settings.github_import_total_timeout_seconds,
     )),
     source_version_store,
-    MemoryGithubImportLimiter(settings.github_import_per_user_hour, settings.github_import_global_hour)
-    if settings.job_store == "memory" else UpstashGithubImportLimiter(
-        settings.upstash_redis_rest_url or "", settings.upstash_redis_rest_token or "",
-        settings.github_import_per_user_hour, settings.github_import_global_hour,
-    ),
+    github_import_limiter(settings),
     GithubImportSlots(settings.github_import_max_active), enabled=settings.github_import_enabled,
     save_timeout_seconds=settings.github_import_save_timeout_seconds,
 )
