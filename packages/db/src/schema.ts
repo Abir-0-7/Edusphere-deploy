@@ -360,3 +360,127 @@ export const studyGuildMembers = pgTable(
     index('idx_guild_members_user').on(t.userId),
   ],
 );
+
+/** Immutable authored course catalog and private, resumable learner state. */
+export const courses = pgTable('courses', {
+  id: uuid('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const courseReleases = pgTable(
+  'course_releases',
+  {
+    id: uuid('id').primaryKey(),
+    courseId: uuid('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    version: text('version').notNull(),
+    status: text('status').notNull(),
+    visibility: text('visibility').notNull(),
+    content: jsonb('content').notNull(),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_course_release_version').on(t.courseId, t.version),
+    index('idx_course_releases_course').on(t.courseId),
+  ],
+);
+
+export const courseEnrollments = pgTable(
+  'course_enrollments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    releaseId: uuid('release_id')
+      .notNull()
+      .references(() => courseReleases.id, { onDelete: 'restrict' }),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    state: jsonb('state').notNull(),
+    revision: integer('revision').notNull().default(0),
+    status: text('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_course_enrollment_release').on(t.userId, t.releaseId),
+    index('idx_course_enrollments_user').on(t.userId, t.updatedAt),
+  ],
+);
+
+export const courseAttempts = pgTable(
+  'course_attempts',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    enrollmentId: uuid('enrollment_id')
+      .notNull()
+      .references(() => courseEnrollments.id, { onDelete: 'cascade' }),
+    exerciseId: text('exercise_id').notNull(),
+    kind: text('kind').notNull(),
+    request: jsonb('request').notNull(),
+    result: jsonb('result').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_course_attempts_user').on(t.userId),
+    index('idx_course_attempts_enrollment').on(t.enrollmentId),
+  ],
+);
+
+/** Explicit learner profile; diagnostic signals do not award mastery. */
+export const learnerProfiles = pgTable('learner_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  goalKind: text('goal_kind').notNull(),
+  goal: varchar('goal', { length: 200 }).notNull(),
+  familiarity: text('familiarity').notNull(),
+  weeklyMinutes: integer('weekly_minutes').notNull(),
+  deadline: text('deadline'),
+  language: text('language').notNull(),
+  accessibility: jsonb('accessibility').notNull(),
+  roleVariant: text('role_variant').notNull().default('auto'),
+  explanationDepth: text('explanation_depth').notNull().default('standard'),
+  pace: text('pace').notNull().default('standard'),
+  diagnostic: jsonb('diagnostic').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const learnerTrackPlanRevisions = pgTable(
+  'learner_track_plan_revisions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    trackId: text('track_id').notNull(),
+    requiredCourseSlugs: jsonb('required_course_slugs').$type<string[]>().notNull(),
+    requiredObjectiveIds: jsonb('required_objective_ids').$type<string[]>().notNull(),
+    objectiveMapping: jsonb('objective_mapping').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('uq_learner_track_plan_user_revision').on(t.userId, t.revision)],
+);
+
+export const learnerRecommendationSnapshots = pgTable('learner_recommendation_snapshots', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  snapshot: jsonb('snapshot').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

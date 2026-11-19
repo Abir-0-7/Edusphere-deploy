@@ -14,6 +14,10 @@ const EnvSchema = z.object({
   AI_SERVICE_INTERNAL_TOKEN: z.string().min(1),
   JUDGE0_BASE_URL: z.string().url().optional(),
   JUDGE0_API_KEY: z.string().optional(),
+  COURSE_LAB_RECEIPT_SECRET: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().min(32).optional(),
+  ),
   UPSTASH_REDIS_REST_URL: z.string().url(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
   SENTRY_DSN: z.string().optional(),

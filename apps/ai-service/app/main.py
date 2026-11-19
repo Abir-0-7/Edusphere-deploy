@@ -22,11 +22,18 @@ from app.ai.outline import Outline
 from app.ai.structure import build_outline
 from app.ai.summaries import LEVELS, stream_summary
 from app.auth import TokenVerifier, verifier_from_settings
+from app.courses.router import create_course_router
+from app.courses.store import MemoryCourseStore, PgCourseStore
 from app.documents.pg_store import PgDocumentStore
 from app.documents.store import InMemoryDocumentStore
 from app.errors import ApiError, InvalidInput, NotFound, TooLarge, Unauthorized, api_error_handler, error_body
 from app.jobs.postgres_store import PgJobStore
 from app.jobs.worker import InMemoryJobStore, Job, JobStore, Worker
+from app.learners.recommendations import MemoryRecommendationStore, PgRecommendationStore, create_recommendation_router
+from app.learners.routes import profile_router
+from app.learners.store import MemoryLearnerStore, PgLearnerStore
+from app.learners.track_routes import track_progress, track_router
+from app.learners.track_store import MemoryTrackPlanStore, PgTrackPlanStore
 from app.llm.router import router_from_settings
 from app.logging_config import configure_logging
 from app.parsing.pages import Page
@@ -209,11 +216,51 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list(),
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
     max_age=600,
 )
 app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+
+
+# Guided courses and learner-profile features are owner-scoped and share the
+# existing document store; memory mode keeps the local deployment fixture free
+# of database requirements while production uses the durable course tables.
+memory_mode = not isinstance(documents, PgDocumentStore)
+learner_profiles = MemoryLearnerStore() if memory_mode else PgLearnerStore(settings.database_url)
+course_store = (
+    MemoryCourseStore(documents)
+    if not isinstance(documents, PgDocumentStore)
+    else PgCourseStore(settings.database_url)
+)
+if isinstance(course_store, PgCourseStore):
+    course_store.ensure_catalog()
+app.include_router(profile_router(current_user_id, learner_profiles))
+app.include_router(
+    create_course_router(current_user_id, course_store, profiles=learner_profiles)
+)
+track_plan_store = MemoryTrackPlanStore() if memory_mode else PgTrackPlanStore(settings.database_url)
+recommendation_snapshot_store = (
+    MemoryRecommendationStore() if memory_mode else PgRecommendationStore(settings.database_url)
+)
+app.include_router(
+    track_router(
+        current_user_id,
+        learner_profiles,
+        track_plan_store,
+        lambda owner: track_progress(course_store, owner),
+    )
+)
+app.include_router(
+    create_recommendation_router(
+        current_user_id,
+        learner_profiles,
+        course_store,
+        track_plan_store,
+        documents,
+        recommendation_snapshot_store,
+    )
+)
 
 
 @app.exception_handler(RequestValidationError)

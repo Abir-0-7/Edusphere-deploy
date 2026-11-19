@@ -16,6 +16,13 @@ describe('typed env validation', () => {
     expect(() => loadEnv(VALID)).not.toThrow();
   });
 
+  it('allows the optional course receipt secret to be blank and enforces its minimum when configured', () => {
+    expect(() => loadEnv({ ...VALID, COURSE_LAB_RECEIPT_SECRET: '' })).not.toThrow();
+    expect(() => loadEnv({ ...VALID, COURSE_LAB_RECEIPT_SECRET: 'too-short' })).toThrow(
+      /COURSE_LAB_RECEIPT_SECRET/,
+    );
+  });
+
   it('fails fast with a clear message when variables are missing', () => {
     try {
       loadEnv({});

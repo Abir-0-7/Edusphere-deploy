@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     cors_origins: str = Field(
         "http://localhost:3000,http://127.0.0.1:3000", alias="AI_SERVICE_CORS_ORIGINS"
     )
+    course_lab_receipt_secret: str | None = Field(None, alias="AI_SERVICE_COURSE_LAB_RECEIPT_SECRET")
 
     # Embeddings (task 2.8): local ONNX first, then a hosted endpoint, then a
     # hash fallback (dev only) so the vector path always runs.
@@ -79,6 +80,8 @@ class Settings(BaseSettings):
             raise ValueError("AI_SERVICE_OCR_LANG must look like 'eng' or 'eng+ben'")
         if self.job_store not in {"postgres", "memory", "auto"}:
             raise ValueError("AI_SERVICE_JOB_STORE must be one of: postgres, memory, auto")
+        if self.course_lab_receipt_secret and len(self.course_lab_receipt_secret) < 32:
+            raise ValueError("AI_SERVICE_COURSE_LAB_RECEIPT_SECRET must be at least 32 characters")
         if self.embedding_backend not in {"auto", "onnx", "hosted", "hash"}:
             raise ValueError("AI_SERVICE_EMBEDDING_BACKEND must be one of: auto, onnx, hosted, hash")
         origins = self.cors_origin_list()

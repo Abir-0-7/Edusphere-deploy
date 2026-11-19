@@ -23,15 +23,17 @@ const navSections = [
     label: 'PRACTICE',
     links: [
       { href: '/review', label: 'Flashcards', mark: '04' },
-      { href: '/progress', label: 'Focus & progress', mark: '05' },
-      { href: '/games', label: 'Game vault', mark: '06' },
+      { href: '/courses', label: 'Guided courses', mark: '05' },
+      { href: '/learning-profile', label: 'Learning profile', mark: '06' },
+      { href: '/progress', label: 'Focus & progress', mark: '07' },
+      { href: '/games', label: 'Game vault', mark: '08' },
     ],
   },
   {
     label: 'TOOLS',
     links: [
-      { href: '/tools', label: 'Academic toolkit', mark: '07' },
-      { href: '/account', label: 'Account', mark: '08' },
+      { href: '/tools', label: 'Academic toolkit', mark: '09' },
+      { href: '/account', label: 'Account', mark: '10' },
     ],
   },
 ];

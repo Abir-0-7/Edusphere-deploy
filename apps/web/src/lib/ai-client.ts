@@ -10,7 +10,7 @@ import { z } from 'zod';
  */
 export type GetToken = () => Promise<string | null>;
 
-async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
+export async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
   const token = await getToken();
   const base = process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000';
   try {
@@ -24,6 +24,18 @@ async function authFetch(getToken: GetToken, path: string, init: RequestInit = {
       `Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`,
     );
   }
+}
+
+export async function readResponse<T>(
+  response: Response,
+  schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } },
+  label: string,
+): Promise<T> {
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(`${label} failed: ${response.status}`);
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) throw new Error(`${label} returned an invalid response.`);
+  return parsed.data;
 }
 
 export type { ChatReply, Chapter, Flashcard, JobStatus };

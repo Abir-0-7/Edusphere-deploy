@@ -59,6 +59,34 @@ _OWNED_TABLES = [
     ("study_logs", ["id", "kind", "payload", "occurred_at"]),
     ("study_plans", ["id", "document_id", "exam_date", "plan", "created_at"]),
     ("weekly_advice", ["id", "content", "model", "generated_at"]),
+    ("courses", ["id", "slug", "user_id", "title", "created_at", "updated_at"]),
+    (
+        "course_releases",
+        [
+            "id", "course_id", "user_id", "version", "status", "visibility", "content", "content_hash",
+            "created_at", "updated_at",
+        ],
+    ),
+    (
+        "course_enrollments",
+        ["id", "user_id", "release_id", "document_id", "state", "revision", "status", "created_at", "updated_at"],
+    ),
+    ("course_attempts", ["id", "user_id", "enrollment_id", "exercise_id", "kind", "request", "result", "created_at"]),
+    (
+        "learner_profiles",
+        [
+            "user_id", "goal_kind", "goal", "familiarity", "weekly_minutes", "deadline", "language",
+            "accessibility", "role_variant", "explanation_depth", "pace", "diagnostic", "created_at", "updated_at",
+        ],
+    ),
+    (
+        "learner_track_plan_revisions",
+        [
+            "id", "user_id", "revision", "track_id", "required_course_slugs", "required_objective_ids",
+            "objective_mapping", "created_at",
+        ],
+    ),
+    ("learner_recommendation_snapshots", ["user_id", "snapshot", "updated_at"]),
     ("token_ledger", ["id", "amount", "reason", "ref_id", "created_at"]),
     (
         "game_sessions",
