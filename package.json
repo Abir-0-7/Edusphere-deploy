@@ -23,6 +23,7 @@
   },
   "pnpm": {
     "overrides": {
+      "katex": "0.19.1",
       "dompurify": ">=3.4.17"
     }
   },

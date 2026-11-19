@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { validateCompletion, type GameAction } from '@studyvault/game-engine';
+import { validateCompletion, type GameAction } from '../../game-engine/src/completion';
 
 // Uses the standalone engine harness to verify the same mountGameVault that
 // the signed-in Next /games page mounts, without bypassing Clerk protection.

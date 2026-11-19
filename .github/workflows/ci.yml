@@ -51,6 +51,9 @@ jobs:
       - run: pnpm --filter @studyvault/web exec playwright install --with-deps chromium
       # Exercise the actual player with deterministic fixtures on forked PRs too.
       - run: pnpm --filter @studyvault/web test:e2e:games
+      - run: pnpm --filter @studyvault/web test:e2e:flashcard-studio
+      - run: pnpm --filter @studyvault/web test:e2e:offline-decks
+      - run: pnpm --filter @studyvault/web test:e2e:maps
       - run: pnpm audit --prod
       - run: pnpm lint
       - run: pnpm typecheck
