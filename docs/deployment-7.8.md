@@ -99,6 +99,14 @@ separate staging database and Clerk test instance for Preview. Set at least:
 - `AI_DAILY_LIMIT` and `AI_RATE_LIMIT_PER_MIN` to the approved quotas
 - `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` when Sentry is configured
 
+For a Clerk Production instance configured to use the app proxy, set
+`NEXT_PUBLIC_CLERK_PROXY_URL` to the app's HTTPS URL ending in `/__clerk`
+(no trailing slash), and configure the same URL in Clerk Dashboard → Domains.
+Redeploy Vercel after an environment change. Before attempting sign-in, verify
+that `/__clerk/v1/environment` serves Clerk JSON and that the Clerk script URL
+in the sign-in page serves JavaScript. A Next.js 404 on either means requests
+are not reaching the Clerk proxy. See [Clerk's app proxy setup](https://clerk.com/docs/guides/dashboard/dns-domains/proxy-fapi).
+
 Guided-course and learning-profile requests go through the authenticated
 same-origin `/api/learning-service` route and use server-only `AI_SERVICE_URL`.
 The AI service must still allow the exact Clerk authorized party for each web

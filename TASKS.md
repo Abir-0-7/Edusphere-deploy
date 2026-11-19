@@ -21,6 +21,10 @@ below. It does not declare unfinished phase items or hosted release gates comple
 - [x] Restore the merged backend tutor imports and shared Markdown/math renderer; correct catalog error/retry handling. Verified 400 backend tests, 125 web tests, 7 course browser cases, TypeScript, source lint and a clean default production build. Optional database integration tests remain skipped; the production Neon verification did not create learner-owned test rows.
 - [ ] Deploy the updated API on the existing Render service and verify hosted catalog/profile routes. The inspected image still lacks those routes; auto-deploy is disabled and the Render connection is not yet available. A GitHub push alone is not a backend deployment.
 
+## Production sign-in repair (2026-11-19)
+
+- [x] Restore Clerk Frontend API forwarding when an explicit app proxy URL is configured. The installed Clerk SDK now forwards both the browser script and environment requests in regression tests; lint, typecheck and the production build verify the patch. A signed-in production journey remains a separate hosted check.
+
 ## Phase 8.G: Game Vault
 
 - [x] **8.G01 Shared versioned game contracts** (G01). Config validation, seeded create/apply/result/serialize/restore; bounded ordered actions and idempotent server reward settlement. Check: malformed/out-of-order/replayed inputs fail and client/server vectors agree. (2026-11-18: engine, contract and route tests pass, including actual PostgreSQL concurrency and rollback. Explicit save deletion preserves tokens and the daily cap.)

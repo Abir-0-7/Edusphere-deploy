@@ -12,6 +12,9 @@ const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost
  * protected here — it is verified by its own svix signing secret.
  */
 export default clerkMiddleware({
+  // Clerk's explicit browser proxy URL disables SDK auto-detection. Keep
+  // forwarding enabled for deployments that already route Clerk through us.
+  ...(process.env.NEXT_PUBLIC_CLERK_PROXY_URL && { frontendApiProxy: { enabled: true } }),
   contentSecurityPolicy: {
     strict: true,
     directives: getContentSecurityPolicyDirectives(aiServiceUrl),
