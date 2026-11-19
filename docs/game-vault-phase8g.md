@@ -11,6 +11,12 @@ objective, instructions, difficulty and expected duration. Native buttons cover
 pointer, keyboard and touch. Ready/start, pause/resume, abandon, retry, fullscreen,
 sound and reduced-motion preferences share one account-bound view.
 
+The `/games` collection now gives each of its eight entries a distinct inline SVG
+preview. The player uses game-specific boards for sorting, chess placement and
+Hanoi, plus separate visual treatments for defense, matching, retrieval and code
+tracing. The N-Queens board includes readable coordinates and live placement
+progress; saved reduced-motion preferences suppress board movement.
+
 Version 1 persists only server-created configuration and at most 500 ordered
 actions. Server replay validates every action, including the history before an
 undo. Seeds, rules version, difficulty and objective are pinned by the server.
@@ -134,7 +140,8 @@ progress; token balance continues to use the existing StudyVault balance API.
 ## Local verification
 
 - All seven StudyVault games were completed in Chromium using mouse, keyboard
-  and touch. The 16-case suite also checked save recovery, navigation, Binary
+  and touch. The 16-case suite also checked game-specific menu art, board
+  progress, save recovery, navigation, Binary
   City unlock and replay, unauthorized frame messages, and the original Godot
   export boot. Next's production security headers were checked separately.
 - Eight real PostgreSQL integration tests used disposable schemas. They covered

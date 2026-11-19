@@ -483,8 +483,12 @@ test('hard puzzle boards remain fully reachable after resize and restore', async
   await begin(page, 'NQueens', 'touch');
   const panel = activePanel(page);
   await expect(panel.getByRole('button', { name: /^Row \d+, column \d+/ })).toHaveCount(64);
+  await expect(panel.getByText('Board progress')).toBeVisible();
+  await expect(panel.getByRole('status', { name: '0 of 8 queens placed' })).toBeVisible();
   await activate(page, panel.getByRole('button', { name: 'Row 8, column 8', exact: true }), 'touch');
   expect(restoreGame(server.active!.snapshot).columns[7]).toBe(7);
+  await expect(panel.locator('svg')).toHaveCount(1);
+  await expect(panel.getByRole('status', { name: '1 of 8 queens placed' })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(panel.getByRole('button', { name: 'Row 8, column 8, queen', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -544,7 +548,11 @@ test('the game menu opens distinct pages with scoped saves and direct URLs', asy
   await fixtureServer(page);
   await page.goto('/games');
   await expect(page.getByRole('heading', { name: 'Game Vault', level: 1 })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open Cyberverse', exact: true })).toHaveAttribute(
+  await expect(page.getByText('EduSphere arcade')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explore the collection' })).toBeVisible();
+  await expect(page.locator('main article')).toHaveCount(8);
+  await expect(page.locator('[data-game-preview]')).toHaveCount(8);
+  await expect(page.getByRole('link', { name: 'Play now Cyberverse', exact: true })).toHaveAttribute(
     'href',
     '/games/cyberverse',
   );
@@ -556,16 +564,16 @@ test('the game menu opens distinct pages with scoped saves and direct URLs', asy
   ).toHaveAttribute('href', '/games/cyberverse');
   await page.locator('summary', { hasText: 'Games' }).click();
   for (const id of GameIdSchema.options) {
-    await expect(page.getByRole('link', { name: `Open ${TITLES[id]}`, exact: true })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: `Play now ${TITLES[id]}`, exact: true })).toHaveAttribute(
       'href',
       gamePath(id),
     );
   }
-  await page.getByRole('link', { name: 'Open Sorting Race' }).tap();
+  await page.getByRole('link', { name: 'Play now Sorting Race' }).tap();
   await expect(page).toHaveURL(/\/games\/sorting-race$/);
   await begin(page, 'SortingRace', 'keyboard');
   await page.getByRole('link', { name: 'All games', exact: true }).click();
-  await page.getByRole('link', { name: 'Open N-Queens' }).click();
+  await page.getByRole('link', { name: 'Play now N-Queens' }).click();
   await expect(page).toHaveURL(/\/games\/n-queens$/);
   await expect(page.getByRole('heading', { name: 'N-Queens', level: 1 })).toBeVisible();
   await expect(page.getByText('No saved sessions for N-Queens yet.')).toBeVisible();
