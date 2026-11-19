@@ -1,9 +1,13 @@
 # Game candidate evaluation — 2026-11-18
 
-The user confirmed there is no learner-demand evidence yet and requested candidate
-designs be documented while implementation stays gated. None of the candidates
-below is promoted to a coding task. All practice must be free to enter. Game scores
-measure engagement, never career readiness or independent mastery.
+On 2026-11-18 the user requested designs while implementation stayed gated for
+learner-demand evidence. On 2026-11-19 the user explicitly requested that all seven
+candidates below be included as playable games, superseding that implementation
+hold. The bounded authored practice slices are documented in `game-expansion.md`.
+This authorization is not learner-demand evidence or human editorial approval.
+All practice is free to enter. Game scores measure engagement, never career
+readiness or independent mastery. The table retains the original evaluation plan;
+its demand/capacity observations remain open research and release checks.
 
 | Candidate                          | Objective and bounded content                                    | Deterministic grading proposal                                                                                                    | Accessible release journey                                                                     | Demand / capacity gate                                                                                     |
 | ---------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -19,4 +23,6 @@ For each candidate, collect consented learner requests/observations, publish the
 objective and minimum content/rubric fixtures, test ambiguity and useful incorrect
 feedback, run the complete keyboard/touch win/loss/retry/restore journey, and measure
 capacity on the existing free stack. Then promote one named implementation slice
-under its Phase 8G task. Listing a candidate here does not approve implementation.
+under its Phase 8G task. Broader content, arbitrary code execution, calibrated
+adaptive assessment and production readiness remain separate from this initial
+user-authorized implementation.

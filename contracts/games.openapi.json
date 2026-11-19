@@ -67,7 +67,14 @@
                                       "FlashcardTowerDefense",
                                       "ConceptMatch",
                                       "RetrievalSprint",
-                                      "CodeTrace"
+                                      "CodeTrace",
+                                      "DebuggingDetective",
+                                      "SQLDetective",
+                                      "GraphPath",
+                                      "ProofBuilder",
+                                      "DataDetective",
+                                      "AdaptiveQuiz",
+                                      "ExamEscape"
                                     ]
                                   },
                                   "difficulty": {
@@ -256,6 +263,102 @@
                                             "type"
                                           ],
                                           "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "debug"
+                                              ]
+                                            },
+                                            "question_id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "line": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 15
+                                            },
+                                            "repair": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 15
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "question_id",
+                                            "line",
+                                            "repair"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "path"
+                                              ]
+                                            },
+                                            "question_id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "node_ids": {
+                                              "maxItems": 12,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 24
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "question_id",
+                                            "node_ids"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "order"
+                                              ]
+                                            },
+                                            "question_id": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "step_ids": {
+                                              "minItems": 1,
+                                              "maxItems": 12,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 24
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "question_id",
+                                            "step_ids"
+                                          ],
+                                          "additionalProperties": false
                                         }
                                       ]
                                     }
@@ -343,6 +446,310 @@
                                     "required": [
                                       "label",
                                       "url"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "activity": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "debug"
+                                            ]
+                                          },
+                                          "lines": {
+                                            "minItems": 1,
+                                            "maxItems": 16,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "maxLength": 160
+                                            }
+                                          },
+                                          "repairs": {
+                                            "minItems": 2,
+                                            "maxItems": 16,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "maxLength": 240
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "lines",
+                                          "repairs"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "sql"
+                                            ]
+                                          },
+                                          "columns": {
+                                            "minItems": 1,
+                                            "maxItems": 8,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "maxLength": 60
+                                            }
+                                          },
+                                          "rows": {
+                                            "maxItems": 12,
+                                            "type": "array",
+                                            "items": {
+                                              "maxItems": 8,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "maxLength": 100
+                                              }
+                                            }
+                                          },
+                                          "query": {
+                                            "type": "string",
+                                            "maxLength": 1000
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "columns",
+                                          "rows",
+                                          "query"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "graph"
+                                            ]
+                                          },
+                                          "nodes": {
+                                            "minItems": 1,
+                                            "maxItems": 12,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 24
+                                            }
+                                          },
+                                          "edges": {
+                                            "maxItems": 40,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "array",
+                                              "items": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "maxLength": 24
+                                                  },
+                                                  {
+                                                    "type": "string",
+                                                    "maxLength": 24
+                                                  }
+                                                ]
+                                              },
+                                              "minItems": 2,
+                                              "maxItems": 2
+                                            }
+                                          },
+                                          "start": {
+                                            "type": "string",
+                                            "maxLength": 24
+                                          },
+                                          "goal": {
+                                            "type": "string",
+                                            "maxLength": 24
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "nodes",
+                                          "edges",
+                                          "start",
+                                          "goal"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "proof"
+                                            ]
+                                          },
+                                          "steps": {
+                                            "minItems": 1,
+                                            "maxItems": 12,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 24
+                                                },
+                                                "text": {
+                                                  "type": "string",
+                                                  "maxLength": 500
+                                                }
+                                              },
+                                              "required": [
+                                                "id",
+                                                "text"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "steps"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "data"
+                                            ]
+                                          },
+                                          "columns": {
+                                            "minItems": 1,
+                                            "maxItems": 8,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "maxLength": 60
+                                            }
+                                          },
+                                          "rows": {
+                                            "maxItems": 12,
+                                            "type": "array",
+                                            "items": {
+                                              "maxItems": 8,
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "maxLength": 100
+                                              }
+                                            }
+                                          },
+                                          "units": {
+                                            "type": "string",
+                                            "maxLength": 120
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "columns",
+                                          "rows",
+                                          "units"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "adaptive"
+                                            ]
+                                          },
+                                          "level": {
+                                            "type": "string",
+                                            "enum": [
+                                              "easy",
+                                              "medium",
+                                              "hard"
+                                            ]
+                                          },
+                                          "reason": {
+                                            "type": "string",
+                                            "maxLength": 300
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "level",
+                                          "reason"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "escape"
+                                            ]
+                                          },
+                                          "room": {
+                                            "type": "string",
+                                            "maxLength": 100
+                                          },
+                                          "position": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 12
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 12
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "room",
+                                          "position",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "progress": {
+                                    "type": "object",
+                                    "properties": {
+                                      "current": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 12
+                                      },
+                                      "total": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 12
+                                      }
+                                    },
+                                    "required": [
+                                      "current",
+                                      "total"
                                     ],
                                     "additionalProperties": false
                                   }
@@ -485,7 +892,14 @@
                         "FlashcardTowerDefense",
                         "ConceptMatch",
                         "RetrievalSprint",
-                        "CodeTrace"
+                        "CodeTrace",
+                        "DebuggingDetective",
+                        "SQLDetective",
+                        "GraphPath",
+                        "ProofBuilder",
+                        "DataDetective",
+                        "AdaptiveQuiz",
+                        "ExamEscape"
                       ]
                     }
                   },
@@ -702,7 +1116,14 @@
                       "FlashcardTowerDefense",
                       "ConceptMatch",
                       "RetrievalSprint",
-                      "CodeTrace"
+                      "CodeTrace",
+                      "DebuggingDetective",
+                      "SQLDetective",
+                      "GraphPath",
+                      "ProofBuilder",
+                      "DataDetective",
+                      "AdaptiveQuiz",
+                      "ExamEscape"
                     ]
                   },
                   "difficulty": {
@@ -777,7 +1198,14 @@
                                 "FlashcardTowerDefense",
                                 "ConceptMatch",
                                 "RetrievalSprint",
-                                "CodeTrace"
+                                "CodeTrace",
+                                "DebuggingDetective",
+                                "SQLDetective",
+                                "GraphPath",
+                                "ProofBuilder",
+                                "DataDetective",
+                                "AdaptiveQuiz",
+                                "ExamEscape"
                               ]
                             },
                             "difficulty": {
@@ -966,6 +1394,102 @@
                                       "type"
                                     ],
                                     "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "debug"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "line": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "repair": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "line",
+                                      "repair"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "path"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "node_ids": {
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "node_ids"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "order"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "step_ids": {
+                                        "minItems": 1,
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "step_ids"
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               }
@@ -1053,6 +1577,310 @@
                               "required": [
                                 "label",
                                 "url"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "activity": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "debug"
+                                      ]
+                                    },
+                                    "lines": {
+                                      "minItems": 1,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 160
+                                      }
+                                    },
+                                    "repairs": {
+                                      "minItems": 2,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 240
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "lines",
+                                    "repairs"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "sql"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "query"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "graph"
+                                      ]
+                                    },
+                                    "nodes": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 24
+                                      }
+                                    },
+                                    "edges": {
+                                      "maxItems": 40,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            },
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            }
+                                          ]
+                                        },
+                                        "minItems": 2,
+                                        "maxItems": 2
+                                      }
+                                    },
+                                    "start": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    },
+                                    "goal": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "nodes",
+                                    "edges",
+                                    "start",
+                                    "goal"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "proof"
+                                      ]
+                                    },
+                                    "steps": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 24
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "text"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "steps"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "data"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "units": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "units"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "adaptive"
+                                      ]
+                                    },
+                                    "level": {
+                                      "type": "string",
+                                      "enum": [
+                                        "easy",
+                                        "medium",
+                                        "hard"
+                                      ]
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "level",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "escape"
+                                      ]
+                                    },
+                                    "room": {
+                                      "type": "string",
+                                      "maxLength": 100
+                                    },
+                                    "position": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room",
+                                    "position",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "progress": {
+                              "type": "object",
+                              "properties": {
+                                "current": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                },
+                                "total": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                }
+                              },
+                              "required": [
+                                "current",
+                                "total"
                               ],
                               "additionalProperties": false
                             }
@@ -1423,7 +2251,14 @@
                                 "FlashcardTowerDefense",
                                 "ConceptMatch",
                                 "RetrievalSprint",
-                                "CodeTrace"
+                                "CodeTrace",
+                                "DebuggingDetective",
+                                "SQLDetective",
+                                "GraphPath",
+                                "ProofBuilder",
+                                "DataDetective",
+                                "AdaptiveQuiz",
+                                "ExamEscape"
                               ]
                             },
                             "difficulty": {
@@ -1612,6 +2447,102 @@
                                       "type"
                                     ],
                                     "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "debug"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "line": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "repair": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "line",
+                                      "repair"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "path"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "node_ids": {
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "node_ids"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "order"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "step_ids": {
+                                        "minItems": 1,
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "step_ids"
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               }
@@ -1699,6 +2630,310 @@
                               "required": [
                                 "label",
                                 "url"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "activity": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "debug"
+                                      ]
+                                    },
+                                    "lines": {
+                                      "minItems": 1,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 160
+                                      }
+                                    },
+                                    "repairs": {
+                                      "minItems": 2,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 240
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "lines",
+                                    "repairs"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "sql"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "query"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "graph"
+                                      ]
+                                    },
+                                    "nodes": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 24
+                                      }
+                                    },
+                                    "edges": {
+                                      "maxItems": 40,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            },
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            }
+                                          ]
+                                        },
+                                        "minItems": 2,
+                                        "maxItems": 2
+                                      }
+                                    },
+                                    "start": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    },
+                                    "goal": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "nodes",
+                                    "edges",
+                                    "start",
+                                    "goal"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "proof"
+                                      ]
+                                    },
+                                    "steps": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 24
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "text"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "steps"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "data"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "units": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "units"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "adaptive"
+                                      ]
+                                    },
+                                    "level": {
+                                      "type": "string",
+                                      "enum": [
+                                        "easy",
+                                        "medium",
+                                        "hard"
+                                      ]
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "level",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "escape"
+                                      ]
+                                    },
+                                    "room": {
+                                      "type": "string",
+                                      "maxLength": 100
+                                    },
+                                    "position": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room",
+                                    "position",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "progress": {
+                              "type": "object",
+                              "properties": {
+                                "current": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                },
+                                "total": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                }
+                              },
+                              "required": [
+                                "current",
+                                "total"
                               ],
                               "additionalProperties": false
                             }
@@ -2208,6 +3443,102 @@
                                   "type"
                                 ],
                                 "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "debug"
+                                    ]
+                                  },
+                                  "question_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "line": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 15
+                                  },
+                                  "repair": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 15
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "question_id",
+                                  "line",
+                                  "repair"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "path"
+                                    ]
+                                  },
+                                  "question_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "node_ids": {
+                                    "maxItems": 12,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 24
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "question_id",
+                                  "node_ids"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "order"
+                                    ]
+                                  },
+                                  "question_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "step_ids": {
+                                    "minItems": 1,
+                                    "maxItems": 12,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 24
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "question_id",
+                                  "step_ids"
+                                ],
+                                "additionalProperties": false
                               }
                             ]
                           }
@@ -2270,7 +3601,14 @@
                                 "FlashcardTowerDefense",
                                 "ConceptMatch",
                                 "RetrievalSprint",
-                                "CodeTrace"
+                                "CodeTrace",
+                                "DebuggingDetective",
+                                "SQLDetective",
+                                "GraphPath",
+                                "ProofBuilder",
+                                "DataDetective",
+                                "AdaptiveQuiz",
+                                "ExamEscape"
                               ]
                             },
                             "difficulty": {
@@ -2459,6 +3797,102 @@
                                       "type"
                                     ],
                                     "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "debug"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "line": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      },
+                                      "repair": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 15
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "line",
+                                      "repair"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "path"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "node_ids": {
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "node_ids"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "order"
+                                        ]
+                                      },
+                                      "question_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "step_ids": {
+                                        "minItems": 1,
+                                        "maxItems": 12,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 24
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "question_id",
+                                      "step_ids"
+                                    ],
+                                    "additionalProperties": false
                                   }
                                 ]
                               }
@@ -2546,6 +3980,310 @@
                               "required": [
                                 "label",
                                 "url"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "activity": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "debug"
+                                      ]
+                                    },
+                                    "lines": {
+                                      "minItems": 1,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 160
+                                      }
+                                    },
+                                    "repairs": {
+                                      "minItems": 2,
+                                      "maxItems": 16,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 240
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "lines",
+                                    "repairs"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "sql"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "query": {
+                                      "type": "string",
+                                      "maxLength": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "query"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "graph"
+                                      ]
+                                    },
+                                    "nodes": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 24
+                                      }
+                                    },
+                                    "edges": {
+                                      "maxItems": 40,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            },
+                                            {
+                                              "type": "string",
+                                              "maxLength": 24
+                                            }
+                                          ]
+                                        },
+                                        "minItems": 2,
+                                        "maxItems": 2
+                                      }
+                                    },
+                                    "start": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    },
+                                    "goal": {
+                                      "type": "string",
+                                      "maxLength": 24
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "nodes",
+                                    "edges",
+                                    "start",
+                                    "goal"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "proof"
+                                      ]
+                                    },
+                                    "steps": {
+                                      "minItems": 1,
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 24
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "text"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "steps"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "data"
+                                      ]
+                                    },
+                                    "columns": {
+                                      "minItems": 1,
+                                      "maxItems": 8,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                      }
+                                    },
+                                    "rows": {
+                                      "maxItems": 12,
+                                      "type": "array",
+                                      "items": {
+                                        "maxItems": 8,
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 100
+                                        }
+                                      }
+                                    },
+                                    "units": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "columns",
+                                    "rows",
+                                    "units"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "adaptive"
+                                      ]
+                                    },
+                                    "level": {
+                                      "type": "string",
+                                      "enum": [
+                                        "easy",
+                                        "medium",
+                                        "hard"
+                                      ]
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "level",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "escape"
+                                      ]
+                                    },
+                                    "room": {
+                                      "type": "string",
+                                      "maxLength": 100
+                                    },
+                                    "position": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 12
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room",
+                                    "position",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "progress": {
+                              "type": "object",
+                              "properties": {
+                                "current": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                },
+                                "total": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 12
+                                }
+                              },
+                              "required": [
+                                "current",
+                                "total"
                               ],
                               "additionalProperties": false
                             }

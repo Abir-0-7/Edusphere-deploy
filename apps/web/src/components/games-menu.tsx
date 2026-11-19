@@ -92,7 +92,82 @@ function GamePreview({ gameId }: { gameId: string }) {
           <path d="m24 31-7 5 7 5m17-10 7 5-7 5m12 3 9-17" fill="none" stroke="#67e8f9" strokeWidth="3" />
         </g>
       )}
-      {gameId === 'cyberverse' && (
+      {gameId === 'DebuggingDetective' && (
+        <g {...common} fill="none" stroke="#78350f" strokeWidth="3">
+          <circle cx="40" cy="28" r="16" fill="#fef3c7" />
+          <path d="m52 40 18 16M35 21l-5 7 5 7m10-14 5 7-5 7" />
+          <path d="M12 12h10m45 6h15M8 47h16" stroke="#f59e0b" />
+        </g>
+      )}
+      {gameId === 'SQLDetective' && (
+        <g {...common} fill="#dbeafe" stroke="#1e40af" strokeWidth="2">
+          <path d="M17 17v30c0 11 62 11 62 0V17" />
+          <ellipse cx="48" cy="17" rx="31" ry="10" />
+          <path d="M17 31c0 11 62 11 62 0m-62 14c0 11 62 11 62 0" fill="none" />
+        </g>
+      )}
+      {gameId === 'GraphPath' && (
+        <g {...common}>
+          <path d="m17 40 26-25 32 7-6 29-26-36 0 34-26-9" fill="none" stroke="#075985" strokeWidth="3" />
+          {[
+            [17, 40],
+            [43, 15],
+            [75, 22],
+            [69, 51],
+            [43, 49],
+          ].map(([x, y], index) => (
+            <circle
+              key={index}
+              cx={x}
+              cy={y}
+              r="7"
+              fill={index < 3 ? '#0e7490' : '#ecfeff'}
+              stroke="#155e75"
+              strokeWidth="2"
+            />
+          ))}
+        </g>
+      )}
+      {gameId === 'ProofBuilder' && (
+        <g {...common} fill="#ede9fe" stroke="#5b21b6" strokeWidth="2">
+          <rect x="13" y="8" width="57" height="12" rx="4" />
+          <rect x="22" y="26" width="57" height="12" rx="4" />
+          <rect x="31" y="44" width="57" height="12" rx="4" />
+          <path d="m77 11 4 4 8-9M5 30h9m-5-4 5 4-5 4" fill="none" />
+        </g>
+      )}
+      {gameId === 'DataDetective' && (
+        <g {...common}>
+          <path d="M13 7v48h72" fill="none" stroke="#164e63" strokeWidth="3" />
+          {[24, 40, 57, 73].map((x, index) => (
+            <rect
+              key={x}
+              x={x}
+              y={[33, 21, 29, 10][index]}
+              width="10"
+              height={[20, 32, 24, 43][index]}
+              rx="3"
+              fill={['#0891b2', '#0e7490', '#14b8a6', '#0f766e'][index]}
+            />
+          ))}
+        </g>
+      )}
+      {gameId === 'AdaptiveQuiz' && (
+        <g {...common} fill="none" stroke="#065f46" strokeWidth="3">
+          <path d="M13 53V40h21V27h22V14h26m-8-6 8 6-8 6" />
+          <circle cx="27" cy="15" r="9" fill="#d1fae5" />
+          <path d="M24 13a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3v.1" />
+        </g>
+      )}
+      {gameId === 'ExamEscape' && (
+        <g {...common} fill="none" stroke="#92400e" strokeWidth="3">
+          <path d="M18 54V8h42v46H18Z" fill="#fffbeb" />
+          <path d="m28 54 0-38 24 6v32" fill="#fcd34d" />
+          <circle cx="43" cy="37" r="2" fill="#92400e" />
+          <path d="M66 31h22m-8-7 8 7-8 7" />
+        </g>
+      )}
+      {gameId === 'Cyberverse' && (
         <g {...common}>
           <path
             d="M7 54V34h15v20m0-29h17v29m0-17h16v17m0-32h16v32m0-19h12v19"

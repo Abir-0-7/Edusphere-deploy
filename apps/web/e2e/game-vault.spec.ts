@@ -15,7 +15,7 @@ test('a keyboard player can pause, refresh, resume and abandon a saved game on a
   await page.goto('/games');
 
   await expect(page.getByRole('heading', { name: 'Game Vault', level: 1, exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Open N-Queens', exact: true }).click();
+  await page.getByRole('link', { name: 'Play now N-Queens', exact: true }).click();
   await expect(page).toHaveURL(/\/games\/n-queens$/);
   await page.getByRole('button', { name: 'New N-Queens' }).click();
   const player = page.getByRole('region', { name: 'Current session' });
@@ -25,7 +25,7 @@ test('a keyboard player can pause, refresh, resume and abandon a saved game on a
   const square = page.getByRole('button', { name: 'Row 1, column 2', exact: true });
   await square.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByText(/Score .* Mistakes/)).toBeVisible();
+  await expect(page.locator('[aria-label="Session score"]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Row 1, column 2, queen', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -57,7 +57,7 @@ test('a keyboard player can pause, refresh, resume and abandon a saved game on a
     .toBe(true);
 });
 
-test('all seven game definitions are available in the catalog', async ({ page }) => {
+test('all fourteen game definitions are available in the catalog', async ({ page }) => {
   await page.goto('/');
   await clerk.signIn({ page, emailAddress: testUserEmail! });
   await page.goto('/games');
@@ -69,9 +69,16 @@ test('all seven game definitions are available in the catalog', async ({ page })
     'Concept Match',
     'Retrieval Sprint',
     'Code Trace',
+    'Debugging Detective',
+    'SQL Detective',
+    'Graph Path',
+    'Proof Builder',
+    'Data Detective',
+    'Adaptive Quiz',
+    'Exam Escape',
   ]) {
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: `Open ${name}`, exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Play now ${name}`, exact: true })).toBeVisible();
   }
 });
 

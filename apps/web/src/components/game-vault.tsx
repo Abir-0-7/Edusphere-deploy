@@ -15,6 +15,7 @@ import {
 } from '@studyvault/types';
 import type { VaultGame } from '@/lib/game-catalog';
 import { GameTokenBalance } from '@/components/game-token-balance';
+import { GameActivity } from '@/components/game-activity';
 import {
   createGameSession,
   deleteGameSession,
@@ -57,12 +58,16 @@ function QueenMark({ darkSquare }: { darkSquare: boolean }) {
   );
 }
 
-function isQuestionGame(
+function hasPythonObjectives(
   id: GameId,
 ): id is Extract<GameId, 'FlashcardTowerDefense' | 'ConceptMatch' | 'RetrievalSprint' | 'CodeTrace'> {
   return (
     id === 'FlashcardTowerDefense' || id === 'ConceptMatch' || id === 'RetrievalSprint' || id === 'CodeTrace'
   );
+}
+
+function isQuestionGame(id: GameId): boolean {
+  return id !== 'SortingRace' && id !== 'NQueens' && id !== 'TowersOfHanoi';
 }
 
 function actionFor(session: GameSession, action: VersionedGameAction): OrderedGameAction {
@@ -198,7 +203,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
         game_id: game.id,
         difficulty,
         practice,
-        ...(isQuestionGame(game.id) && objectiveId
+        ...(hasPythonObjectives(game.id) && objectiveId
           ? { objective_id: GameObjectiveSchema.parse(objectiveId) }
           : {}),
       });
@@ -498,7 +503,19 @@ function AccountGameVault({ game }: { game: VaultGame }) {
         </div>
       );
     }
-    if (!isQuestionGame(selected.snapshot.config.game_id) || !question) return null;
+    if (!question) return null;
+    if (question.activity) {
+      return (
+        <GameActivity
+          key={`${selected.id}:${question.id}`}
+          question={question}
+          disabled={selected.status !== 'playing' || busy}
+          reducedMotion={reducedMotion}
+          onAction={act}
+        />
+      );
+    }
+    if (!hasPythonObjectives(selected.snapshot.config.game_id)) return null;
     const questionTheme = {
       FlashcardTowerDefense: {
         eyebrow: 'text-orange-900',
@@ -688,7 +705,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
             />{' '}
             Practice mode (hints and undo; no token reward)
           </label>
-          {isQuestionGame(game.id) && (
+          {hasPythonObjectives(game.id) && (
             <label className="text-sm">
               Question focus
               <select
@@ -714,10 +731,16 @@ function AccountGameVault({ game }: { game: VaultGame }) {
             New {game.title}
           </button>
         </div>
-        {isQuestionGame(game.id) && (
+        {hasPythonObjectives(game.id) && (
           <p className="mt-3 text-sm text-neutral-600">
             Question games use the authored Python foundations set. Game answers do not change scheduled
             flashcard reviews or mastery; scores describe this game session.
+          </p>
+        )}
+        {isQuestionGame(game.id) && !hasPythonObjectives(game.id) && (
+          <p className="mt-3 text-sm text-neutral-600">
+            Free authored practice. Answers are checked by the server; game scores and adaptive difficulty do
+            not certify mastery or change scheduled reviews. Read at your own pace.
           </p>
         )}
       </section>
@@ -761,12 +784,19 @@ function AccountGameVault({ game }: { game: VaultGame }) {
               <p className="mt-1 text-xl font-black tabular-nums text-amber-950">{state.hints}</p>
             </div>
           </div>
-          {isQuestionGame(selected.snapshot.config.game_id) && (
+          {selected.snapshot.config.game_id === 'ExamEscape' ? (
             <p className="mt-2 text-sm text-neutral-700">
-              Complete the question set with at least 60% correct, rounded up to a whole answer, to win. You
-              need at least one correct answer. Three incorrect answers end the session early. Read at your
-              own pace; there is no timer.
+              Unlock every room with a correct answer to escape. An incorrect answer keeps you in the same
+              room; three incorrect answers end the attempt. Read at your own pace; there is no timer.
             </p>
+          ) : (
+            isQuestionGame(selected.snapshot.config.game_id) && (
+              <p className="mt-2 text-sm text-neutral-700">
+                Complete the question set with at least 60% correct, rounded up to a whole answer, to win. You
+                need at least one correct answer. Three incorrect answers end the session early. Read at your
+                own pace; there is no timer.
+              </p>
+            )
           )}
           <div className="mt-4">{renderBoard()}</div>
           {state.feedback && (

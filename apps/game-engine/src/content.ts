@@ -1,4 +1,6 @@
 import type { GameDifficulty, VaultGameId } from './catalog';
+import type { GamePublicQuestion } from '@studyvault/types';
+import { EXPANDED_QUESTIONS } from './expanded-content';
 
 export type ContentSource = { label: string; url: string };
 export type ReviewedQuestion = {
@@ -9,6 +11,15 @@ export type ReviewedQuestion = {
   answer: number;
   explanation: string;
   source: ContentSource;
+  activity?: GamePublicQuestion['activity'];
+  level?: GameDifficulty;
+  solution?: {
+    line?: number;
+    repair?: number;
+    node_ids?: readonly string[];
+    step_ids?: readonly string[];
+    dependencies?: readonly (readonly [string, string])[];
+  };
 };
 
 const data: ContentSource = {
@@ -252,6 +263,21 @@ export const AUTHORED_QUESTIONS: Readonly<Record<string, readonly ReviewedQuesti
   RetrievalSprint: Object.freeze(recall),
   FlashcardTowerDefense: Object.freeze(recall),
   CodeTrace: Object.freeze(trace),
+  ...EXPANDED_QUESTIONS,
+  AdaptiveQuiz: Object.freeze([
+    ...concepts.map((question) => ({
+      ...question,
+      id: `adaptive-easy-${question.id}`,
+      level: 'easy' as const,
+    })),
+    ...recall.map((question) => ({
+      ...question,
+      id: `adaptive-medium-${question.id}`,
+      level: 'medium' as const,
+    })),
+    ...trace.map((question) => ({ ...question, id: `adaptive-hard-${question.id}`, level: 'hard' as const })),
+  ]),
+  ExamEscape: Object.freeze(trace.map((question) => ({ ...question, id: `escape-${question.id}` }))),
 });
 
 /** Version 1 selects a bounded subset; the seed controls its order, never keys. */
@@ -286,5 +312,33 @@ export function questionsFor(config: {
       : scoped.filter((question) => question.objective_id === config.objective_id);
   if (scoped.length > 0 && matching.length === 0)
     throw new Error('no questions are available for this objective scope');
-  return seededOrder(matching, config.seed).slice(0, questionCount(config.game_id, config.difficulty));
+  const selected = seededOrder(matching, config.seed).slice(
+    0,
+    questionCount(config.game_id, config.difficulty),
+  );
+  if (!['DebuggingDetective', 'SQLDetective', 'DataDetective', 'ExamEscape'].includes(config.game_id))
+    return selected;
+  return selected.map((question, index) => {
+    if (question.activity?.kind === 'debug') {
+      const activity = question.activity;
+      const repairIndices = seededOrder(
+        activity.repairs.map((_, i) => i),
+        config.seed + index + 1,
+      );
+      return {
+        ...question,
+        activity: { ...activity, repairs: repairIndices.map((i) => activity.repairs[i]!) },
+        solution: { ...question.solution, repair: repairIndices.indexOf(question.solution!.repair!) },
+      };
+    }
+    const indices = seededOrder(
+      question.choices.map((_, i) => i),
+      config.seed + index + 1,
+    );
+    return {
+      ...question,
+      choices: indices.map((i) => question.choices[i]!),
+      answer: indices.indexOf(question.answer),
+    };
+  });
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ErrorEnvelopeSchema,
+  GameIdSchema,
   GameSessionSchema,
   GameSessionListSchema,
   type GameId,
@@ -11,6 +12,7 @@ import {
   applyGame,
   createGame,
   getGameResult,
+  getAuthoredQuestion,
   getPublicQuestion,
   questionsFor,
   type GameState,
@@ -285,14 +287,32 @@ function solution(initial: GameState): VersionedGameAction[] {
     hanoi(state.towers[0]!.length, 0, 2, 1);
   } else {
     while (getGameResult(state).status === 'playing') {
-      const question = getPublicQuestion(state)!;
-      const key = questionsFor(state.config).find((entry) => entry.id === question.id)!;
-      step({ type: 'answer', question_id: question.id, choice: key.answer });
+      step(correctQuestionAction(state));
     }
   }
   expect(getGameResult(state).status).toBe('won');
   return moves;
 }
+
+function correctQuestionAction(state: GameState): VersionedGameAction {
+  const key = getAuthoredQuestion(state)!;
+  const solution = key.solution;
+  if (typeof solution?.line === 'number' && typeof solution?.repair === 'number')
+    return { type: 'debug', question_id: key.id, line: solution.line, repair: solution.repair };
+  if (solution?.node_ids) return { type: 'path', question_id: key.id, node_ids: [...solution.node_ids] };
+  if (solution?.step_ids) return { type: 'order', question_id: key.id, step_ids: [...solution.step_ids] };
+  return { type: 'answer', question_id: key.id, choice: key.answer };
+}
+
+const EXPANDED_GAMES = [
+  'DebuggingDetective',
+  'SQLDetective',
+  'GraphPath',
+  'ProofBuilder',
+  'DataDetective',
+  'AdaptiveQuiz',
+  'ExamEscape',
+] as const satisfies readonly GameId[];
 
 beforeEach(() => {
   testState.owner = 'alice';
@@ -373,7 +393,7 @@ describe('owner scoped game session routes', () => {
     expect(database.ledger).toEqual([]);
   });
 
-  it.each<GameId>(['SortingRace', 'NQueens', 'TowersOfHanoi'])(
+  it.each<GameId>(['SortingRace', 'NQueens', 'TowersOfHanoi', ...EXPANDED_GAMES])(
     'rejects objective-scoped %s before creating a save',
     async (gameId) => {
       const response = await createSession(request({ game_id: gameId, objective_id: 'python.branching' }));
@@ -456,6 +476,66 @@ describe('owner scoped game session routes', () => {
     expect(session.view.correct).toBe(0);
   });
 
+  it.each(EXPANDED_GAMES)(
+    'keeps %s private, rejects forged commands and restores the authoritative action after pause',
+    async (gameId) => {
+      const session = await created(gameId);
+      const privateState = createGame(session.snapshot.config);
+      const nextAction = correctQuestionAction(privateState);
+      expect(session.view.question).not.toBeNull();
+      expect(session.view.question?.activity).toBeTruthy();
+      const publicPayload = JSON.stringify(session);
+      expect(publicPayload).not.toContain('"solution":');
+      expect(publicPayload).not.toContain('"answer":');
+      expect(publicPayload).not.toContain('"dependencies":');
+      testState.owner = 'bob';
+      expect((await readSession(new Request('https://study.test'), context(session.id))).status).toBe(404);
+      expect((await command(session.id, 0, 'start')).status).toBe(404);
+      expect(GameSessionListSchema.parse(await (await listSessions()).json()).sessions).toEqual([]);
+      testState.owner = 'alice';
+
+      const forged = await commandSession(
+        request({ revision: 0, command: 'start', won: true, tokens_awarded: 999 }),
+        context(session.id),
+      );
+      expect(forged.status).toBe(400);
+      expect((await command(session.id, 0, 'start')).status).toBe(200);
+      expect((await action(session.id, 1, 2, nextAction)).status).toBe(400);
+      expect((await action(session.id, 1, 1, { type: 'swap', left: 0, right: 1 })).status).toBe(400);
+      expect((await command(session.id, 1, 'pause')).status).toBe(200);
+      expect((await action(session.id, 2, 1, nextAction)).status).toBe(400);
+      expect((await command(session.id, 2, 'resume')).status).toBe(200);
+      expect((await action(session.id, 3, 1, nextAction)).status).toBe(200);
+      expect((await action(session.id, 3, 1, nextAction)).status).toBe(409);
+
+      const restored = GameSessionSchema.parse(
+        await (await readSession(new Request('https://study.test'), context(session.id))).json(),
+      );
+      expect(restored.snapshot.actions).toEqual([{ seq: 1, action: nextAction }]);
+      expect(restored.view.correct).toBe(1);
+      expect(restored.view.feedback?.correct).toBe(true);
+      expect(restored.revision).toBe(4);
+      expect(database.ledger).toEqual([]);
+    },
+  );
+
+  it.each(['DebuggingDetective', 'GraphPath', 'ProofBuilder'] as const)(
+    'requires the domain action for %s rather than accepting a generic answer index',
+    async (gameId) => {
+      const session = await created(gameId);
+      await command(session.id, 0, 'start');
+      const response = await action(session.id, 1, 1, {
+        type: 'answer',
+        question_id: session.view.question!.id,
+        choice: 0,
+      });
+      expect(response.status).toBe(400);
+      expect(database.sessions[0]?.snapshot.actions).toEqual([]);
+      expect(database.sessions[0]?.revision).toBe(1);
+      expect(database.ledger).toEqual([]);
+    },
+  );
+
   it.each(
     (['ConceptMatch', 'RetrievalSprint', 'CodeTrace', 'FlashcardTowerDefense'] as const).flatMap((gameId) =>
       (['python.arithmetic', 'python.collections', 'python.iteration', 'python.branching'] as const).map(
@@ -534,57 +614,55 @@ describe('owner scoped game session routes', () => {
     expect(database.sessions[0]?.snapshot.actions).toHaveLength(1);
   });
 
-  it.each<GameId>([
-    'SortingRace',
-    'NQueens',
-    'TowersOfHanoi',
-    'FlashcardTowerDefense',
-    'ConceptMatch',
-    'RetrievalSprint',
-    'CodeTrace',
-  ])('settles %s once after server replay and caps same-day retry rewards', async (gameId) => {
-    const session = await created(gameId);
-    const moves = solution(createGame(session.snapshot.config));
-    await command(session.id, 0, 'start');
-    for (let index = 0; index < moves.length - 1; index++) {
-      expect((await action(session.id, index + 1, index + 1, moves[index]!)).status).toBe(200);
-    }
-    const last = moves.at(-1)!;
-    const replies = await Promise.all(
-      Array.from({ length: 8 }, () => action(session.id, moves.length, moves.length, last)),
-    );
-    expect(replies.filter((reply) => reply.status === 200)).toHaveLength(1);
-    expect(replies.filter((reply) => reply.status === 409)).toHaveLength(7);
-    const completed = GameSessionSchema.parse(
-      await (await readSession(new Request('https://study.test'), context(session.id))).json(),
-    );
-    expect(completed.status).toBe('won');
-    expect(completed.tokens_awarded).toBeGreaterThan(0);
-    expect(completed.tokens_awarded).toBeLessThanOrEqual(5);
-    expect(database.ledger).toHaveLength(1);
-    const wonCount = GameSessionListSchema.parse(await (await listSessions()).json()).progression[gameId];
-    expect(wonCount).toBe(1);
-    const retry = await created(gameId);
-    const retryMoves = solution(createGame(retry.snapshot.config));
-    await command(retry.id, 0, 'start');
-    for (let index = 0; index < retryMoves.length; index++)
-      await action(retry.id, index + 1, index + 1, retryMoves[index]!);
-    expect(database.ledger).toHaveLength(1);
-    expect(database.sessions.find((row) => row.id === retry.id)?.tokensAwarded).toBe(0);
-  });
+  it.each<GameId>(GameIdSchema.options)(
+    'settles %s once after server replay and caps same-day retry rewards',
+    async (gameId) => {
+      const session = await created(gameId);
+      const moves = solution(createGame(session.snapshot.config));
+      await command(session.id, 0, 'start');
+      for (let index = 0; index < moves.length - 1; index++) {
+        expect((await action(session.id, index + 1, index + 1, moves[index]!)).status).toBe(200);
+      }
+      const last = moves.at(-1)!;
+      const replies = await Promise.all(
+        Array.from({ length: 8 }, () => action(session.id, moves.length, moves.length, last)),
+      );
+      expect(replies.filter((reply) => reply.status === 200)).toHaveLength(1);
+      expect(replies.filter((reply) => reply.status === 409)).toHaveLength(7);
+      const completed = GameSessionSchema.parse(
+        await (await readSession(new Request('https://study.test'), context(session.id))).json(),
+      );
+      expect(completed.status).toBe('won');
+      expect(completed.tokens_awarded).toBeGreaterThan(0);
+      expect(completed.tokens_awarded).toBeLessThanOrEqual(5);
+      expect(database.ledger).toHaveLength(1);
+      const wonCount = GameSessionListSchema.parse(await (await listSessions()).json()).progression[gameId];
+      expect(wonCount).toBe(1);
+      const retry = await created(gameId);
+      const retryMoves = solution(createGame(retry.snapshot.config));
+      await command(retry.id, 0, 'start');
+      for (let index = 0; index < retryMoves.length; index++)
+        await action(retry.id, index + 1, index + 1, retryMoves[index]!);
+      expect(database.ledger).toHaveLength(1);
+      expect(database.sessions.find((row) => row.id === retry.id)?.tokensAwarded).toBe(0);
+    },
+  );
 
-  it('preserves a complete casual practice journey without a token or scheduled-review write', async () => {
-    const session = await created('RetrievalSprint', true);
-    const moves = solution(createGame(session.snapshot.config));
-    await command(session.id, 0, 'start');
-    for (let index = 0; index < moves.length; index++)
-      await action(session.id, index + 1, index + 1, moves[index]!);
-    const completed = database.sessions[0]!;
-    expect(completed.status).toBe('won');
-    expect(completed.tokensAwarded).toBe(0);
-    expect(database.ledger).toEqual([]);
-    expect(database.writes.every((table) => table === 'sessions' || table === 'update')).toBe(true);
-  });
+  it.each<GameId>(['RetrievalSprint', ...EXPANDED_GAMES])(
+    'preserves a complete %s practice journey without a token or scheduled-review write',
+    async (gameId) => {
+      const session = await created(gameId, true);
+      const moves = solution(createGame(session.snapshot.config));
+      await command(session.id, 0, 'start');
+      for (let index = 0; index < moves.length; index++)
+        await action(session.id, index + 1, index + 1, moves[index]!);
+      const completed = database.sessions[0]!;
+      expect(completed.status).toBe('won');
+      expect(completed.tokensAwarded).toBe(0);
+      expect(database.ledger).toEqual([]);
+      expect(database.writes.every((table) => table === 'sessions' || table === 'update')).toBe(true);
+    },
+  );
 
   it('makes terminal sessions immutable and abandoning grants no reward', async () => {
     const session = await created('CodeTrace');

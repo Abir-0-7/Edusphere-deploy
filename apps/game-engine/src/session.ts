@@ -23,6 +23,8 @@ export type GameState = GameSnapshot & {
   hints: number;
   moves: number;
   hintText: string | null;
+  adaptiveLevel: GameDifficulty;
+  answeredQuestionIds: string[];
 };
 
 export type GameResult = {
@@ -37,6 +39,12 @@ export type GameResult = {
 const MAX_ACTIONS = 500;
 const INTEGER = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value);
 const isGameId = (value: string): value is VaultGameId => (GAME_IDS as readonly string[]).includes(value);
+
+function cloneAction(action: GameAction): GameAction {
+  if (action.type === 'path') return { ...action, node_ids: [...action.node_ids] };
+  if (action.type === 'order') return { ...action, step_ids: [...action.step_ids] };
+  return { ...action };
+}
 
 function assertConfig(config: GameConfig): void {
   const keys = config ? Object.keys(config).sort().join('|') : '';
@@ -66,6 +74,11 @@ function assertConfig(config: GameConfig): void {
     )
   )
     throw new Error('unknown objective scope');
+  if (
+    config.objective_id !== undefined &&
+    !['FlashcardTowerDefense', 'ConceptMatch', 'RetrievalSprint', 'CodeTrace'].includes(config.game_id)
+  )
+    throw new Error('objective scope is not supported for this game');
   if (!isQuestionGame(config.game_id)) {
     if (config.objective_id !== undefined) throw new Error('objective scope is not supported for this game');
     return;
@@ -107,6 +120,8 @@ function initialState(config: GameConfig): GameState {
     hints: 0,
     moves: 0,
     hintText: null,
+    adaptiveLevel: config.difficulty,
+    answeredQuestionIds: [],
   };
 }
 
@@ -115,12 +130,43 @@ function isQuestionGame(gameId: VaultGameId): boolean {
     gameId === 'FlashcardTowerDefense' ||
     gameId === 'ConceptMatch' ||
     gameId === 'RetrievalSprint' ||
-    gameId === 'CodeTrace'
+    gameId === 'CodeTrace' ||
+    gameId === 'DebuggingDetective' ||
+    gameId === 'SQLDetective' ||
+    gameId === 'GraphPath' ||
+    gameId === 'ProofBuilder' ||
+    gameId === 'DataDetective' ||
+    gameId === 'AdaptiveQuiz' ||
+    gameId === 'ExamEscape'
   );
 }
 
 function questions(config: GameConfig): readonly ReviewedQuestion[] {
   return questionsFor(config);
+}
+
+/** Server/test-only fixture access. Never import this module into a browser bundle. */
+export function getAuthoredQuestion(state: GameState): ReviewedQuestion | undefined {
+  if (state.config.game_id === 'AdaptiveQuiz') {
+    const question = seededOrder(
+      AUTHORED_QUESTIONS.AdaptiveQuiz ?? [],
+      state.config.seed + state.questionIndex,
+    ).find(
+      (question) =>
+        question.level === state.adaptiveLevel && !state.answeredQuestionIds.includes(question.id),
+    );
+    if (!question) return undefined;
+    const indices = seededOrder(
+      question.choices.map((_, index) => index),
+      state.config.seed + state.questionIndex + 1,
+    );
+    return {
+      ...question,
+      choices: indices.map((index) => question.choices[index]!),
+      answer: indices.indexOf(question.answer),
+    };
+  }
+  return questions(state.config)[state.questionIndex];
 }
 
 function assertOrderedAction(ordered: OrderedGameAction, expectedSeq: number): void {
@@ -143,6 +189,9 @@ function assertOrderedAction(ordered: OrderedGameAction, expectedSeq: number): v
     answer: ['type', 'question_id', 'choice'],
     undo: ['type'],
     hint: ['type'],
+    debug: ['type', 'question_id', 'line', 'repair'],
+    path: ['type', 'question_id', 'node_ids'],
+    order: ['type', 'question_id', 'step_ids'],
   };
   const keys = Object.keys(action).sort();
   if (!exactKeys[action.type] || keys.join('|') !== [...exactKeys[action.type]].sort().join('|'))
@@ -195,6 +244,36 @@ function assertOrderedAction(ordered: OrderedGameAction, expectedSeq: number): v
     case 'undo':
     case 'hint':
       break;
+    case 'debug':
+      if (
+        typeof action.question_id !== 'string' ||
+        action.question_id.length < 1 ||
+        action.question_id.length > 128 ||
+        !INTEGER(action.line) ||
+        action.line < 0 ||
+        action.line > 15 ||
+        !INTEGER(action.repair) ||
+        action.repair < 0 ||
+        action.repair > 15
+      )
+        throw new Error('invalid debug repair');
+      break;
+    case 'path':
+    case 'order': {
+      const ids = action.type === 'path' ? action.node_ids : action.step_ids;
+      if (
+        typeof action.question_id !== 'string' ||
+        action.question_id.length < 1 ||
+        action.question_id.length > 128 ||
+        !Array.isArray(ids) ||
+        ids.length > 12 ||
+        (action.type === 'order' && ids.length === 0) ||
+        ids.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 24) ||
+        new Set(ids).size !== ids.length
+      )
+        throw new Error('invalid ordered selection');
+      break;
+    }
     default: {
       const neverAction: never = action;
       throw new Error(`unknown action ${(neverAction as { type: string }).type}`);
@@ -230,6 +309,24 @@ function questionWon(state: GameState): boolean {
     state.mistakes < 3 &&
     state.correct >= Math.ceil(questions(state.config).length * 0.6)
   );
+}
+
+function recordAnswer(state: GameState, question: ReviewedQuestion, correct: boolean): void {
+  state.feedback = {
+    question_id: question.id,
+    correct,
+    explanation: question.explanation,
+    source: { ...question.source },
+  };
+  if (correct || state.config.game_id !== 'ExamEscape') state.questionIndex++;
+  if (correct) state.correct++;
+  else state.mistakes++;
+  if (state.config.game_id === 'AdaptiveQuiz') {
+    state.answeredQuestionIds.push(question.id);
+    const levels = ['easy', 'medium', 'hard'] as const;
+    state.adaptiveLevel =
+      levels[Math.max(0, Math.min(2, levels.indexOf(state.adaptiveLevel) + (correct ? 1 : -1)))]!;
+  }
 }
 
 function solved(state: GameState): boolean {
@@ -290,19 +387,81 @@ function applyPrimitive(state: GameState, action: GameAction): void {
     }
     case 'answer': {
       if (!isQuestionGame(state.config.game_id)) throw new Error('answers are not valid for this game');
-      const question = questions(state.config)[state.questionIndex];
+      const question = getAuthoredQuestion(state);
+      if (['DebuggingDetective', 'GraphPath', 'ProofBuilder'].includes(state.config.game_id))
+        throw new Error('use the game-specific action');
       if (!question || action.question_id !== question.id || action.choice >= question.choices.length)
         throw new Error('answer is out of order');
       const correct = action.choice === question.answer;
-      state.feedback = {
-        question_id: question.id,
-        correct,
-        explanation: question.explanation,
-        source: { ...question.source },
-      };
-      state.questionIndex++;
-      if (correct) state.correct++;
-      else state.mistakes++;
+      recordAnswer(state, question, correct);
+      return;
+    }
+    case 'debug': {
+      const question = getAuthoredQuestion(state);
+      if (
+        state.config.game_id !== 'DebuggingDetective' ||
+        !question ||
+        question.id !== action.question_id ||
+        question.activity?.kind !== 'debug' ||
+        action.line >= question.activity.lines.length ||
+        action.repair >= question.activity.repairs.length
+      )
+        throw new Error('repair is not valid for this question');
+      recordAnswer(
+        state,
+        question,
+        action.line === question.solution?.line && action.repair === question.solution.repair,
+      );
+      return;
+    }
+    case 'path': {
+      const question = getAuthoredQuestion(state);
+      if (
+        state.config.game_id !== 'GraphPath' ||
+        !question ||
+        question.id !== action.question_id ||
+        question.activity?.kind !== 'graph'
+      )
+        throw new Error('path is not valid for this question');
+      const { nodes, edges, start, goal } = question.activity;
+      if (action.node_ids.some((node) => !nodes.includes(node))) throw new Error('unknown graph node');
+      const shortest = question.solution?.node_ids ?? [];
+      const correct =
+        shortest.length === 0
+          ? action.node_ids.length === 0
+          : action.node_ids.length === shortest.length &&
+            action.node_ids[0] === start &&
+            action.node_ids.at(-1) === goal &&
+            action.node_ids.every(
+              (node, i) =>
+                i === 0 ||
+                edges.some(
+                  ([a, b]) =>
+                    (a === action.node_ids[i - 1] && b === node) ||
+                    (b === action.node_ids[i - 1] && a === node),
+                ),
+            );
+      recordAnswer(state, question, correct);
+      return;
+    }
+    case 'order': {
+      const question = getAuthoredQuestion(state);
+      if (
+        state.config.game_id !== 'ProofBuilder' ||
+        !question ||
+        question.id !== action.question_id ||
+        question.activity?.kind !== 'proof'
+      )
+        throw new Error('order is not valid for this question');
+      const steps = question.activity.steps;
+      if (action.step_ids.some((id) => !steps.some((step) => step.id === id)))
+        throw new Error('unknown proof step');
+      const correct =
+        action.step_ids.length === steps.length &&
+        (question.solution?.dependencies ?? []).every(
+          ([before, after]) => action.step_ids.indexOf(before) < action.step_ids.indexOf(after),
+        );
+      recordAnswer(state, question, correct);
       return;
     }
     case 'hint':
@@ -315,7 +474,11 @@ function applyPrimitive(state: GameState, action: GameAction): void {
             ? 'Check columns and both diagonal directions for conflicts.'
             : state.config.game_id === 'TowersOfHanoi'
               ? 'Move the smallest disk every other turn; alternate its legal destination.'
-              : 'Slow down and identify what each Python operation changes.';
+              : state.config.game_id === 'GraphPath'
+                ? 'Explore one edge at a time from the start; the first layer that reaches the goal gives a shortest route.'
+                : state.config.game_id === 'ProofBuilder'
+                  ? 'Introduce each variable before using it; place the conclusion after substitution.'
+                  : 'Reread the fixed information and eliminate choices it does not support.';
       return;
     case 'undo':
       throw new Error('undo is replayed by the session reducer');
@@ -350,10 +513,12 @@ function replay(config: GameConfig, actionLog: readonly OrderedGameAction[]): Ga
       hints: state.hints,
       moves: state.moves,
       hintText: state.hintText,
+      adaptiveLevel: state.adaptiveLevel,
+      answeredQuestionIds: [...state.answeredQuestionIds],
     });
     applyPrimitive(state, ordered.action);
   }
-  state.actions = actionLog.map((entry) => ({ seq: entry.seq, action: { ...entry.action } as GameAction }));
+  state.actions = actionLog.map((entry) => ({ seq: entry.seq, action: cloneAction(entry.action) }));
   return state;
 }
 
@@ -374,7 +539,7 @@ export function applyGame(state: GameState, ordered: OrderedGameAction): GameSta
 export function serializeGame(state: GameState): GameSnapshot {
   return {
     config: { ...state.config },
-    actions: state.actions.map((entry) => ({ seq: entry.seq, action: { ...entry.action } as GameAction })),
+    actions: state.actions.map((entry) => ({ seq: entry.seq, action: cloneAction(entry.action) })),
   };
 }
 
@@ -391,13 +556,36 @@ export function restoreGame(snapshot: GameSnapshot): GameState {
 
 export function getPublicQuestion(state: GameState): GamePublicView['question'] {
   if (!isQuestionGame(state.config.game_id) || getGameResult(state).status !== 'playing') return null;
-  const question = questions(state.config)[state.questionIndex];
+  const question = getAuthoredQuestion(state);
+  let activity = question?.activity;
+  const progress = { current: state.questionIndex + 1, total: questions(state.config).length };
+  if (state.config.game_id === 'AdaptiveQuiz')
+    activity = {
+      kind: 'adaptive',
+      level: state.adaptiveLevel,
+      reason:
+        state.questionIndex === 0
+          ? 'Starting at your chosen practice level.'
+          : state.feedback?.correct
+            ? 'Your last answer was correct; try the next level, capped at hard.'
+            : 'Your last answer was incorrect; practise one level lower, floored at easy.',
+    };
+  if (state.config.game_id === 'ExamEscape')
+    activity = {
+      kind: 'escape',
+      room: `Lock ${progress.current}`,
+      position: progress.current,
+      total: progress.total,
+    };
+  if (activity?.kind === 'proof')
+    activity = { ...activity, steps: seededOrder(activity.steps, state.config.seed + state.questionIndex) };
   return question
     ? {
         id: question.id,
         prompt: question.prompt,
         choices: [...question.choices],
         source: { ...question.source },
+        ...(activity ? { activity: structuredClone(activity), progress } : {}),
       }
     : null;
 }
@@ -434,9 +622,12 @@ export function getGameResult(state: GameState): GameResult {
       : lost
         ? 'The session ended after repeated incorrect answers.'
         : 'Keep going; every action is checked against the versioned rules.');
-  const rule = isQuestionGame(state.config.game_id)
-    ? ` Clear at least ${Math.ceil(questions(state.config).length * 0.6)} of ${questions(state.config).length} questions correctly (60%, rounded up); 3 mistakes end the round. This score records engagement, not mastery.`
-    : '';
+  const rule =
+    state.config.game_id === 'ExamEscape'
+      ? ` Unlock all ${questions(state.config).length} rooms; a wrong answer keeps the current lock closed, and 3 mistakes end the run. Reading is untimed. This score records engagement, not mastery.`
+      : isQuestionGame(state.config.game_id)
+        ? ` Clear at least ${Math.ceil(questions(state.config).length * 0.6)} of ${questions(state.config).length} questions correctly (60%, rounded up); 3 mistakes end the round. This score records engagement, not mastery.`
+        : '';
   const explanation = detail + rule;
   return {
     status,
