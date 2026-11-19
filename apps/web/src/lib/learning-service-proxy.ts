@@ -20,8 +20,23 @@ const learningRoutePatterns: ReadonlyArray<{ method: string; path: RegExp }> = [
   { method: 'PUT', path: /^\/api\/bibliography\/[0-9a-f-]{36}$/ },
   { method: 'DELETE', path: /^\/api\/bibliography\/[0-9a-f-]{36}$/ },
   { method: 'POST', path: /^\/api\/documents\/[0-9a-f-]{36}\/source-versions$/ },
+  { method: 'GET', path: /^\/api\/source-versions$/ },
+  { method: 'POST', path: /^\/api\/source-versions\/(?:github\/import|import-text)$/ },
   { method: 'GET', path: /^\/api\/source-versions\/[0-9a-f-]{36}$/ },
   { method: 'POST', path: /^\/api\/source-versions\/[0-9a-f-]{36}\/resolve$/ },
+  { method: 'GET', path: /^\/api\/course-outlines(?:\/[0-9a-f-]{36}(?:\/approvals)?)?$/ },
+  { method: 'POST', path: /^\/api\/course-outlines(?:\/[0-9a-f-]{36}\/approve)?$/ },
+  { method: 'PUT', path: /^\/api\/course-outlines\/[0-9a-f-]{36}$/ },
+  { method: 'DELETE', path: /^\/api\/course-outlines\/[0-9a-f-]{36}$/ },
+  { method: 'GET', path: /^\/api\/course-generations(?:\/[0-9a-f-]{36}(?:\/lesson-edits)?)?$/ },
+  {
+    method: 'POST',
+    path: /^\/api\/course-generations(?:\/preview|\/refresh(?:\/preview)?|\/[0-9a-f-]{36}\/(?:cancel|resume))?$/,
+  },
+  { method: 'PUT', path: /^\/api\/course-generations\/[0-9a-f-]{36}\/lessons\/[A-Za-z0-9_-]{1,80}$/ },
+  { method: 'POST', path: /^\/api\/source-refresh\/impact$/ },
+  { method: 'GET', path: /^\/api\/course-enrollments\/[0-9a-f-]{36}\/course$/ },
+  { method: 'POST', path: /^\/api\/course-enrollments\/[0-9a-f-]{36}\/(?:upgrade-preview|upgrade)$/ },
 ];
 
 export function isAllowedLearningRoute(method: string, path: string): boolean {

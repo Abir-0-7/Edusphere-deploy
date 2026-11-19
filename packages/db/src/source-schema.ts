@@ -28,6 +28,7 @@ export const sourceVersions = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    unique('uq_source_versions_id_owner').on(t.id, t.userId),
     unique('uq_source_versions_owner_hash').on(t.userId, t.contentHash),
     foreignKey({
       name: 'fk_source_versions_document_owner',

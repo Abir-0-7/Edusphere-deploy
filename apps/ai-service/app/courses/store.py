@@ -21,8 +21,16 @@ from app.courses.contracts import (
     StudyNotesRequest,
 )
 from app.courses.labs import run_lab
+from app.courses.upgrade_contracts import (
+    CourseUpgradeApplyRequest,
+    CourseUpgradePreview,
+    CourseUpgradePreviewRequest,
+    CourseUpgradeReceipt,
+    CourseUpgradeResponse,
+)
+from app.courses.upgrades import prepare_upgrade, verify_acceptance
 from app.documents.store import ChapterRecord, ChunkRecord, InMemoryDocumentStore
-from app.errors import InvalidInput, NotFound
+from app.errors import Conflict, InvalidInput, NotFound
 
 _MISCONCEPTION_ATTEMPT_LIMIT = 500
 _TRACK_ATTEMPT_PREVIEW_LIMIT = 500
@@ -81,11 +89,51 @@ def _enrollment(identifier, user_id, release_id, document_id, state=None, revisi
     }
 
 
+def _upgraded_enrollment(user_id, identifier, document_id, request, preview, state, target):
+    receipt = CourseUpgradeReceipt(
+        id=request.id,
+        from_enrollment_id=preview.from_enrollment_id,
+        to_enrollment_id=identifier,
+        from_document_id=preview.from_document_id,
+        from_revision=preview.from_revision,
+        from_release_id=preview.from_release_id,
+        from_content_hash=preview.from_content_hash,
+        target_release_id=preview.target_release_id,
+        target_content_hash=preview.target_content_hash,
+        preview_hash=preview.preview_hash,
+        retained_lesson_ids=preview.retained_lesson_ids,
+        retained_objective_ids=preview.retained_objective_ids,
+        created_at=datetime.now(UTC).isoformat(),
+    )
+    state["upgrade_receipt"] = receipt.model_dump(mode="json")
+    row = _enrollment(identifier, user_id, target.id, document_id, state=state)
+    engine.update_completion(row, target)
+    return row, CourseUpgradeResponse(session=engine.session_view(row, target), receipt=receipt, replayed=False)
+
+
+def _upgrade_replay(enrollment_id, request, candidate, release):
+    receipt = CourseUpgradeReceipt.model_validate(candidate["state"]["upgrade_receipt"])
+    if (str(receipt.from_enrollment_id) != str(enrollment_id)
+            or receipt.id != request.id or receipt.from_revision != request.expected_revision
+            or receipt.target_release_id != request.target_release_id
+            or receipt.target_content_hash != request.target_content_hash
+            or receipt.preview_hash != request.preview_hash):
+        raise Conflict("Upgrade action ID was already used with different input")
+    return CourseUpgradeResponse(session=engine.session_view(candidate, release), receipt=receipt, replayed=True)
+
+
+def _check_upgrade_prerequisites(original, target, completed_slugs):
+    # An existing enrollment proves prior admission, including admission by diagnostic.
+    if not engine.prerequisite_met(target, completed_slugs | set(original.prerequisites)):
+        raise InvalidInput("Complete the newly required courses before upgrading")
+
+
 def _assignment_action(enrollment, release: CourseRelease, request: AssignmentDraftRequest) -> AssignmentDraftResponse:
-    if not any(item.id == request.assignment_id for item in release.assignments):
+    assignment = next((item for item in release.assignments if item.id == request.assignment_id), None)
+    if assignment is None:
         raise InvalidInput("assignment is not part of this course release")
     state = enrollment["state"]
-    actions = state.setdefault("assignment_actions", {})
+    actions = state.get("assignment_actions", {})
     identifier = str(request.id)
     fingerprint = {
         "assignment_id": request.assignment_id,
@@ -93,18 +141,46 @@ def _assignment_action(enrollment, release: CourseRelease, request: AssignmentDr
         "text": request.text,
         "revision": request.revision,
     }
+    # Empty new fields preserve pre-F05 action fingerprints and old retries.
+    if request.sections:
+        fingerprint["sections"] = request.sections
+    if request.evidence_ids:
+        fingerprint["evidence_ids"] = request.evidence_ids
     prior = actions.get(identifier)
     if prior is not None:
         if prior["fingerprint"] != fingerprint:
             raise InvalidInput("assignment action id was already used with different input")
         return AssignmentDraftResponse.model_validate({**prior["result"], "replayed": True})
     engine.require_revision(enrollment, request.revision)
-    if request.action == "submit" and len(request.text.strip()) < 80:
-        raise InvalidInput("Add a short explanation before submitting this assignment")
+    sections = {section.id: section for section in assignment.sections}
+    if not set(request.sections) <= sections.keys():
+        raise InvalidInput("assignment section is not part of this course assignment")
+    if not set(request.evidence_ids) <= set(assignment.evidence_ids):
+        raise InvalidInput("assignment evidence is not part of this course assignment")
+    if any(len(value) > sections[identifier].max_chars for identifier, value in request.sections.items()):
+        raise InvalidInput("assignment section exceeds its authored maximum")
+    if request.action == "submit":
+        if assignment.id in release.required_assignment_ids and not {lesson.id for lesson in release.lessons} <= set(
+            state["completed_lesson_ids"]
+        ):
+            raise InvalidInput("Complete all lesson and module checkpoints before submitting the required project")
+        if sections:
+            if set(request.sections) != sections.keys() or any(
+                not section.min_chars <= len(request.sections[identifier].strip()) <= section.max_chars
+                for identifier, section in sections.items()
+            ):
+                raise InvalidInput("Complete every project section within its authored length bounds before submitting")
+        elif len(request.text.strip()) < 80:
+            raise InvalidInput("Add a short explanation before submitting this assignment")
+        if assignment.require_evidence and not request.evidence_ids:
+            raise InvalidInput("Select approved assignment evidence before submitting")
     drafts = state.setdefault("assignment_drafts", {})
     statuses = state.setdefault("assignment_status", {})
     drafts[request.assignment_id] = request.text
     statuses[request.assignment_id] = "submitted" if request.action == "submit" else "draft"
+    state.setdefault("assignment_sections", {})[request.assignment_id] = dict(request.sections)
+    state.setdefault("assignment_evidence_ids", {})[request.assignment_id] = list(request.evidence_ids)
+    engine.update_completion(enrollment, release)
     enrollment["revision"] += 1
     result = AssignmentDraftResponse(
         id=request.id,
@@ -112,8 +188,11 @@ def _assignment_action(enrollment, release: CourseRelease, request: AssignmentDr
         status=statuses[request.assignment_id],
         revision=enrollment["revision"],
         replayed=False,
+        sections=request.sections,
+        evidence_ids=request.evidence_ids,
     )
     actions[identifier] = {"fingerprint": fingerprint, "result": result.model_dump(mode="json")}
+    state["assignment_actions"] = actions
     for stale_id in list(actions)[:-40]:
         del actions[stale_id]
     return result
@@ -200,6 +279,61 @@ class MemoryCourseStore:
             _authorized(release, user_id)
             _validate_source_pins(release, self.source_versions)
             return release.model_copy(deep=True)
+
+    def pinned_course_detail(self, user_id: str, enrollment_id: str):
+        """Return the exact release pinned by this enrollment, never latest-by-slug."""
+        with self._lock:
+            _, release = self._owned(user_id, enrollment_id)
+            return release.model_copy(deep=True)
+
+    def _release_by_id(self, user_id: str, release_id: str):
+        release = self._releases.get(str(release_id))
+        if release is None:
+            raise NotFound("course release not found")
+        _authorized(release, user_id, published_only=True)
+        _validate_source_pins(release, self.source_versions)
+        return release
+
+    def preview_upgrade(
+        self, user_id: str, enrollment_id: str, request: CourseUpgradePreviewRequest,
+    ) -> CourseUpgradePreview:
+        with self._lock:
+            row, original = self._owned(user_id, enrollment_id)
+            target = self._release_by_id(user_id, str(request.target_release_id))
+            _check_upgrade_prerequisites(original, target, self.completed_slugs(user_id))
+            preview, _ = prepare_upgrade(row, original, target)
+            return preview
+
+    def apply_upgrade(self, user_id: str, enrollment_id: str, request: CourseUpgradeApplyRequest):
+        with self._lock:
+            row, original = self._owned(user_id, enrollment_id)
+            # Idempotent replay is found on the new target row. The source row is
+            # never modified to record upgrade history.
+            for candidate in self._enrollments.values():
+                if candidate["user_id"] != user_id:
+                    continue
+                receipt = candidate["state"].get("upgrade_receipt")
+                if receipt and receipt.get("id") == str(request.id):
+                    owned, release = self._owned(user_id, candidate["id"])
+                    return _upgrade_replay(enrollment_id, request, owned, release)
+            target = self._release_by_id(user_id, str(request.target_release_id))
+            if row["revision"] != request.expected_revision:
+                raise Conflict("Enrollment changed; refresh the upgrade preview")
+            _check_upgrade_prerequisites(original, target, self.completed_slugs(user_id))
+            preview, state = prepare_upgrade(row, original, target)
+            verify_acceptance(preview, request)
+            if any(candidate["user_id"] == user_id and candidate["release_id"] == str(target.id)
+                   for candidate in self._enrollments.values()):
+                raise Conflict("You already have an enrollment for this release; open it from your courses")
+            identifier, document_id = str(uuid.uuid4()), str(uuid.uuid4())
+            markdown, chapters, chunks = _material(target, identifier, document_id, user_id)
+            target_row, result = _upgraded_enrollment(user_id, identifier, document_id, request, preview, state, target)
+            self.documents.create_parsed_course_document(
+                document_id, user_id=user_id, filename=f"{target.slug}-v{target.version}.md",
+                markdown=markdown, chapters=chapters, chunks=chunks,
+            )
+            self._enrollments[identifier] = target_row
+            return result
 
     def completed_slugs(self, user_id: str):
         with self._lock:
@@ -580,12 +714,87 @@ class PgCourseStore:
 
     def completed_slugs(self, user_id: str):
         with self._connect() as conn, conn.cursor() as cur:
+            return self._completed_slugs(cur, user_id)
+
+    @staticmethod
+    def _completed_slugs(cur, user_id):
+        cur.execute(
+            "SELECT c.slug FROM course_enrollments e JOIN course_releases r ON r.id=e.release_id"
+            " JOIN courses c ON c.id=r.course_id WHERE e.user_id=%s AND e.status='completed'",
+            (user_id,),
+        )
+        return {row[0] for row in cur.fetchall()}
+
+    def _release_by_id(self, cur, user_id, release_id, *, conn=None):
+        cur.execute(
+            "SELECT r.content FROM course_releases r JOIN courses c ON c.id=r.course_id"
+            " WHERE r.id=%s AND ((r.user_id=%s AND c.user_id=%s) OR (r.visibility='catalog'"
+            " AND r.status='published' AND r.user_id IS NULL AND c.user_id IS NULL))"
+            + (" FOR SHARE OF r" if conn is not None else ""),
+            (str(release_id), user_id, user_id),
+        )
+        result = cur.fetchone()
+        if result is None:
+            raise NotFound("course release not found")
+        release = CourseRelease.model_validate(result[0])
+        _authorized(release, user_id, published_only=True)
+        _validate_source_pins(release, self.source_versions, conn=conn)
+        return release
+
+    def pinned_course_detail(self, user_id: str, enrollment_id: str) -> CourseRelease:
+        with self._connect() as conn, conn.cursor() as cur:
+            _, release = self._owned(cur, user_id, enrollment_id)
+            return release
+
+    def preview_upgrade(
+        self, user_id: str, enrollment_id: str, request: CourseUpgradePreviewRequest,
+    ) -> CourseUpgradePreview:
+        with self._connect() as conn, conn.cursor() as cur:
+            row, original = self._owned(cur, user_id, enrollment_id)
+            target = self._release_by_id(cur, user_id, request.target_release_id)
+            _check_upgrade_prerequisites(original, target, self._completed_slugs(cur, user_id))
+            preview, _ = prepare_upgrade(row, original, target)
+            return preview
+
+    def apply_upgrade(
+        self, user_id: str, enrollment_id: str, request: CourseUpgradeApplyRequest,
+    ) -> CourseUpgradeResponse:
+        with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
+            # Enrollment and upgrade share this lock to serialize account quotas,
+            # target uniqueness and duplicate accept requests.
+            cur.execute("SELECT id FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            if cur.fetchone() is None:
+                raise NotFound("course learner not found")
+            row, original = self._owned(cur, user_id, enrollment_id, lock=True, conn=conn)
             cur.execute(
-                "SELECT c.slug FROM course_enrollments e JOIN course_releases r ON r.id=e.release_id"
-                " JOIN courses c ON c.id=r.course_id WHERE e.user_id=%s AND e.status='completed'",
-                (user_id,),
+                "SELECT id FROM course_enrollments WHERE user_id=%s AND state->'upgrade_receipt'->>'id'=%s",
+                (user_id, str(request.id)),
             )
-            return {row[0] for row in cur.fetchall()}
+            existing = cur.fetchone()
+            if existing is not None:
+                owned, release = self._owned(cur, user_id, existing[0], conn=conn)
+                return _upgrade_replay(enrollment_id, request, owned, release)
+            if row["revision"] != request.expected_revision:
+                raise Conflict("Enrollment changed; refresh the upgrade preview")
+            target = self._release_by_id(cur, user_id, request.target_release_id, conn=conn)
+            _check_upgrade_prerequisites(original, target, self._completed_slugs(cur, user_id))
+            preview, state = prepare_upgrade(row, original, target)
+            verify_acceptance(preview, request)
+            if self._existing_enrollment(cur, user_id, target.id) is not None:
+                raise Conflict("You already have an enrollment for this release; open it from your courses")
+            identifier, document_id = str(uuid.uuid4()), str(uuid.uuid4())
+            target_row, result = _upgraded_enrollment(user_id, identifier, document_id, request, preview, state, target)
+            self._write_new_enrollment(cur, user_id, target, target_row)
+            return result
+
+    @staticmethod
+    def _existing_enrollment(cur, user_id, release_id):
+        cur.execute(
+            "SELECT id,document_id,state,revision,status FROM course_enrollments"
+            " WHERE user_id=%s AND release_id=%s",
+            (user_id, str(release_id)),
+        )
+        return cur.fetchone()
 
     def enroll(self, user_id: str, slug: str, diagnostic=None):
         release = self.get_release(slug, user_id)
@@ -595,65 +804,54 @@ class PgCourseStore:
             if cur.fetchone() is None:
                 raise NotFound("course learner not found")
             _validate_source_pins(release, self.source_versions, conn=conn)
-            cur.execute(
-                "SELECT id,document_id,state,revision,status FROM course_enrollments"
-                " WHERE user_id=%s AND release_id=%s",
-                (user_id, str(release.id)),
-            )
-            existing = cur.fetchone()
+            existing = self._existing_enrollment(cur, user_id, release.id)
             if existing:
                 return engine.session_view(_enrollment(existing[0], user_id, release.id, *existing[1:]), release)
-            cur.execute("SELECT count(*) FROM documents WHERE user_id=%s", (user_id,))
-            if int(cur.fetchone()[0]) >= self.max_documents_per_user:
-                raise InvalidInput("document limit reached for this account")
-            cur.execute(
-                "SELECT c.slug FROM course_enrollments e JOIN course_releases r ON r.id=e.release_id"
-                " JOIN courses c ON c.id=r.course_id WHERE e.user_id=%s AND e.status='completed'",
-                (user_id,),
-            )
-            if not engine.prerequisite_met(release, {row[0] for row in cur.fetchall()}, diagnostic):
+            if not engine.prerequisite_met(release, self._completed_slugs(cur, user_id), diagnostic):
                 raise InvalidInput("Complete Python Foundations or pass the prerequisite diagnostic first")
             identifier, document_id = str(uuid.uuid4()), str(uuid.uuid4())
-            markdown, chapters, chunks = _material(release, identifier, document_id, user_id)
+            enrollment = _enrollment(identifier, user_id, release.id, document_id)
+            self._write_new_enrollment(cur, user_id, release, enrollment)
+            return engine.session_view(enrollment, release)
+
+    def _write_new_enrollment(self, cur, user_id, release, enrollment):
+        cur.execute("SELECT count(*) FROM documents WHERE user_id=%s", (user_id,))
+        if int(cur.fetchone()[0]) >= self.max_documents_per_user:
+            raise InvalidInput("document limit reached for this account")
+        identifier, document_id = enrollment["id"], enrollment["document_id"]
+        markdown, chapters, chunks = _material(release, identifier, document_id, user_id)
+        cur.execute(
+            "INSERT INTO documents (id,user_id,filename,mime_type,size_bytes,page_count,status,markdown)"
+            " VALUES (%s,%s,%s,'text/markdown',%s,%s,'parsed',%s)",
+            (document_id, user_id, f"{release.slug}-v{release.version}.md",
+             len(markdown.encode()), len(chapters), markdown),
+        )
+        for chapter in chapters:
             cur.execute(
-                "INSERT INTO documents (id,user_id,filename,mime_type,size_bytes,page_count,status,markdown)"
-                " VALUES (%s,%s,%s,'text/markdown',%s,%s,'parsed',%s)",
+                "INSERT INTO chapters (id,document_id,user_id,title,ordinal,start_page,end_page)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
                 (
+                    chapter.id,
                     document_id,
                     user_id,
-                    f"{slug}-v{release.version}.md",
-                    len(markdown.encode()),
-                    len(chapters),
-                    markdown,
+                    chapter.title,
+                    chapter.ordinal,
+                    chapter.start_page,
+                    chapter.end_page,
                 ),
             )
-            for chapter in chapters:
-                cur.execute(
-                    "INSERT INTO chapters (id,document_id,user_id,title,ordinal,start_page,end_page)"
-                    " VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                    (
-                        chapter.id,
-                        document_id,
-                        user_id,
-                        chapter.title,
-                        chapter.ordinal,
-                        chapter.start_page,
-                        chapter.end_page,
-                    ),
-                )
-            for chunk in chunks:
-                cur.execute(
-                    "INSERT INTO chunks (id,document_id,user_id,chapter_id,content,page,ordinal)"
-                    " VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                    (chunk.id, document_id, user_id, chunk.chapter_id, chunk.content, chunk.page, chunk.ordinal),
-                )
-            enrollment = _enrollment(identifier, user_id, release.id, document_id)
+        for chunk in chunks:
             cur.execute(
-                "INSERT INTO course_enrollments (id,user_id,release_id,document_id,state,revision,status)"
-                " VALUES (%s,%s,%s,%s,%s::jsonb,0,'active')",
-                (identifier, user_id, str(release.id), document_id, json.dumps(enrollment["state"])),
+                "INSERT INTO chunks (id,document_id,user_id,chapter_id,content,page,ordinal)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (chunk.id, document_id, user_id, chunk.chapter_id, chunk.content, chunk.page, chunk.ordinal),
             )
-            return engine.session_view(enrollment, release)
+        cur.execute(
+            "INSERT INTO course_enrollments (id,user_id,release_id,document_id,state,revision,status)"
+            " VALUES (%s,%s,%s,%s,%s::jsonb,%s,%s)",
+            (identifier, user_id, str(release.id), document_id, json.dumps(enrollment["state"]),
+             enrollment["revision"], enrollment["status"]),
+        )
 
     def _owned(self, cur, user_id, enrollment_id, *, lock=False, conn=None):
         cur.execute(

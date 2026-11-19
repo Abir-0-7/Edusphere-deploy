@@ -13,7 +13,7 @@ import random
 import time
 import uuid
 from collections.abc import AsyncIterator
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 import httpx
@@ -26,6 +26,7 @@ from app.llm.cache_scope import (
     accept_cache_candidate,
     clear_cache_candidate,
     current_response_scope,
+    scope_payload,
     stage_cache_candidate,
 )
 from app.llm.operations import MemoryOperations, PgOperations, operation_key, unavailable
@@ -155,6 +156,20 @@ class LLMRouter:
     def _cache_key(self, payload: dict[str, Any]) -> str:
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
+    def _fallback_reserve(self, provider: Provider) -> int:
+        """Keep retries on one endpoint from consuming the distinct fallback budget."""
+        index = self.providers.index(provider)
+        endpoint = provider.base_url.rstrip("/")
+        now = time.monotonic()
+        return len({item.base_url.rstrip("/") for item in self.providers[index + 1:]
+                    if item.is_configured and item.base_url.rstrip("/") != endpoint
+                    and not self.circuits[item.name].is_open(now)})
+
+    def _can_retry(self, provider: Provider, error: Exception, remaining: int) -> bool:
+        if isinstance(error, httpx.HTTPStatusError) and error.response.status_code not in RETRYABLE_STATUS:
+            return False
+        return remaining > self._fallback_reserve(provider)
+
     def complete(self, messages: list[dict[str, str]], temperature: float = 0.2) -> str:
         """Chat completion via the fallback chain. Raises AllProvidersFailed."""
         clear_cache_candidate()
@@ -170,7 +185,7 @@ class LLMRouter:
                 {
                     "messages": messages,
                     "temperature": temperature,
-                    "scope": asdict(scope) if scope else None,
+                    "scope": scope_payload(scope) if scope else None,
                     "providers": [{"name": p.name, "model": p.model, "url": p.base_url} for p in self.providers],
                     "policy": self.cache_policy_version,
                 },
@@ -181,7 +196,8 @@ class LLMRouter:
         if self.operations is not None and key is not None:
             try:
                 source = current_response_scope()
-                fresh, prior = self.operations.claim(owner, key, source.document_id if source else None)
+                extra = {"generation_run_id": source.generation_run_id} if source and source.generation_run_id else {}
+                fresh, prior = self.operations.claim(owner, key, source.document_id if source else None, **extra)
             except ApiError:
                 raise
             except Exception as exc:
@@ -285,7 +301,7 @@ class LLMRouter:
                 {
                     "messages": messages,
                     "temperature": temperature,
-                    "scope": asdict(scope) if scope else None,
+                    "scope": scope_payload(scope) if scope else None,
                     "providers": [{"name": p.name, "model": p.model, "url": p.base_url} for p in self.providers],
                     "policy": self.cache_policy_version,
                 },
@@ -332,6 +348,7 @@ class LLMRouter:
             nonlocal attempted, outcome, result, attempt_no, remaining, admitted
             fallback_before = len(self.usage_log.records)
             errors: list[str] = []
+            attempted_endpoints: set[str] = set()
             try:
                 for provider in self.providers:
                     if remaining <= 0:
@@ -342,6 +359,10 @@ class LLMRouter:
                     circuit = self.circuits[provider.name]
                     if circuit.is_open(time.monotonic()):
                         errors.append(f"{provider.name}: circuit open")
+                        continue
+                    endpoint = provider.base_url.rstrip("/")
+                    if endpoint in attempted_endpoints and remaining <= self._fallback_reserve(provider):
+                        errors.append(f"{provider.name}: remaining attempts reserved for fallback")
                         continue
                     if not admitted:
                         if self.budget_store is not None:
@@ -378,6 +399,7 @@ class LLMRouter:
                         if remaining <= 0:
                             break
                         remaining -= 1
+                        attempted_endpoints.add(endpoint)
                         attempt_no += 1
                         attempted = True
                         tracking.attempted = True
@@ -460,8 +482,10 @@ class LLMRouter:
                                 raise ApiError(
                                     "Tutor stream ended before completion; retry with a new request", status_code=503
                                 ) from exc
-                            if retry < self.max_retries and remaining > 0:
+                            if retry < self.max_retries and self._can_retry(provider, exc, remaining):
                                 await asyncio.sleep(min(2**retry, 4) + random.uniform(0, 0.25))
+                            else:
+                                break
                         finally:
                             if self.usage_ledger is not None:
                                 try:
@@ -535,7 +559,7 @@ class LLMRouter:
             "temperature": temperature,
             "owner": current_ai_owner(),
             "max_output_tokens": self.max_output_tokens,
-            "scope": asdict(scope) if (scope := current_response_scope()) is not None else None,
+            "scope": scope_payload(scope) if (scope := current_response_scope()) is not None else None,
             "cache_policy_version": self.cache_policy_version,
             "providers": [{"name": p.name, "base_url": p.base_url, "model": p.model} for p in self.providers],
         }
@@ -546,6 +570,7 @@ class LLMRouter:
                 return str(cached), True
 
         errors: list[str] = []
+        attempted_endpoints: set[str] = set()
         admitted = False
         remaining = [self.max_provider_attempts]
         attempt_counter = [0]
@@ -560,6 +585,10 @@ class LLMRouter:
                 continue
             if remaining[0] <= 0:
                 break
+            endpoint = provider.base_url.rstrip("/")
+            if endpoint in attempted_endpoints and remaining[0] <= self._fallback_reserve(provider):
+                errors.append(f"{provider.name}: remaining attempts reserved for fallback")
+                continue
             if not admitted:
                 if self.budget_store is not None:
                     if owner is None or self.budget_limits is None:
@@ -591,6 +620,7 @@ class LLMRouter:
                 admitted = True
             try:
                 attempted[0] = True
+                attempted_endpoints.add(endpoint)
                 budget_tracking.attempted = True
                 text = self._call_with_retries(
                     provider, messages, temperature, remaining, owner, operation_id, attempt_counter, budget_tracking
@@ -636,6 +666,11 @@ class LLMRouter:
         }
         with self.client_factory(timeout=self.timeout_seconds) as client:
             for attempt in range(self.max_retries + 1):
+                # Stop cancelled/expired background work before another remote
+                # attempt or fallback can spend quota. Non-job callers are a no-op.
+                from app.jobs.worker import check_claim
+
+                check_claim()
                 if remaining[0] <= 0:
                     break
                 remaining[0] -= 1
@@ -677,8 +712,10 @@ class LLMRouter:
                 except (httpx.HTTPError, LLMError, KeyError, IndexError, ValueError) as exc:
                     budget_tracking.uncertain = True
                     last_error = exc
-                    if attempt < self.max_retries and remaining[0] > 0:
+                    if attempt < self.max_retries and self._can_retry(provider, exc, remaining[0]):
                         self.sleep(min(2**attempt, 4) + random.uniform(0, 0.25))
+                    else:
+                        break
                 finally:
                     if self.usage_ledger is not None:
                         try:

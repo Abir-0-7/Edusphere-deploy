@@ -620,7 +620,9 @@ def catalog() -> tuple[CourseRelease, ...]:
     from app.courses.catalog_candidates import candidates
 
     promoted = tuple(release.model_copy(update={"status": "published"}, deep=True) for release in candidates())
-    return python_foundations(), pytorch_fundamentals(), *promoted
+    from app.courses.full_course_release import practical_python_release
+
+    return python_foundations(), pytorch_fundamentals(), *promoted, practical_python_release()
 
 
 # Diagnostic permits an experienced learner to enter PyTorch without fabricating

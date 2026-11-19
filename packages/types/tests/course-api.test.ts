@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   AttemptRequestSchema,
   AssignmentDraftRequestSchema,
+  AssignmentDraftResponseSchema,
+  CourseAssignmentSchema,
   CourseChatRequestSchema,
   CourseChatResponseSchema,
   CourseReleaseSchema,
@@ -78,6 +80,7 @@ const release = () => ({
   exercises: [exercise('practice-1', 'practice'), exercise('checkpoint-1', 'checkpoint')],
   labs: [],
   assignments: [],
+  required_assignment_ids: [],
 });
 
 describe('course wire contracts', () => {
@@ -189,6 +192,8 @@ describe('course wire contracts', () => {
       remediation: null,
       assignment_drafts: {},
       assignment_status: {},
+      assignment_sections: {},
+      assignment_evidence_ids: {},
       lab_progress: {},
       lab_transcripts: {},
     };
@@ -304,6 +309,119 @@ describe('course wire contracts', () => {
         task_id: 'task-1',
         text: 'DROP TABLE products;',
       }).success,
+    ).toBe(true);
+  });
+});
+
+describe('structured capstones', () => {
+  it('links a required structured capstone rubric and keeps legacy metadata defaults usable', () => {
+    const assignment = CourseAssignmentSchema.parse({
+      id: 'capstone',
+      title: 'A supported design',
+      prompt: 'Explain an algorithm.',
+      deliverable: 'Written analysis.',
+      rubric: ['Explain the reasoning.'],
+      objective_ids: ['expressions'],
+      evidence_ids: ['precedence-evidence'],
+      criteria: [
+        {
+          id: 'reasoning',
+          description: 'Explain your design.',
+          objective_ids: ['expressions'],
+          evidence_ids: ['precedence-evidence'],
+          review_guidance: 'A human reviewer inspects this; no execution.',
+        },
+      ],
+      sections: [
+        { id: 'analysis', title: 'Analysis', prompt: 'Explain the design.', min_chars: 20, max_chars: 500 },
+      ],
+      require_evidence: true,
+    });
+    expect(
+      CourseReleaseSchema.safeParse({
+        ...release(),
+        size: 'full',
+        assignments: [assignment],
+        required_assignment_ids: ['capstone'],
+      }).success,
+    ).toBe(true);
+    expect(
+      CourseReleaseSchema.safeParse({
+        ...release(),
+        assignments: [assignment],
+        required_assignment_ids: ['missing'],
+      }).success,
+    ).toBe(false);
+    expect(
+      CourseAssignmentSchema.safeParse({
+        ...assignment,
+        criteria: [{ ...assignment.criteria[0]!, evidence_ids: ['forged'] }],
+      }).success,
+    ).toBe(false);
+    expect(
+      CourseAssignmentSchema.safeParse({
+        ...assignment,
+        sections: [assignment.sections[0], assignment.sections[0]],
+      }).success,
+    ).toBe(false);
+    expect(CourseAssignmentSchema.safeParse({ ...assignment, require_evidence: 1 }).success).toBe(false);
+    expect(
+      CourseAssignmentSchema.safeParse({
+        ...assignment,
+        sections: [{ ...assignment.sections[0]!, min_chars: 501 }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts bounded structured project work without inventing grades or execution claims', () => {
+    const request = {
+      id: 'a0378313-f11c-4a53-9bc6-71f2164873e7',
+      revision: 2,
+      assignment_id: 'capstone',
+      action: 'submit',
+      sections: { analysis: 'A supported algorithm and its assumptions.' },
+      evidence_ids: ['precedence-evidence'],
+    };
+    expect(AssignmentDraftRequestSchema.parse(request).text).toBe('');
+    expect(
+      AssignmentDraftResponseSchema.parse({
+        id: request.id,
+        assignment_id: request.assignment_id,
+        status: 'submitted',
+        revision: 3,
+        replayed: false,
+        sections: request.sections,
+        evidence_ids: request.evidence_ids,
+      }).sections,
+    ).toEqual(request.sections);
+    expect(
+      AssignmentDraftResponseSchema.safeParse({
+        id: request.id,
+        assignment_id: request.assignment_id,
+        status: 'submitted',
+        revision: 3,
+        replayed: false,
+        grade: 100,
+      }).success,
+    ).toBe(false);
+    for (const change of [
+      { sections: { analysis: 5 } },
+      { sections: { analysis: 'x'.repeat(5001) } },
+      { sections: { analysis: '\u0000' } },
+      { sections: { analysis: '\ud800' } },
+      {
+        sections: Object.fromEntries(
+          Array.from({ length: 8 }, (_, index) => [`s${index}`, 'x'.repeat(3000)]),
+        ),
+      },
+      { evidence_ids: ['same', 'same'] },
+      { score: 100 },
+    ]) {
+      expect(AssignmentDraftRequestSchema.safeParse({ ...request, ...change }).success).toBe(false);
+    }
+    expect(
+      AssignmentDraftRequestSchema.safeParse({ ...request, sections: { analysis: '😀'.repeat(5000) } })
+        .success,
     ).toBe(true);
   });
 });

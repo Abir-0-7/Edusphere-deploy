@@ -5,9 +5,10 @@ import type { CourseSummary, SessionResponse } from '@studyvault/types';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getCourseSessions, listCourses } from '@/lib/course-client';
+import { CourseOutlinePlanner } from '@/components/course-outline-planner';
 
 export function CourseCatalog() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,9 +84,9 @@ export function CourseCatalog() {
       ) : courses.length > 0 ? (
         <div className="grid gap-5 md:grid-cols-2">
           {courses.map((course) => {
-            const session = sessions
-              .filter((item) => item.course_slug === course.slug)
-              .sort((left, right) => right.revision - left.revision)[0];
+            const saved = sessions.filter((item) => item.course_slug === course.slug);
+            const session = saved.find((item) => item.release_id === course.release_id) ?? saved[0];
+            const previous = saved.filter((item) => item.id !== session?.id);
             const complete = session?.status === 'completed';
             return (
               <article
@@ -134,11 +135,32 @@ export function CourseCatalog() {
                     </span>
                   ) : null}
                 </div>
+                {previous.length ? (
+                  <ul
+                    className="mt-4 space-y-2 border-t border-slate-200 pt-3"
+                    aria-label="Previous enrollments"
+                  >
+                    {previous.map((item) => (
+                      <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <Link
+                          href={`/courses/${encodeURIComponent(course.slug)}?enrollment=${encodeURIComponent(item.id)}`}
+                          className="font-semibold text-emerald-800 underline focus-visible:outline focus-visible:outline-2"
+                        >
+                          Open previous enrollment
+                        </Link>
+                        <span className="text-slate-600">
+                          {item.completed_lesson_ids.length} of {item.lessons.length} lessons complete
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </article>
             );
           })}
         </div>
       ) : null}
+      <CourseOutlinePlanner getToken={getToken} accountId={userId ?? ''} />
     </main>
   );
 }

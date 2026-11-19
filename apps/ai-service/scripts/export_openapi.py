@@ -11,6 +11,26 @@ from pathlib import Path
 from typing import Any
 
 CORE_PATHS = (
+    "/api/course-generations/preview",
+    "/api/course-generations",
+    "/api/course-generations/{generation_id}",
+    "/api/course-generations/{generation_id}/cancel",
+    "/api/course-generations/{generation_id}/resume",
+    "/api/course-generations/refresh/preview",
+    "/api/course-generations/refresh",
+    "/api/course-generations/{run_id}/lesson-edits",
+    "/api/course-generations/{run_id}/lessons/{objective_id}",
+    "/api/source-refresh/impact",
+    "/api/source-versions",
+    "/api/course-outlines",
+    "/api/course-outlines/{outline_id}",
+    "/api/course-outlines/{outline_id}/approve",
+    "/api/course-outlines/{outline_id}/approvals",
+    "/api/source-versions/import-github",
+    "/api/documents/{document_id}/source-versions",
+    "/api/source-versions/import-text",
+    "/api/source-versions/{version_id}",
+    "/api/source-versions/{version_id}/resolve",
     "/api/bibliography",
     "/api/bibliography/{item_id}",
     "/api/bibliography/library-documents",
@@ -46,7 +66,14 @@ CORE_PATHS = (
     "/api/documents/{document_id}/concept-graph/import",
     "/api/documents/{document_id}/concept-graph/regenerate",
     "/api/documents/{document_id}/concept-graph/nodes/{node_id}/actions",
+    "/api/course-enrollments/{enrollment_id}/course",
+    "/api/course-enrollments/{enrollment_id}/upgrade-preview",
+    "/api/course-enrollments/{enrollment_id}/upgrade",
     "/api/documents/{document_id}/chapters",
+    "/api/documents/{document_id}/concept-graph",
+    "/api/documents/{document_id}/concept-graph/import",
+    "/api/documents/{document_id}/concept-graph/nodes/{node_id}/actions",
+    "/api/documents/{document_id}/concept-graph/regenerate",
     "/api/documents/{document_id}/flashcards",
     "/api/documents/{document_id}/flashcard-quizzes",
     "/api/documents/{document_id}/flashcard-decks/{deck_id}/export.csv",
@@ -101,7 +128,7 @@ def core_openapi(spec: dict[str, Any]) -> dict[str, Any]:
             "description": (
                 "Generated from FastAPI response/request models with python -m scripts.export_openapi. "
                 "Scope: learner profiles, optional diagnostics, learning JSON, summary/TTS streams, "
-                "focus, progress, plans, bibliography records, pinned source versions and academic tools. "
+                "focus, progress, plans, bibliography records, course generation and source refresh. "
                 "Named/data SSE event payloads are documented in x-event-schemas. "
                 "Health and privacy export remain in the runtime /openapi.json. "
                 "Requests are authenticated with a Clerk bearer token."

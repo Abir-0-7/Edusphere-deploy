@@ -2,11 +2,11 @@
 
 import hashlib
 import json
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, model_validator
 
 from app.source_versions.contracts import EvidencePin
 
@@ -134,6 +134,28 @@ class CourseLabView(Contract):
     tasks: list[CourseLabTask] = Field(min_length=1, max_length=12)
 
 
+class AssignmentCriterion(Contract):
+    id: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=2000)
+    objective_ids: list[str] = Field(min_length=1, max_length=30)
+    evidence_ids: list[str] = Field(min_length=1, max_length=100)
+    review_guidance: str = Field(min_length=1, max_length=2000)
+
+
+class AssignmentSection(Contract):
+    id: str = Field(min_length=1, max_length=120)
+    title: str = Field(min_length=1, max_length=200)
+    prompt: str = Field(min_length=1, max_length=2000)
+    min_chars: StrictInt = Field(ge=0, le=5000)
+    max_chars: StrictInt = Field(ge=1, le=5000)
+
+    @model_validator(mode="after")
+    def valid_bounds(self):
+        if self.min_chars > self.max_chars:
+            raise ValueError("assignment section minimum exceeds its maximum")
+        return self
+
+
 class CourseAssignment(Contract):
     id: str = Field(min_length=1, max_length=120)
     title: str = Field(min_length=1, max_length=200)
@@ -142,6 +164,25 @@ class CourseAssignment(Contract):
     rubric: list[str] = Field(min_length=1, max_length=12)
     objective_ids: list[str] = Field(min_length=1)
     evidence_ids: list[str] = Field(min_length=1)
+    criteria: list[AssignmentCriterion] = Field(default_factory=list, max_length=12, exclude_if=lambda value: not value)
+    sections: list[AssignmentSection] = Field(default_factory=list, max_length=8, exclude_if=lambda value: not value)
+    require_evidence: StrictBool = Field(default=False, exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def structured_links(self):
+        if len({item.id for item in self.criteria}) != len(self.criteria):
+            raise ValueError("assignment criterion identifiers must be unique")
+        if len({item.id for item in self.sections}) != len(self.sections):
+            raise ValueError("assignment section identifiers must be unique")
+        if sum(section.min_chars for section in self.sections) > 20000:
+            raise ValueError("assignment section minima exceed the total submission bound")
+        for criterion in self.criteria:
+            if (not set(criterion.objective_ids) <= set(self.objective_ids)
+                    or not set(criterion.evidence_ids) <= set(self.evidence_ids)
+                    or len(criterion.objective_ids) != len(set(criterion.objective_ids))
+                    or len(criterion.evidence_ids) != len(set(criterion.evidence_ids))):
+                raise ValueError("rubric criterion must link unique assignment objectives and evidence")
+        return self
 
 
 class CourseRelease(Contract):
@@ -168,6 +209,7 @@ class CourseRelease(Contract):
     exercises: list[ExerciseKey] = Field(min_length=1)
     labs: list[CourseLab] = Field(default_factory=list, max_length=12)
     assignments: list[CourseAssignment] = Field(default_factory=list, max_length=8)
+    required_assignment_ids: list[str] = Field(default_factory=list, max_length=8, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def validate_links(self):
@@ -212,6 +254,9 @@ class CourseRelease(Contract):
                 or not set(assignment.evidence_ids) <= evidence.keys()
             ):
                 raise ValueError("assignment references unknown objective or evidence")
+        if (len(self.required_assignment_ids) != len(set(self.required_assignment_ids))
+                or not set(self.required_assignment_ids) <= {assignment.id for assignment in self.assignments}):
+            raise ValueError("required assignments must uniquely identify assignments in this release")
         visiting, visited = set(), set()
 
         def visit(identifier):
@@ -321,6 +366,7 @@ class CourseDetail(CourseSummary):
     evidence: list[Evidence]
     reference_urls: list[str]
     prerequisite_met: bool
+    required_assignment_ids: list[str] = Field(default_factory=list, max_length=8)
     modules: list[Module]
     labs: list[CourseLabView] = Field(default_factory=list)
     assignments: list[CourseAssignment] = Field(default_factory=list)
@@ -415,6 +461,8 @@ class SessionResponse(Contract):
     remediation: RemediationView | None = None
     assignment_drafts: dict[str, str] = Field(default_factory=dict, max_length=8)
     assignment_status: dict[str, Literal["draft", "submitted"]] = Field(default_factory=dict, max_length=8)
+    assignment_sections: dict[str, dict[str, str]] = Field(default_factory=dict, max_length=8)
+    assignment_evidence_ids: dict[str, list[str]] = Field(default_factory=dict, max_length=8)
     lab_progress: dict[str, int] = Field(default_factory=dict, max_length=12)
     lab_transcripts: dict[str, list[LabTranscriptEntry]] = Field(default_factory=dict, max_length=12)
 
@@ -484,7 +532,22 @@ class AssignmentDraftRequest(Contract):
     revision: StrictInt = Field(ge=0)
     assignment_id: str = Field(min_length=1, max_length=120)
     action: Literal["save", "submit"]
-    text: StrictStr = Field(max_length=5000)
+    text: StrictStr = Field(default="", max_length=5000)
+    sections: dict[Annotated[str, Field(min_length=1, max_length=120)],
+                   Annotated[StrictStr, Field(max_length=5000)]] = Field(default_factory=dict, max_length=8)
+    evidence_ids: list[Annotated[StrictStr, Field(min_length=1, max_length=200)]] = Field(
+        default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def bounded_sections(self):
+        if sum(len(value) for value in self.sections.values()) > 20000:
+            raise ValueError("assignment sections exceed the total 20000 character bound")
+        if len(self.evidence_ids) != len(set(self.evidence_ids)):
+            raise ValueError("assignment evidence references must be unique")
+        if any("\x00" in value or any(0xD800 <= ord(char) <= 0xDFFF for char in value)
+               for value in [self.text, *self.sections.keys(), *self.sections.values(), *self.evidence_ids]):
+            raise ValueError("assignment text must contain valid Unicode without NUL")
+        return self
 
 
 class AssignmentDraftResponse(Contract):
@@ -493,6 +556,8 @@ class AssignmentDraftResponse(Contract):
     status: Literal["draft", "submitted"]
     revision: int
     replayed: bool
+    sections: dict[str, str] = Field(default_factory=dict, max_length=8)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=100)
 
 
 class LabRunRequest(Contract):

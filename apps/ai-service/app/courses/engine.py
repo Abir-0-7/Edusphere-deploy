@@ -51,6 +51,8 @@ def initial_state() -> dict[str, Any]:
         "chat_actions": {},
         "assignment_drafts": {},
         "assignment_status": {},
+        "assignment_sections": {},
+        "assignment_evidence_ids": {},
         "lab_progress": {},
         "lab_transcripts": {},
     }
@@ -136,6 +138,8 @@ def session_view(enrollment: dict, release: CourseRelease) -> SessionResponse:
             "remediation": remediation,
             "assignment_drafts": state.get("assignment_drafts", {}),
             "assignment_status": state.get("assignment_status", {}),
+            "assignment_sections": state.get("assignment_sections", {}),
+            "assignment_evidence_ids": state.get("assignment_evidence_ids", {}),
             "lab_progress": {
                 identifier: item.get("progress", 0) for identifier, item in state.get("labs", {}).items()
             },
@@ -199,6 +203,17 @@ def grade(exercise: ExerciseKey, answer: object) -> bool:
     return set(answer) == set(exercise.answer)
 
 
+def update_completion(enrollment: dict, release: CourseRelease) -> bool:
+    """Activity completion is not a rubric grade, mastery or execution claim."""
+    state = enrollment["state"]
+    lessons_complete = {lesson.id for lesson in release.lessons} <= set(state["completed_lesson_ids"])
+    projects_submitted = all(state.get("assignment_status", {}).get(identifier) == "submitted"
+                             for identifier in release.required_assignment_ids)
+    complete = lessons_complete and projects_submitted
+    enrollment["status"] = "completed" if complete else "active"
+    return complete
+
+
 def attempt(enrollment: dict, release: CourseRelease, request: dict) -> dict:
     require_revision(enrollment, request["revision"])
     state = enrollment["state"]
@@ -234,8 +249,7 @@ def attempt(enrollment: dict, release: CourseRelease, request: dict) -> dict:
                 "step": "bridge",
             }
             feedback = "Pause for a worked example and a bridge check before trying a fresh checkpoint."
-    complete = len(state["completed_lesson_ids"]) == len(release.lessons)
-    enrollment["status"] = "completed" if complete else "active"
+    complete = update_completion(enrollment, release)
     enrollment["revision"] += 1
     result = {
         "id": request["id"],

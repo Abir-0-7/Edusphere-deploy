@@ -23,6 +23,7 @@ class ResponseScope:
     schema_version: str
     variant: str
     language: str
+    generation_run_id: str | None = None
 
 
 _scope: ContextVar[ResponseScope | None] = ContextVar("response_cache_scope", default=None)
@@ -33,6 +34,14 @@ _candidate: ContextVar[tuple[Callable[[str, str], None], str, str] | None] = Con
 
 def current_response_scope() -> ResponseScope | None:
     return _scope.get()
+
+
+def scope_payload(scope: ResponseScope) -> dict:
+    """Keep existing operation/cache keys stable for non-generation callers."""
+    payload = asdict(scope)
+    if scope.generation_run_id is None:
+        payload.pop("generation_run_id")
+    return payload
 
 
 def build_response_scope(
@@ -70,6 +79,7 @@ def response_scope(
     schema_version: str = "1",
     variant: str = "default",
     language: str = "source",
+    generation_run_id: str | None = None,
 ) -> Iterator[None]:
     """Snapshot actual source text/locators so changed inputs cannot reuse old answers.
 
@@ -83,6 +93,10 @@ def response_scope(
         variant=variant,
         language=language,
     )
+    if generation_run_id is not None:
+        from dataclasses import replace
+
+        scope = replace(scope, generation_run_id=generation_run_id)
     token = _scope.set(scope)
     candidate_token = _candidate.set(None)
     try:
@@ -130,7 +144,8 @@ class PrivateResponseCache:
         if not owner or scope is None:
             return None
         try:
-            return self.store.get(owner, key, scope.document_id)
+            extra = {"generation_run_id": scope.generation_run_id} if scope.generation_run_id else {}
+            return self.store.get(owner, key, scope.document_id, **extra)
         except Exception as exc:  # noqa: BLE001 - cache is optional, admission is not
             logger.warning("response cache read unavailable: %s", type(exc).__name__)
             return None
@@ -140,6 +155,7 @@ class PrivateResponseCache:
         if not owner or scope is None:
             return
         try:
-            self.store.put(owner, key, value, self.ttl_seconds, scope.document_id)
+            extra = {"generation_run_id": scope.generation_run_id} if scope.generation_run_id else {}
+            self.store.put(owner, key, value, self.ttl_seconds, scope.document_id, **extra)
         except Exception as exc:  # noqa: BLE001 - a cache outage must not lose successful work
             logger.warning("response cache write unavailable: %s", type(exc).__name__)

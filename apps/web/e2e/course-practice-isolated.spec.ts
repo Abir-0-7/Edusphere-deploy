@@ -58,7 +58,9 @@ for (const course of publishedCourses) {
     });
 
     await page.goto('/courses');
-    const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: course.title }) });
+    const card = page
+      .getByRole('article')
+      .filter({ has: page.getByRole('heading', { name: course.title, exact: true }) });
     await card.getByRole('button', { name: 'View course' }).click();
     if (course.slug === 'pytorch-fundamentals') {
       const answers = ['14', 'true', '9', '7', '6'];

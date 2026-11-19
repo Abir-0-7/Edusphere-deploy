@@ -42,9 +42,15 @@ def _receipt(
 def test_published_courses_include_coding_shell_labs_and_assignments():
     releases = catalog()
     assert {release.slug for release in releases} == {
-        "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+        "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations",
+        "practical-python-foundations"
     }
     for release in releases:
+        if release.size == "full":
+            assert release.status == "published"
+            assert release.labs == []
+            assert release.required_assignment_ids == ["pp-capstone"]
+            continue
         assert release.status == "published"
         assert release.version == "2"
         assert release.labs and len(release.assignments) == 1

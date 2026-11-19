@@ -6,6 +6,8 @@ export default defineConfig({
     './src/game-schema.ts',
     './src/bibliography-schema.ts',
     './src/source-schema.ts',
+    './src/outline-schema.ts',
+    './src/generation-schema.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

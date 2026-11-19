@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/.next/**',
       '**/node_modules/**',
       '**/coverage/**',
+      '**/.tmp-playwright/**',
       '**/public/ocr/**',
       '**/public/games/cyberverse/**',
       // Pinned third-party source distributed solely for license attribution.

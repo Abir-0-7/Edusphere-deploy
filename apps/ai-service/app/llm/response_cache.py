@@ -14,9 +14,11 @@ from typing import Any, Protocol
 
 
 class ScopedResponseCache(Protocol):
-    def get(self, user_id: str, cache_key: str, document_id: str | None = None) -> str | None: ...
+    def get(self, user_id: str, cache_key: str, document_id: str | None = None,
+            *, generation_run_id: str | None = None) -> str | None: ...
     def put(
-        self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None
+        self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None,
+        *, generation_run_id: str | None = None,
     ) -> bool: ...
     def invalidate_user(self, user_id: str) -> None: ...
     def invalidate_document(self, user_id: str, document_id: str) -> None: ...
@@ -57,6 +59,7 @@ class _Entry:
     expires_at: datetime
     updated_at: datetime
     document_id: str | None
+    generation_run_id: str | None = None
 
 
 class MemoryResponseCache:
@@ -77,7 +80,8 @@ class MemoryResponseCache:
         self._entries: dict[tuple[str, str], _Entry] = {}
         self._lock = threading.Lock()
 
-    def get(self, user_id: str, cache_key: str, document_id: str | None = None) -> str | None:
+    def get(self, user_id: str, cache_key: str, document_id: str | None = None,
+            *, generation_run_id: str | None = None) -> str | None:
         _key(user_id, cache_key, document_id)
         now = _now(self.clock)
         with self._lock:
@@ -87,11 +91,12 @@ class MemoryResponseCache:
             if entry.expires_at <= now:
                 self._entries.pop((user_id, cache_key))
                 return None
-            if entry.document_id != document_id:
+            if entry.document_id != document_id or entry.generation_run_id != generation_run_id:
                 return None
             return entry.content
 
-    def put(self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None) -> bool:
+    def put(self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None,
+            *, generation_run_id: str | None = None) -> bool:
         _key(user_id, cache_key, document_id)
         _positive(ttl_seconds, "ttl_seconds")
         if not isinstance(content, str):
@@ -105,7 +110,8 @@ class MemoryResponseCache:
             for key in expired:
                 self._entries.pop(key)
             existing = self._entries.get((user_id, cache_key))
-            if existing is not None and existing.document_id != document_id:
+            if existing is not None and (existing.document_id != document_id
+                                         or existing.generation_run_id != generation_run_id):
                 return False
             owned = [key for key in self._entries if key[0] == user_id]
             excess = len(owned) - self.max_entries_per_user + ((user_id, cache_key) not in self._entries)
@@ -115,7 +121,7 @@ class MemoryResponseCache:
             )
             for key in evictable[: max(0, excess)]:
                 self._entries.pop(key)
-            self._entries[user_id, cache_key] = _Entry(content, expires_at, now, document_id)
+            self._entries[user_id, cache_key] = _Entry(content, expires_at, now, document_id, generation_run_id)
             return True
 
     def invalidate_user(self, user_id: str) -> None:
@@ -177,16 +183,19 @@ class PgResponseCache:
             connect = self.connection_factory
         return connect(self.database_url, autocommit=True, connect_timeout=5)
 
-    def get(self, user_id: str, cache_key: str, document_id: str | None = None) -> str | None:
+    def get(self, user_id: str, cache_key: str, document_id: str | None = None,
+            *, generation_run_id: str | None = None) -> str | None:
         _key(user_id, cache_key, document_id)
         now = _now(self.clock)
         with self._connect() as conn, conn.cursor() as cur:
+            generation_filter = " AND c.generation_run_id=%s" if generation_run_id is not None else ""
             cur.execute(
                 f"SELECT c.content FROM {self.table} c JOIN {self.owner_table} u ON u.id=c.user_id"
                 f" LEFT JOIN {self.document_table} d ON d.id=c.document_id AND d.user_id=c.user_id"
                 " WHERE c.user_id=%s AND c.cache_key=%s AND c.expires_at>%s"
-                " AND c.document_id IS NOT DISTINCT FROM %s AND (c.document_id IS NULL OR d.id IS NOT NULL)",
-                (user_id, cache_key, now, document_id),
+                " AND c.document_id IS NOT DISTINCT FROM %s AND (c.document_id IS NULL OR d.id IS NOT NULL)"
+                + generation_filter,
+                (user_id, cache_key, now, document_id, *((generation_run_id,) if generation_run_id else ())),
             )
             row = cur.fetchone()
         if row is None:
@@ -194,7 +203,8 @@ class PgResponseCache:
         content = row[0]
         return content if isinstance(content, str) and 0 < len(content) <= self.max_content_chars else None
 
-    def put(self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None) -> bool:
+    def put(self, user_id: str, cache_key: str, content: str, ttl_seconds: int, document_id: str | None = None,
+            *, generation_run_id: str | None = None) -> bool:
         _key(user_id, cache_key, document_id)
         _positive(ttl_seconds, "ttl_seconds")
         if not isinstance(content, str):
@@ -217,6 +227,11 @@ class PgResponseCache:
                 )
                 if cur.fetchone() is None:
                     return False
+            if generation_run_id is not None:
+                cur.execute("SELECT id FROM course_generation_runs WHERE id=%s AND user_id=%s FOR KEY SHARE",
+                            (generation_run_id, user_id))
+                if cur.fetchone() is None:
+                    return False
             cur.execute(f"DELETE FROM {self.table} WHERE user_id=%s AND expires_at<=%s", (user_id, now))
             cur.execute(
                 f"SELECT cache_key, document_id FROM {self.table} WHERE user_id=%s ORDER BY updated_at, cache_key",
@@ -230,13 +245,19 @@ class PgResponseCache:
             evictable = [key for key in stored if key != cache_key]
             for old_key in evictable[: max(0, excess)]:
                 cur.execute(f"DELETE FROM {self.table} WHERE user_id=%s AND cache_key=%s", (user_id, old_key))
+            columns = ", generation_run_id" if generation_run_id is not None else ""
+            values = ",%s" if generation_run_id is not None else ""
+            generation_filter = (f" AND {self.table}.generation_run_id IS NOT DISTINCT FROM EXCLUDED.generation_run_id"
+                                 if generation_run_id is not None else "")
             cur.execute(
                 f"INSERT INTO {self.table}"
-                " (user_id, document_id, cache_key, content, expires_at, created_at, updated_at)"
-                " VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (user_id, cache_key) DO UPDATE"
+                f" (user_id, document_id, cache_key, content, expires_at, created_at, updated_at{columns})"
+                f" VALUES (%s,%s,%s,%s,%s,%s,%s{values}) ON CONFLICT (user_id, cache_key) DO UPDATE"
                 " SET content=EXCLUDED.content, expires_at=EXCLUDED.expires_at, updated_at=EXCLUDED.updated_at"
-                f" WHERE {self.table}.document_id IS NOT DISTINCT FROM EXCLUDED.document_id RETURNING cache_key",
-                (user_id, document_id, cache_key, content, expires_at, now, now),
+                f" WHERE {self.table}.document_id IS NOT DISTINCT FROM EXCLUDED.document_id"
+                + generation_filter + " RETURNING cache_key",
+                (user_id, document_id, cache_key, content, expires_at, now, now,
+                 *((generation_run_id,) if generation_run_id else ())),
             )
             return cur.fetchone() is not None
 

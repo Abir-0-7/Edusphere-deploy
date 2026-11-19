@@ -33,7 +33,7 @@ describe('same-origin learning service proxy routes', () => {
     ).toBe(false);
     expect(isAllowedLearningRoute('POST', '/api/courses/python-foundations/%2e%2e')).toBe(false);
     expect(isAllowedLearningRoute('GET', '/api/learner-profile/track-plan/apply')).toBe(false);
-    expect(isAllowedLearningRoute('POST', '/api/source-versions/github/import')).toBe(false);
+    expect(isAllowedLearningRoute('POST', '/api/source-versions/github/delete')).toBe(false);
     expect(
       isAllowedLearningRoute('DELETE', '/api/source-versions/01234567-89ab-cdef-0123-456789abcdef'),
     ).toBe(false);
@@ -66,5 +66,41 @@ describe('same-origin learning service proxy routes', () => {
     expect(url).toBe('/api/learning-service/api/courses');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer clerk-session-token');
     expect(init?.cache).toBe('no-store');
+  });
+
+  it('allows bounded source authoring and explicit course upgrades through the deployment proxy', () => {
+    const id = '01234567-89ab-cdef-0123-456789abcdef';
+    const allowed = [
+      ['GET', '/api/source-versions'],
+      ['POST', '/api/source-versions/github/import'],
+      ['POST', '/api/source-versions/import-text'],
+      ['GET', '/api/course-outlines'],
+      ['POST', '/api/course-outlines'],
+      ['PUT', `/api/course-outlines/${id}`],
+      ['DELETE', `/api/course-outlines/${id}`],
+      ['POST', `/api/course-outlines/${id}/approve`],
+      ['GET', `/api/course-outlines/${id}/approvals`],
+      ['GET', '/api/course-generations'],
+      ['POST', '/api/course-generations/preview'],
+      ['POST', '/api/course-generations'],
+      ['GET', `/api/course-generations/${id}`],
+      ['POST', `/api/course-generations/${id}/cancel`],
+      ['POST', `/api/course-generations/${id}/resume`],
+      ['POST', '/api/course-generations/refresh/preview'],
+      ['POST', '/api/course-generations/refresh'],
+      ['GET', `/api/course-generations/${id}/lesson-edits`],
+      ['PUT', `/api/course-generations/${id}/lessons/objective-1`],
+      ['POST', '/api/source-refresh/impact'],
+      ['GET', `/api/course-enrollments/${id}/course`],
+      ['POST', `/api/course-enrollments/${id}/upgrade-preview`],
+      ['POST', `/api/course-enrollments/${id}/upgrade`],
+    ];
+    for (const [method, path] of allowed) {
+      expect(isAllowedLearningRoute(method ?? '', path ?? ''), `${method} ${path}`).toBe(true);
+    }
+    expect(isAllowedLearningRoute('GET', '/api/course-generations/refresh')).toBe(false);
+    expect(isAllowedLearningRoute('DELETE', `/api/course-generations/${id}`)).toBe(false);
+    expect(isAllowedLearningRoute('PUT', `/api/course-generations/${id}/lessons/%2e%2e`)).toBe(false);
+    expect(isAllowedLearningRoute('POST', `/api/course-outlines/${id}/publish`)).toBe(false);
   });
 });

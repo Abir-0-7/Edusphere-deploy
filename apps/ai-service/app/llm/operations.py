@@ -17,7 +17,7 @@ _request_key: ContextVar[str | None] = ContextVar("ai_request_key", default=None
 
 
 @contextmanager
-def operation_scope(key: str) -> Iterator[None]:
+def operation_scope(key: str | None) -> Iterator[None]:
     token = _request_key.set(key)
     try:
         yield
@@ -49,7 +49,8 @@ class MemoryOperations:
         self.lease_seconds = lease_seconds
         self.lock = threading.Lock()
 
-    def claim(self, owner: str, key: str, document_id: str | None = None) -> tuple[bool, str | None]:
+    def claim(self, owner: str, key: str, document_id: str | None = None,
+              *, generation_run_id: str | None = None) -> tuple[bool, str | None]:
         now = datetime.now(UTC)
         with self.lock:
             row = self.rows.get((owner, key))
@@ -58,8 +59,11 @@ class MemoryOperations:
                     "state": "reserved",
                     "result": None,
                     "expires": now + timedelta(seconds=self.lease_seconds),
+                    "generation_run_id": generation_run_id,
                 }
                 return True, None
+            if row.get("generation_run_id") != generation_run_id:
+                raise ApiError("AI operation resource scope conflict", status_code=409)
             if row["state"] == "succeeded":
                 return False, row["result"]
             if row["state"] == "reserved" and row["expires"] <= now:
@@ -86,7 +90,8 @@ class PgOperations:
 
         return psycopg.connect(self.database_url, autocommit=True, connect_timeout=5)
 
-    def claim(self, owner: str, key: str, document_id: str | None = None) -> tuple[bool, str | None]:
+    def claim(self, owner: str, key: str, document_id: str | None = None,
+              *, generation_run_id: str | None = None) -> tuple[bool, str | None]:
         now = datetime.now(UTC)
         with self._connect() as conn, conn.transaction(), conn.cursor() as cur:
             cur.execute("SELECT id FROM users WHERE id=%s FOR KEY SHARE", (owner,))
@@ -96,10 +101,19 @@ class PgOperations:
                 cur.execute("SELECT id FROM documents WHERE id=%s AND user_id=%s FOR KEY SHARE", (document_id, owner))
                 if cur.fetchone() is None:
                     raise ApiError("AI operation source is unavailable", status_code=404)
+            if generation_run_id is not None:
+                cur.execute("SELECT id FROM course_generation_runs WHERE id=%s AND user_id=%s FOR KEY SHARE",
+                            (generation_run_id, owner))
+                if cur.fetchone() is None:
+                    raise ApiError("AI generation run is unavailable", status_code=404)
+            columns = ",generation_run_id" if generation_run_id is not None else ""
+            values = ",%s" if generation_run_id is not None else ""
+            extra = (generation_run_id,) if generation_run_id is not None else ()
             cur.execute(
-                "INSERT INTO ai_operations(user_id,document_id,operation_key,state,expires_at) "
-                "VALUES(%s,%s,%s,'reserved',%s) ON CONFLICT(user_id,operation_key) DO NOTHING RETURNING operation_key",
-                (owner, document_id, key, now + timedelta(seconds=self.lease_seconds)),
+                f"INSERT INTO ai_operations(user_id,document_id,operation_key,state,expires_at{columns}) "
+                f"VALUES(%s,%s,%s,'reserved',%s{values}) "
+                "ON CONFLICT(user_id,operation_key) DO NOTHING RETURNING operation_key",
+                (owner, document_id, key, now + timedelta(seconds=self.lease_seconds), *extra),
             )
             if cur.fetchone() is not None:
                 return True, None

@@ -38,6 +38,13 @@ from app.contracts import (
     FlashcardReportResponse,
     FlashcardResponse,
 )
+from app.course_generation.refresh import refresh_router
+from app.course_generation.router import course_generation_router
+from app.course_generation.service import JOB_KIND as COURSE_GENERATION_JOB
+from app.course_generation.service import GenerationService
+from app.course_generation.store import MemoryGenerationStore, PgGenerationStore
+from app.course_outlines.router import course_outline_router
+from app.course_outlines.store import MemoryOutlineStore, PgOutlineStore
 from app.courses.router import create_course_router
 from app.courses.store import MemoryCourseStore, PgCourseStore
 from app.courses.tutor import answer_with_router, stream_answer_with_router
@@ -84,6 +91,18 @@ from app.privacy import PrivacyStore
 from app.rag.chat import answer_question
 from app.rag.embeddings import embedder_from_settings
 from app.settings import get_settings
+from app.source_refresh.index import MemoryImpactIndex, PgImpactIndex
+from app.source_refresh.router import source_refresh_router
+from app.source_versions.github_admission import (
+    GithubImportSlots,
+    MemoryGithubImportLimiter,
+    UpstashGithubImportLimiter,
+)
+from app.source_versions.github_http import GithubHttp
+from app.source_versions.github_importer import GithubImporter
+from app.source_versions.github_limits import ImportLimits
+from app.source_versions.github_router import GithubImportService, github_import_router
+from app.source_versions.local_text_router import local_text_router
 from app.source_versions.router import source_version_router
 from app.source_versions.store import MemorySourceVersionStore, PgSourceVersionStore
 from app.study.readiness import ReadinessInputs, breakdown
@@ -350,6 +369,71 @@ source_version_store = (
     else PgSourceVersionStore(settings.database_url, max_versions_per_user=settings.max_source_versions_per_user)
 )
 app.include_router(source_version_router(current_user_id, source_version_store, documents))
+app.include_router(local_text_router(
+    current_user_id, source_version_store, enabled=settings.source_text_import_enabled,
+))
+github_import_service = GithubImportService(
+    GithubImporter(GithubHttp(), ImportLimits(
+        max_files=settings.github_import_max_files, max_file_bytes=settings.github_import_max_file_bytes,
+        max_total_bytes=settings.github_import_max_total_bytes, max_wire_bytes=settings.github_import_max_wire_bytes,
+        max_response_bytes=settings.github_import_max_response_bytes,
+        max_api_requests=settings.github_import_max_api_requests, max_path_depth=settings.github_import_max_path_depth,
+        max_selected_lines=settings.github_import_max_selected_lines,
+        request_timeout_seconds=settings.github_import_request_timeout_seconds,
+        total_timeout_seconds=settings.github_import_total_timeout_seconds,
+    )),
+    source_version_store,
+    MemoryGithubImportLimiter(settings.github_import_per_user_hour, settings.github_import_global_hour)
+    if settings.job_store == "memory" else UpstashGithubImportLimiter(
+        settings.upstash_redis_rest_url or "", settings.upstash_redis_rest_token or "",
+        settings.github_import_per_user_hour, settings.github_import_global_hour,
+    ),
+    GithubImportSlots(settings.github_import_max_active), enabled=settings.github_import_enabled,
+    save_timeout_seconds=settings.github_import_save_timeout_seconds,
+)
+# Register the literal POST route independently from UUID-based evidence routes.
+app.include_router(github_import_router(current_user_id, github_import_service))
+course_outline_store = (
+    MemoryOutlineStore(
+        source_version_store, max_outlines_per_user=settings.max_course_outlines_per_user,
+        max_approvals_per_outline=settings.max_course_outline_approvals,
+    ) if settings.job_store == "memory" else PgOutlineStore(
+        settings.database_url, source_version_store, max_outlines_per_user=settings.max_course_outlines_per_user,
+        max_approvals_per_outline=settings.max_course_outline_approvals,
+        timeout_seconds=settings.course_outline_storage_timeout_seconds,
+    )
+)
+app.include_router(course_outline_router(
+    current_user_id, course_outline_store, source_version_store, enabled=settings.course_outlines_enabled,
+))
+course_generation_store = (
+    MemoryGenerationStore(
+        course_outline_store, job_store, max_runs_per_user=settings.max_course_generations_per_user,
+        timeout_seconds=settings.course_generation_storage_timeout_seconds,
+    ) if settings.job_store == "memory" else PgGenerationStore(
+        settings.database_url, course_outline_store, job_store,
+        max_runs_per_user=settings.max_course_generations_per_user,
+        timeout_seconds=settings.course_generation_storage_timeout_seconds,
+    )
+)
+course_generation_service = GenerationService(
+    course_generation_store, course_outline_store, job_store, llm_router,
+    max_input_bytes=settings.course_generation_max_input_bytes,
+    max_output_tokens=settings.course_generation_max_output_tokens,
+    max_provider_attempts=settings.course_generation_max_provider_attempts,
+    max_stage_attempts=settings.course_generation_max_stage_attempts,
+    max_run_tokens=settings.course_generation_max_run_tokens,
+)
+if settings.course_generation_enabled and settings.course_outlines_enabled:
+    worker.handlers[COURSE_GENERATION_JOB] = course_generation_service.handle
+app.include_router(refresh_router(
+    current_user_id, course_generation_service,
+    enabled=settings.source_refresh_enabled and settings.course_generation_enabled and settings.course_outlines_enabled,
+))
+app.include_router(course_generation_router(
+    current_user_id, course_generation_service,
+    enabled=settings.course_generation_enabled and settings.course_outlines_enabled,
+))
 course_store = (
     MemoryCourseStore(documents, source_versions=source_version_store)
     if memory_mode
@@ -384,6 +468,7 @@ app.include_router(
         _course_tutor_answer,
         course_tutor_streamer=_course_tutor_stream,
         profiles=learner_profiles,
+        upgrades_enabled=settings.course_upgrades_enabled,
     )
 )
 app.include_router(profile_router(current_user_id, learner_profiles))
@@ -416,6 +501,17 @@ app.include_router(
 concept_graph_store = (
     MemoryConceptGraphStore() if settings.job_store == "memory" else PgConceptGraphStore(settings.database_url)
 )
+source_impact_index = (
+    MemoryImpactIndex(
+        documents, course_outline_store, course_generation_store, concept_graph_store, course_store,
+        course_generation_service.edits,
+    ) if settings.job_store == "memory" else PgImpactIndex(
+        settings.database_url, timeout_seconds=settings.course_generation_storage_timeout_seconds,
+    )
+)
+app.include_router(source_refresh_router(
+    current_user_id, source_version_store, source_impact_index, enabled=settings.source_refresh_enabled,
+))
 app.include_router(
     create_concept_graph_router(
         current_user_id,

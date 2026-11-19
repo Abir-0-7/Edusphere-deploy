@@ -64,9 +64,17 @@ def test_course_tutor_uses_shared_router_and_accepts_only_valid_private_cache_re
     provider = respx.post("https://course-provider.test/v1/chat/completions").mock(
         return_value=httpx.Response(
             200,
-            json={"choices": [{"message": {"content": json.dumps({
-                "answer": "A name identifies a value.", "evidence_ids": [evidence_id]
-            })}}]},
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {"answer": "A name identifies a value.", "evidence_ids": [evidence_id]}
+                            )
+                        }
+                    }
+                ]
+            },
         )
     )
     router = LLMRouter(
@@ -75,7 +83,8 @@ def test_course_tutor_uses_shared_router_and_accepts_only_valid_private_cache_re
     )
     with ai_scope("tutor-test"):
         assert answer_with_router(router, session, "Explain a name", document) == (
-            "A name identifies a value.", [evidence_id]
+            "A name identifies a value.",
+            [evidence_id],
         )
         assert answer_with_router(router, session, "Explain a name", document)[0] == "A name identifies a value."
     assert provider.call_count == 1
@@ -121,7 +130,7 @@ async def test_course_tutor_stream_passes_active_source_scope_to_shared_router()
     assert '"exercises"' not in messages[1]["content"] and '"checkpoint"' not in messages[1]["content"]
 
 
-def test_deployment_entrypoint_starts_with_four_courses_and_learning_profile_in_safe_memory_mode(monkeypatch):
+def test_deployment_entrypoint_starts_with_five_courses_and_learning_profile_in_safe_memory_mode(monkeypatch):
     # Execute the full entrypoint afresh, rather than only assembling a test
     # router. Explicit memory settings and a blocked connect prevent DB access.
     settings = Settings(
@@ -155,7 +164,11 @@ def test_deployment_entrypoint_starts_with_four_courses_and_learning_profile_in_
         catalog = client.get("/api/courses", headers=headers)
         assert catalog.status_code == 200, catalog.text
         assert {course["slug"] for course in catalog.json()["courses"]} == {
-            "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+            "python-foundations",
+            "pytorch-fundamentals",
+            "sql-query-foundations",
+            "git-foundations",
+            "practical-python-foundations",
         }
         profile = client.get("/api/learner-profile", headers=headers)
         assert profile.status_code == 200, profile.text

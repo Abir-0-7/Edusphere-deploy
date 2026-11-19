@@ -134,6 +134,27 @@
       "when": 1795101430425,
       "tag": "0018_source_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795124444076,
+      "tag": "0019_course_outlines",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795124444077,
+      "tag": "0020_course_generation",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795124444078,
+      "tag": "0021_generation_lesson_edits",
+      "breakpoints": true
     }
   ]
 }

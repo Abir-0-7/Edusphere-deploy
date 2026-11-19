@@ -60,6 +60,12 @@ class GithubOrigin(Contract):
         return self
 
 
+class TextOrigin(Contract):
+    kind: Literal["text"] = "text"
+    format: Literal["notes", "txt", "html", "epub"]
+    line_count: StrictInt = Field(ge=1, le=2000)
+
+
 class PdfLocator(Contract):
     kind: Literal["pdf"] = "pdf"
     pdf_page_index: StrictInt = Field(ge=1, le=100000)
@@ -92,8 +98,20 @@ class GithubLocator(Contract):
         return self
 
 
-Locator = Annotated[PdfLocator | GithubLocator, Field(discriminator="kind")]
-Origin = Annotated[PdfOrigin | GithubOrigin, Field(discriminator="kind")]
+class TextLocator(Contract):
+    kind: Literal["text"] = "text"
+    start_line: StrictInt = Field(ge=1, le=2000)
+    end_line: StrictInt = Field(ge=1, le=2000)
+
+    @model_validator(mode="after")
+    def ordered(self):
+        if self.end_line < self.start_line:
+            raise ValueError("text lines must be ordered")
+        return self
+
+
+Locator = Annotated[PdfLocator | GithubLocator | TextLocator, Field(discriminator="kind")]
+Origin = Annotated[PdfOrigin | GithubOrigin | TextOrigin, Field(discriminator="kind")]
 
 
 class Rights(Contract):
@@ -124,13 +142,16 @@ class GithubFileProvenance(Contract):
 
 
 class Provenance(Contract):
-    adapter: Literal["legacy_pdf_chunks", "github_selected_text"]
+    adapter: Literal["legacy_pdf_chunks", "github_selected_text", "local_utf8_text"]
     parser_name: str | None = Field(default=None, min_length=1, max_length=120)
     parser_version: str | None = Field(default=None, min_length=1, max_length=120)
     original_sha256: Sha256 | None = None
     rights: Rights = Field(default_factory=Rights)
     repository_files: list[GithubFileProvenance] | None = Field(
         default=None, min_length=1, max_length=16, exclude_if=lambda value: value is None,
+    )
+    extraction_notes: list[Text] | None = Field(
+        default=None, min_length=1, max_length=8, exclude_if=lambda value: value is None,
     )
 
     @model_validator(mode="after")
@@ -141,6 +162,14 @@ class Provenance(Contract):
             self.parser_name is not None or self.original_sha256 is not None or self.repository_files is not None
         ):
             raise ValueError("legacy extraction cannot attest a parser or original-file hash")
+        if self.adapter == "local_utf8_text" and (
+            self.parser_name != "studyvault-local-text" or self.parser_version != "1"
+            or self.original_sha256 is None or self.repository_files is not None
+            or self.rights.status != "user_declared" or not self.rights.statement.strip()
+        ):
+            raise ValueError("local text requires extraction provenance and a rights declaration")
+        if self.adapter != "local_utf8_text" and self.extraction_notes is not None:
+            raise ValueError("extraction notes are reserved for local source adapters")
         return self
 
 
@@ -154,10 +183,10 @@ class SourceSegment(Contract):
     def exact_content(self):
         if hashlib.sha256(self.text.encode("utf-8")).hexdigest() != self.text_sha256:
             raise ValueError("segment hash does not match its UTF-8 text")
-        if isinstance(self.locator, GithubLocator) and len(self.text.splitlines()) != (
+        if isinstance(self.locator, (GithubLocator, TextLocator)) and len(self.text.splitlines()) != (
             self.locator.end_line - self.locator.start_line + 1
         ):
-            raise ValueError("repository text must contain exactly the selected lines")
+            raise ValueError("located text must contain exactly the selected lines")
         return self
 
 
@@ -179,10 +208,10 @@ class SourceSnapshot(Contract):
     def validate_snapshot(self):
         if len({item.id for item in self.segments}) != len(self.segments):
             raise ValueError("segment identifiers must be unique")
-        if self.provenance.adapter != (
-            "legacy_pdf_chunks" if isinstance(self.origin, PdfOrigin) else "github_selected_text"
-        ):
+        adapter = {"pdf": "legacy_pdf_chunks", "github": "github_selected_text", "text": "local_utf8_text"}
+        if self.provenance.adapter != adapter[self.origin.kind]:
             raise ValueError("adapter does not match source kind")
+        next_text_line = 1
         for segment in self.segments:
             if segment.locator.kind != self.origin.kind:
                 raise ValueError("segment kind does not match source kind")
@@ -191,6 +220,17 @@ class SourceSnapshot(Contract):
                     raise ValueError("PDF position is outside the source")
                 if segment.id != str(segment.locator.chunk_id):
                     raise ValueError("legacy PDF segment must retain its chunk identifier")
+            if isinstance(segment.locator, TextLocator):
+                start, end = segment.locator.start_line, segment.locator.end_line
+                if start != next_text_line or segment.id != f"text:L{start}-L{end}":
+                    raise ValueError("text segments must use consecutive line ranges and stable identifiers")
+                next_text_line = end + 1
+        if isinstance(self.origin, TextOrigin) and self.origin.line_count != next_text_line - 1:
+            raise ValueError("text segments must cover the declared lines")
+        if isinstance(self.origin, TextOrigin) and (
+            (self.origin.format in {"html", "epub"}) != (self.provenance.extraction_notes is not None)
+        ):
+            raise ValueError("markup-derived line locators require extraction notes")
         if self.provenance.repository_files is not None:
             paths = [item.path for item in self.provenance.repository_files]
             if len(paths) != len(set(paths)) or any(segment.locator.path not in paths for segment in self.segments):

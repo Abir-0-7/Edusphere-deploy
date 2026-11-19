@@ -115,15 +115,70 @@ const CourseLabViewSchema = CourseLabSchema.extend({
 });
 export type CourseLab = z.infer<typeof CourseLabSchema>;
 export type CourseLabView = z.infer<typeof CourseLabViewSchema>;
-const CourseAssignmentSchema = z.strictObject({
+export const AssignmentCriterionSchema = z.strictObject({
   id: StrictString.max(120),
-  title: StrictString.max(200),
-  prompt: StrictString.max(3000),
-  deliverable: StrictString.max(2000),
-  rubric: z.array(StrictString).min(1).max(12),
-  objective_ids: z.array(StrictString).min(1),
-  evidence_ids: z.array(StrictString).min(1),
+  description: StrictString.max(2000),
+  objective_ids: z.array(StrictString).min(1).max(30),
+  evidence_ids: z.array(StrictString).min(1).max(100),
+  review_guidance: StrictString.max(2000),
 });
+export type AssignmentCriterion = z.infer<typeof AssignmentCriterionSchema>;
+export const AssignmentSectionSchema = z
+  .strictObject({
+    id: StrictString.max(120),
+    title: StrictString.max(200),
+    prompt: StrictString.max(2000),
+    min_chars: z.number().int().min(0).max(5000),
+    max_chars: z.number().int().min(1).max(5000),
+  })
+  .refine((section) => section.min_chars <= section.max_chars, {
+    message: 'Assignment section minimum exceeds its maximum.',
+    path: ['min_chars'],
+  });
+export type AssignmentSection = z.infer<typeof AssignmentSectionSchema>;
+export const CourseAssignmentSchema = z
+  .strictObject({
+    id: StrictString.max(120),
+    title: StrictString.max(200),
+    prompt: StrictString.max(3000),
+    deliverable: StrictString.max(2000),
+    rubric: z.array(StrictString).min(1).max(12),
+    objective_ids: z.array(StrictString).min(1),
+    evidence_ids: z.array(StrictString).min(1),
+    criteria: z.array(AssignmentCriterionSchema).max(12).default([]),
+    sections: z.array(AssignmentSectionSchema).max(8).default([]),
+    require_evidence: z.boolean().default(false),
+  })
+  .superRefine((assignment, context) => {
+    if (
+      new Set(assignment.criteria.map((item) => item.id)).size !== assignment.criteria.length ||
+      new Set(assignment.sections.map((item) => item.id)).size !== assignment.sections.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Assignment criterion and section identifiers must be unique.',
+      });
+    }
+    if (assignment.sections.reduce((sum, section) => sum + section.min_chars, 0) > 20000) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Assignment section minima exceed the total submission bound.',
+      });
+    }
+    for (const criterion of assignment.criteria) {
+      if (
+        !criterion.objective_ids.every((id) => assignment.objective_ids.includes(id)) ||
+        !criterion.evidence_ids.every((id) => assignment.evidence_ids.includes(id)) ||
+        new Set(criterion.objective_ids).size !== criterion.objective_ids.length ||
+        new Set(criterion.evidence_ids).size !== criterion.evidence_ids.length
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Rubric criteria must link unique assignment objectives and evidence.',
+        });
+      }
+    }
+  });
 export type CourseAssignment = z.infer<typeof CourseAssignmentSchema>;
 
 const unique = (items: readonly string[]): boolean => new Set(items).size === items.length;
@@ -152,6 +207,7 @@ export const CourseReleaseSchema = z
     exercises: z.array(ExerciseKeySchema).min(1),
     labs: z.array(CourseLabSchema).max(12).default([]),
     assignments: z.array(CourseAssignmentSchema).max(8).default([]),
+    required_assignment_ids: z.array(StrictString).max(8).default([]),
   })
   .superRefine((release, context) => {
     if (release.visibility === 'private' && !release.user_id) {
@@ -172,6 +228,16 @@ export const CourseReleaseSchema = z
     const lessonIds = release.lessons.map((lesson) => lesson.id);
     const labIds = release.labs.map((lab) => lab.id);
     const assignmentIds = release.assignments.map((assignment) => assignment.id);
+    if (
+      !unique(release.required_assignment_ids) ||
+      !release.required_assignment_ids.every((id) => assignmentIds.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['required_assignment_ids'],
+        message: 'Required assignments are invalid.',
+      });
+    }
     if (
       !unique(sourceIds) ||
       !unique(evidenceIds) ||
@@ -428,6 +494,7 @@ export const CourseDetailSchema = CourseSummarySchema.extend({
   modules: z.array(ModuleSchema),
   labs: z.array(CourseLabViewSchema).max(12).default([]),
   assignments: z.array(CourseAssignmentSchema).max(8).default([]),
+  required_assignment_ids: z.array(StrictString).max(8).default([]),
 }).strict();
 export type CourseDetail = z.infer<typeof CourseDetailSchema>;
 
@@ -533,6 +600,8 @@ export const SessionResponseSchema = z.strictObject({
   remediation: RemediationSchema.nullable().default(null),
   assignment_drafts: z.record(z.string(), z.string()).default({}),
   assignment_status: z.record(z.string(), z.enum(['draft', 'submitted'])).default({}),
+  assignment_sections: z.record(z.string(), z.record(z.string(), z.string())).default({}),
+  assignment_evidence_ids: z.record(z.string(), z.array(z.string())).default({}),
   lab_progress: z.record(z.string(), z.number().int().nonnegative()).default({}),
   lab_transcripts: z.record(z.string(), z.array(LabTranscriptSchema)).default({}),
 });
@@ -581,20 +650,76 @@ export const StudyNotesRequestSchema = z.strictObject({
 });
 export type StudyNotesRequest = z.infer<typeof StudyNotesRequestSchema>;
 
-export const AssignmentDraftRequestSchema = z.strictObject({
-  id: Uuid,
-  revision: z.number().int().nonnegative(),
-  assignment_id: StrictString.max(120),
-  action: z.enum(['save', 'submit']),
-  text: z.string().max(5000),
-});
-export type AssignmentDraftRequest = z.infer<typeof AssignmentDraftRequestSchema>;
+export const AssignmentDraftRequestSchema = z
+  .strictObject({
+    id: Uuid,
+    revision: z.number().int().nonnegative(),
+    assignment_id: StrictString.max(120),
+    action: z.enum(['save', 'submit']),
+    text: z.string().max(5000).default(''),
+    sections: z
+      .record(
+        StrictString.max(120),
+        z.string().refine((value) => Array.from(value).length <= 5000, {
+          message: 'Assignment section exceeds 5000 Unicode characters.',
+        }),
+      )
+      .default({}),
+    evidence_ids: z.array(StrictString.max(200)).max(100).default([]),
+  })
+  .superRefine((request, context) => {
+    if (
+      Object.keys(request.sections).length > 8 ||
+      Object.values(request.sections).reduce((sum, value) => sum + Array.from(value).length, 0) > 20000
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sections'],
+        message: 'Assignment sections exceed their bounded limit.',
+      });
+    }
+    if (new Set(request.evidence_ids).size !== request.evidence_ids.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidence_ids'],
+        message: 'Assignment evidence must be unique.',
+      });
+    }
+    const invalidUnicode = (value: string): boolean => {
+      for (let i = 0; i < value.length; i += 1) {
+        const unit = value.charCodeAt(i);
+        if (unit === 0) return true;
+        if (unit >= 0xd800 && unit <= 0xdbff) {
+          const next = value.charCodeAt(i + 1);
+          if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+          i += 1;
+        } else if (unit >= 0xdc00 && unit <= 0xdfff) return true;
+      }
+      return false;
+    };
+    if (
+      [
+        request.text,
+        ...Object.keys(request.sections),
+        ...Object.values(request.sections),
+        ...request.evidence_ids,
+      ].some(invalidUnicode)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Assignment text must contain valid Unicode without NUL.',
+      });
+    }
+  });
+export type AssignmentDraftRequest = z.input<typeof AssignmentDraftRequestSchema>;
 export const AssignmentDraftResponseSchema = z.strictObject({
   id: Uuid,
   assignment_id: StrictString,
   status: z.enum(['draft', 'submitted']),
   revision: z.number().int(),
   replayed: z.boolean(),
+  sections: z.record(z.string(), z.string()).default({}),
+  evidence_ids: z.array(z.string()).max(100).default([]),
 });
 export type AssignmentDraftResponse = z.infer<typeof AssignmentDraftResponseSchema>;
 export const LabRunRequestSchema = z.strictObject({

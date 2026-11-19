@@ -213,6 +213,23 @@ class InMemoryDocumentStore:
                 self._source_bytes[doc.id] = source_bytes
         return doc
 
+    def create_parsed_course_document(
+        self, document_id: str, *, user_id: str, filename: str, markdown: str,
+        chapters: list[ChapterRecord], chunks: list[ChunkRecord],
+    ) -> None:
+        """Publish all material for a new enrollment together in the development store."""
+        if len(chunks) > self._max_chunks_per_document:
+            raise InvalidInput("document chunk limit reached")
+        doc = DocumentRecord(
+            id=document_id, user_id=user_id, filename=filename, mime_type="text/markdown",
+            size_bytes=len(markdown.encode("utf-8")), markdown=markdown, page_count=len(chapters),
+            status="parsed", chapters=chapters, chunks=chunks,
+        )
+        with self._lock:
+            if sum(item.user_id == user_id for item in self._docs.values()) >= self._max_documents_per_user:
+                raise InvalidInput("document limit reached for this account")
+            self._docs[doc.id] = doc
+
     def take_source_bytes(self, document_id: str) -> bytes | None:
         with self._lock:
             return self._source_bytes.pop(document_id, None)

@@ -1,12 +1,13 @@
 # Phase 8.F01: immutable source evidence bridge
 
-This is the first task in 8.F. Network imports, outline approval, module generation
-and source-release upgrades belong to F02–F06 and are not implemented here.
+This is the first task in 8.F. The subsequent bounded public repository importer
+is documented in [F02](github-source-import.md). Outline approval, module generation
+and source-release upgrades remain F03–F06.
 
 ## Contracts and storage
 
 `app/source_versions/contracts.py` and `packages/types/src/source-version-api.ts`
-define the version-one wire models. Deployment migration `0018_source_versions.sql` adds one
+define the version-one wire models. Migration `0018_source_versions.sql` adds one
 private, immutable table; it does not rewrite documents, chunks, cards, schedules,
 course releases or enrollments. The database prevents updates and enforces owner
 and source deletion cascades. A source version hash covers the entire canonical
@@ -57,11 +58,11 @@ only canonical GitHub commit/blob links, URL-encoding the validated path. It
 rejects traversal, absolute/empty path components, backslashes, control characters,
 URL schemes, fragments, queries and percent-encoded paths.
 
-There is deliberately no endpoint accepting an arbitrary repository snapshot or
-fetching a URL. These contracts and fixtures do not claim that network, notebook,
-secret, binary, symlink, submodule or license checks for a real importer pass.
-Those checks and actual public import belong to F02. Imported text is data; no
-imported code is evaluated or executed.
+There is no endpoint accepting an arbitrary repository snapshot or fetching an
+arbitrary URL. F02 adds a separate opt-in endpoint for explicit public repository,
+commit, path/range and notebook-cell selections, including the network and content
+checks described in its implementation notes. Imported text is data; no imported
+code is evaluated or executed.
 
 ## Resolving and consuming evidence
 
@@ -119,35 +120,5 @@ host load encountered a retry timing failure, DB connection timeout and a bounds
 test timeout; after the bounded test's allocation/timeout correction, the complete
 reruns passed. No feature service retry or production DB timeout was weakened.
 
-Work is on `codex/phase8f-evidence-bridge`. The pre-existing staged/unstaged
+F01 work was prepared on `codex/phase8f-evidence-bridge`. The pre-existing staged/unstaged
 worktree changes were preserved; no mixed commit or deployment was created.
-
-## Deployment port
-
-The completed F01 slice was ported onto the deployment repository with additive
-migration 0018, preserving the existing code-editor course labs and Phase 8D
-contracts. F02 network-import code and unfinished E07 whiteboard changes were
-excluded. Historical source-workspace verification above is distinct from the
-new deployment integration checks; no production migration is performed by this
-port.
-
-Deployment-port verification: 108 focused source/course/privacy tests passed
-with eight optional database cases initially skipped. All six source-version
-PostgreSQL cases then passed against the documented disposable localhost
-database. A separate combined 0016-0018 migration test passed in a random schema,
-checking a legacy-row sentinel, owner constraints, immutable source versions,
-bibliography unlinking and cascades. This component rehearsal uses the existing
-users/documents parent contracts; it is not a full pgvector baseline migration.
-Nine shared wire-contract tests and focused Ruff/ESLint checks passed.
-
-A further disposable PostgreSQL rehearsal applied all 19 journal migrations
-0000-0018 in one random schema, remapping explicit `public` foreign-key targets
-into that schema. The local bundle has no pgvector: only its pre-existing vector
-column was substituted with a numeric array and the extension/vector-index DDL
-was omitted in this fixture. All 19 selected course, lab, adaptation, privacy,
-profile, recommendation, track and pinned-course acceptance tests passed. The new
-pinned-course case uses the deployed v2 catalog and checks SQL checkpoint writes,
-second-store resume and source-deletion revocation. The local Windows database's
-WIN1252 default required an explicit UTF-8 client connection for JSON round trips.
-The random schema was removed. Actual pgvector retrieval, the live pipeline,
-production migrations and production database encoding are not verified here.

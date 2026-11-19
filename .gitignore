@@ -6,6 +6,9 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+pytest-of-*/
 .env
 .env.local
 .env.*
@@ -16,6 +19,7 @@ coverage/
 *.tsbuildinfo
 test-results/
 .playwright-tmp/
+.tmp-playwright/
 .phase8ab-postgres/
 playwright-report/
 *.log

@@ -57,8 +57,13 @@ def test_original_catalog_is_static_valid_and_keys_do_not_reach_learner(store):
         "pytorch-fundamentals",
         "sql-query-foundations",
         "git-foundations",
+        "practical-python-foundations",
     ]
     for course in catalog():
+        if course.size == "full":
+            assert len(course.lessons) == 16
+            assert len(course.exercises) == 80
+            continue
         assert course.size == "mini" and course.origin == "prebuilt"
         assert len(course.lessons) == 5
         assert len({ex.id for ex in course.exercises}) == 85
@@ -132,7 +137,7 @@ def test_private_draft_owner_access_and_publishing_cannot_cross_catalog(store):
     release = CourseRelease.model_validate(draft)
     store.save_release(release)
     assert store.get_release("my-python", "a").size == "full"
-    assert len(store.list_courses("a")) == 4
+    assert len(store.list_courses("a")) == 5
     with pytest.raises(NotFound):
         store.get_release("my-python", "b")
     with pytest.raises(InvalidInput, match="not published"):
@@ -339,7 +344,11 @@ def test_routes_validate_requests_hide_keys_and_scope_sessions(store):
         response = client.get("/api/courses")
         assert response.status_code == 200
         assert {course["slug"] for course in response.json()["courses"]} == {
-            "python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"
+            "python-foundations",
+            "pytorch-fundamentals",
+            "sql-query-foundations",
+            "git-foundations",
+            "practical-python-foundations",
         }
         for slug in ["python-foundations", "pytorch-fundamentals", "sql-query-foundations", "git-foundations"]:
             public_detail = client.get(f"/api/courses/{slug}")

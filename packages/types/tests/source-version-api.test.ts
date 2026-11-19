@@ -6,6 +6,7 @@ import {
   EvidencePinSchema,
   GithubLocatorSchema,
   GithubOriginSchema,
+  LocalTextImportSchema,
   PdfSnapshotRequestSchema,
   ResolvedEvidenceSchema,
   SourceProvenanceSchema,
@@ -73,6 +74,68 @@ const repoSnapshot = () => ({
   origin: { ...repoOrigin },
   provenance: { adapter: 'github_selected_text' as const, parser_name: 'text-lines', parser_version: '1' },
   segments: [repoSegment()],
+});
+
+describe('local UTF-8 source snapshots', () => {
+  it('preserves a contiguous local line locator and requires declared rights', () => {
+    const content = 'Read this\n    indented example\n';
+    const snapshot = {
+      schema_version: 1,
+      title: 'Lecture notes',
+      origin: { kind: 'text', format: 'notes', line_count: 2 },
+      provenance: {
+        adapter: 'local_utf8_text',
+        parser_name: 'studyvault-local-text',
+        parser_version: '1',
+        original_sha256: sha256(content),
+        rights: { status: 'user_declared', statement: 'I authored this.' },
+      },
+      segments: [
+        {
+          id: 'text:L1-L2',
+          locator: { kind: 'text', start_line: 1, end_line: 2 },
+          text: content,
+          text_sha256: sha256(content),
+        },
+      ],
+    };
+    expect(SourceSnapshotSchema.parse(snapshot).segments[0]?.text).toBe(content);
+    expect(
+      SourceSnapshotSchema.safeParse({ ...snapshot, origin: { ...snapshot.origin, line_count: 3 } }).success,
+    ).toBe(false);
+    expect(
+      SourceSnapshotSchema.safeParse({
+        ...snapshot,
+        provenance: { ...snapshot.provenance, rights: { status: 'unknown' } },
+      }).success,
+    ).toBe(false);
+    const markup = { ...snapshot, origin: { ...snapshot.origin, format: 'epub' } };
+    expect(SourceSnapshotSchema.safeParse(markup).success).toBe(false);
+    expect(
+      SourceSnapshotSchema.safeParse({
+        ...markup,
+        provenance: { ...markup.provenance, extraction_notes: ['Extracted text line references.'] },
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalTextImportSchema.safeParse({
+        format: 'notes',
+        title: 'Lecture notes',
+        rights_statement: 'I authored this.',
+        text: content,
+      }).success,
+    ).toBe(true);
+    expect(
+      LocalTextImportSchema.safeParse({
+        format: 'txt',
+        title: 'Lecture notes',
+        rights_statement: 'I authored this.',
+        filename: 'image.pdf',
+        media_type: 'application/pdf',
+        content_base64: 'aGV5',
+      }).success,
+    ).toBe(false);
+  });
 });
 
 const fixtureModels = {

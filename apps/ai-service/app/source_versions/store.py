@@ -94,6 +94,19 @@ class MemorySourceVersionStore:
             raise NotFound("Source version not found")
         return resolve_version(row, pin)
 
+    def list_summaries(self, user_id: str, *, limit: int, offset: int):
+        with self._lock:
+            rows = [row for (owner, _), row in self._rows.items() if owner == user_id and (
+                not isinstance(row.snapshot.origin, PdfOrigin)
+                or self.documents.get_for_user(str(row.snapshot.origin.document_id), user_id) is not None
+            )]
+            rows.sort(key=lambda row: (row.created_at, str(row.id)), reverse=True)
+            return [{
+                "id": row.id, "content_hash": row.content_hash, "title": row.snapshot.title,
+                "kind": row.snapshot.origin.kind, "segment_count": len(row.snapshot.segments),
+                "created_at": row.created_at,
+            } for row in rows[offset:offset + limit]], len(rows)
+
 
 class PgSourceVersionStore:
     def __init__(self, database_url: str, *, max_versions_per_user: int = 100):
@@ -174,33 +187,53 @@ class PgSourceVersionStore:
             ).fetchone()
         return self._record(row) if row else None
 
-    def resolve(self, user_id: str, pin: EvidencePin, *, conn=None):
-        if conn is None:
-            row = self.get(user_id, str(pin.version_id))
-            if row is None:
-                raise NotFound("Source version not found")
-            return resolve_version(row, pin)
-        # Course saves must retain source locks until their own transaction ends.
+    def get_locked(self, user_id: str, version_id: str, conn) -> SourceVersion | None:
+        """Load once per selected source and retain parent/version locks for a write."""
         from psycopg.rows import dict_row
 
         with conn.cursor(row_factory=dict_row) as cursor:
             row = cursor.execute(
                 "SELECT id,document_id,content_hash,snapshot,created_at FROM source_versions "
-                "WHERE id=%s AND user_id=%s", (str(pin.version_id), user_id),
+                "WHERE id=%s AND user_id=%s", (version_id, user_id),
             ).fetchone()
             if row is None:
-                raise NotFound("Source version not found")
+                return None
             if row["document_id"] is not None and cursor.execute(
                 "SELECT id FROM documents WHERE id=%s AND user_id=%s FOR SHARE",
                 (row["document_id"], user_id),
             ).fetchone() is None:
-                raise NotFound("Source document not found")
+                return None
             # Match source save/cascade order: document before version. Re-read
             # after locking the parent because deletion may have won the race.
             row = cursor.execute(
                 "SELECT id,document_id,content_hash,snapshot,created_at FROM source_versions "
-                "WHERE id=%s AND user_id=%s FOR SHARE", (str(pin.version_id), user_id),
+                "WHERE id=%s AND user_id=%s FOR SHARE", (version_id, user_id),
             ).fetchone()
             if row is None:
-                raise NotFound("Source version not found")
-            return resolve_version(self._record(row), pin)
+                return None
+            return self._record(row)
+
+    def resolve(self, user_id: str, pin: EvidencePin, *, conn=None):
+        row = (self.get(user_id, str(pin.version_id)) if conn is None
+               else self.get_locked(user_id, str(pin.version_id), conn))
+        if row is None:
+            raise NotFound("Source version not found")
+        return resolve_version(row, pin)
+
+    def list_summaries(self, user_id: str, *, limit: int, offset: int):
+        import psycopg
+        from psycopg.rows import dict_row
+
+        with psycopg.connect(self.database_url, row_factory=dict_row, connect_timeout=5) as conn:
+            rows = conn.execute(
+                "SELECT id,content_hash,snapshot->>'title' AS title,snapshot->'origin'->>'kind' AS kind,"
+                "jsonb_array_length(snapshot->'segments') AS segment_count,created_at FROM source_versions "
+                "WHERE user_id=%s ORDER BY created_at DESC,id DESC LIMIT %s OFFSET %s",
+                (user_id, limit, offset),
+            ).fetchall()
+            total = conn.execute(
+                "SELECT count(*) AS count FROM source_versions WHERE user_id=%s", (user_id,),
+            ).fetchone()
+            for row in rows:
+                row["created_at"] = row["created_at"].isoformat()
+            return rows, total["count"]

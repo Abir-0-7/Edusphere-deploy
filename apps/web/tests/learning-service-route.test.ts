@@ -4,7 +4,7 @@ const { authMock, getEnvMock } = vi.hoisted(() => ({ authMock: vi.fn(), getEnvMo
 vi.mock('@clerk/nextjs/server', () => ({ auth: authMock }));
 vi.mock('@/env', () => ({ getEnv: getEnvMock }));
 
-import { DELETE, GET } from '../src/app/api/learning-service/[...path]/route';
+import { DELETE, GET, POST } from '../src/app/api/learning-service/[...path]/route';
 
 describe('learning service proxy route', () => {
   beforeEach(() => {
@@ -84,6 +84,31 @@ describe('learning service proxy route', () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toBe(`https://studyvault-ai.example/api/bibliography/${id}`);
     expect(init?.method).toBe('DELETE');
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed-clerk-token');
+  });
+
+  it('forwards explicit upgrade acceptance without changing its identity or body', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response('{"replayed":false}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    const id = '01234567-89ab-cdef-0123-456789abcdef';
+    const body = JSON.stringify({ id: 'stable-acceptance', expected_revision: 3, accept_upgrade: true });
+    const response = await POST(
+      new Request(`https://edusphere.example/api/learning-service/api/course-enrollments/${id}/upgrade`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'Idempotency-Key': 'stable-acceptance' },
+        body,
+      }),
+      { params: Promise.resolve({ path: ['api', 'course-enrollments', id, 'upgrade'] }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toBe(`https://studyvault-ai.example/api/course-enrollments/${id}/upgrade`);
+    expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe(body);
+    expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('stable-acceptance');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed-clerk-token');
   });
 });

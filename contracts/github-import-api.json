@@ -1,0 +1,1949 @@
+{
+  "valid": {
+    "request": {
+      "origin": {
+        "kind": "github",
+        "owner": "example",
+        "repository": "teaching",
+        "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "files": [
+        {
+          "start_line": 1,
+          "end_line": 2,
+          "kind": "text",
+          "path": "docs/reading.md"
+        },
+        {
+          "kind": "notebook",
+          "path": "lessons/light.ipynb",
+          "cells": [
+            {
+              "start_line": 1,
+              "end_line": 2,
+              "index": 0
+            },
+            {
+              "start_line": 1,
+              "end_line": null,
+              "index": 1
+            }
+          ]
+        }
+      ],
+      "rights_statement": "I may use these selected public materials for private study."
+    },
+    "version": {
+      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "content_hash": "79201096a4f0c95d4043fc7e377c7837b849fb6866f505a362496624583a282f",
+      "snapshot": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      },
+      "created_at": "2026-11-19T00:00:00+00:00"
+    },
+    "pin": {
+      "version_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "content_hash": "79201096a4f0c95d4043fc7e377c7837b849fb6866f505a362496624583a282f",
+      "segment_id": "notebook:0:1",
+      "locator": {
+        "kind": "github",
+        "path": "lessons/light.ipynb",
+        "start_line": 1,
+        "end_line": 2,
+        "notebook_cell": {
+          "index": 0,
+          "cell_type": "markdown"
+        }
+      },
+      "quote": "# Light\nLight carries energy. \u0986\u09b2\u09cb"
+    },
+    "resolved": {
+      "pin": {
+        "version_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "content_hash": "79201096a4f0c95d4043fc7e377c7837b849fb6866f505a362496624583a282f",
+        "segment_id": "notebook:0:1",
+        "locator": {
+          "kind": "github",
+          "path": "lessons/light.ipynb",
+          "start_line": 1,
+          "end_line": 2,
+          "notebook_cell": {
+            "index": 0,
+            "cell_type": "markdown"
+          }
+        },
+        "quote": "# Light\nLight carries energy. \u0986\u09b2\u09cb"
+      },
+      "source_title": "example/teaching selected private study sources",
+      "content": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+      "canonical_url": "https://github.com/example/teaching/blob/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/lessons/light.ipynb",
+      "source_version_url": "/api/source-versions/ffffffff-ffff-4fff-8fff-ffffffffffff"
+    },
+    "request_with_defaults": {
+      "origin": {
+        "kind": "github",
+        "owner": "example",
+        "repository": "teaching",
+        "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "files": [
+        {
+          "start_line": 1,
+          "end_line": null,
+          "kind": "text",
+          "path": "README.md"
+        }
+      ],
+      "rights_statement": "Permitted study."
+    }
+  },
+  "invalid": [
+    {
+      "name": "unknown-url-input",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study.",
+        "url": "http://127.0.0.1/secret"
+      }
+    },
+    {
+      "name": "unknown-token-input",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study.",
+        "token": "not-an-allowed-field"
+      }
+    },
+    {
+      "name": "branch-instead-of-commit",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "main"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "short-commit",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "newline-commit",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "encoded-traversal",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "%2e%2e/secret.txt"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "absolute-path",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "/secret.txt"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "path-control",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/\nsecret.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "boolean-line",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": true,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "string-line",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": "1",
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "reversed-range",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 3,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "oversized-range",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 1001,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "text-kind-notebook",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "unsafe.ipynb"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "notebook-kind-text",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "unsafe.py",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "negative-cell",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": -1
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "boolean-cell",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": true
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "too-large-cell",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 256
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "duplicate-cell",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 0
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "no-cells",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": []
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "too-many-cells",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "index": 0
+              },
+              {
+                "index": 1
+              },
+              {
+                "index": 2
+              },
+              {
+                "index": 3
+              },
+              {
+                "index": 4
+              },
+              {
+                "index": 5
+              },
+              {
+                "index": 6
+              },
+              {
+                "index": 7
+              },
+              {
+                "index": 8
+              }
+            ]
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "empty-rights",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": ""
+      }
+    },
+    {
+      "name": "blank-rights",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "\t\n\u0085\u001c "
+      }
+    },
+    {
+      "name": "nul-rights",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "Private\u0000study"
+      }
+    },
+    {
+      "name": "surrogate-rights",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "Private\ud800"
+      }
+    },
+    {
+      "name": "oversized-rights",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "kind": "notebook",
+            "path": "lessons/light.ipynb",
+            "cells": [
+              {
+                "start_line": 1,
+                "end_line": 2,
+                "index": 0
+              },
+              {
+                "start_line": 1,
+                "end_line": null,
+                "index": 1
+              }
+            ]
+          }
+        ],
+        "rights_statement": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "name": "no-files",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "duplicate-files",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          },
+          {
+            "start_line": 1,
+            "end_line": 2,
+            "kind": "text",
+            "path": "docs/reading.md"
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "too-many-files",
+      "schema": "request",
+      "input": {
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "files": [
+          {
+            "kind": "text",
+            "path": "docs/0.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/1.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/2.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/3.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/4.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/5.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/6.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/7.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/8.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/9.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/10.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/11.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/12.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/13.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/14.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/15.md"
+          },
+          {
+            "kind": "text",
+            "path": "docs/16.md"
+          }
+        ],
+        "rights_statement": "I may use these selected public materials for private study."
+      }
+    },
+    {
+      "name": "bad-cell-type",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "raw"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell-index-boolean",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": true,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty-file-provenance",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": []
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate-file-provenance",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "uncovered-file-provenance",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "zero-byte-count",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 0
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "oversized-byte-count",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 262145
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "short-blob-sha",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "raw_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    },
+    {
+      "name": "newline-raw-hash",
+      "schema": "snapshot",
+      "input": {
+        "schema_version": 1,
+        "title": "example/teaching selected private study sources",
+        "origin": {
+          "kind": "github",
+          "owner": "example",
+          "repository": "teaching",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "provenance": {
+          "adapter": "github_selected_text",
+          "parser_name": "studyvault-github-text",
+          "parser_version": "1",
+          "original_sha256": null,
+          "rights": {
+            "status": "user_declared",
+            "statement": "I may use these selected public materials for private study."
+          },
+          "repository_files": [
+            {
+              "path": "docs/reading.md",
+              "git_blob_sha": "e4d64312e34050df131ce2c8777cccbb0ab92c55",
+              "raw_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
+              "byte_count": 39
+            },
+            {
+              "path": "lessons/light.ipynb",
+              "git_blob_sha": "86d5f62df931b57d26168022f489506ba69be596",
+              "raw_sha256": "9f24f461cd62ab3c7855d07d93fe270d132400a14dfedd6dac3758799ef27f8a",
+              "byte_count": 274
+            }
+          ]
+        },
+        "segments": [
+          {
+            "id": "reading:1",
+            "locator": {
+              "kind": "github",
+              "path": "docs/reading.md",
+              "start_line": 1,
+              "end_line": 2
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:0:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 2,
+              "notebook_cell": {
+                "index": 0,
+                "cell_type": "markdown"
+              }
+            },
+            "text": "# Light\nLight carries energy. \u0986\u09b2\u09cb",
+            "text_sha256": "0e3d5a4754f476c7672b3597bb4487ece5c5ba4d9dd92516edf284be1a860343"
+          },
+          {
+            "id": "notebook:1:1",
+            "locator": {
+              "kind": "github",
+              "path": "lessons/light.ipynb",
+              "start_line": 1,
+              "end_line": 1,
+              "notebook_cell": {
+                "index": 1,
+                "cell_type": "code"
+              }
+            },
+            "text": "print('Imported code is only text.')",
+            "text_sha256": "b3639b8d0a981c1fd3dcf7121dd57a98a3023ffb900789486d5433c1037abb56"
+          }
+        ]
+      }
+    }
+  ]
+}

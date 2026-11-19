@@ -1,3 +1,4 @@
+import { courseGenerationRuns } from './generation-schema';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -70,7 +71,9 @@ export const conceptGraphs = pgTable(
   'concept_graphs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').notNull(),
     revision: integer('revision').notNull().default(1),
     graph: jsonb('graph').notNull(),
@@ -160,7 +163,9 @@ export const flashcardDecks = pgTable(
   'flashcard_decks',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').notNull(),
     name: text('name').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
@@ -174,8 +179,12 @@ export const flashcardDecks = pgTable(
     }).onDelete('cascade'),
     unique('uq_flashcard_decks_id_document_owner').on(t.id, t.documentId, t.userId),
     check('ck_flashcard_decks_name', sql`char_length(btrim(${t.name})) BETWEEN 1 AND 120`),
-    uniqueIndex('uq_flashcard_decks_default').on(t.userId, t.documentId).where(sql`${t.isDefault}`),
-    uniqueIndex('uq_flashcard_decks_named').on(t.userId, t.documentId, t.name).where(sql`NOT ${t.isDefault}`),
+    uniqueIndex('uq_flashcard_decks_default')
+      .on(t.userId, t.documentId)
+      .where(sql`${t.isDefault}`),
+    uniqueIndex('uq_flashcard_decks_named')
+      .on(t.userId, t.documentId, t.name)
+      .where(sql`NOT ${t.isDefault}`),
   ],
 );
 
@@ -227,7 +236,10 @@ export const flashcards = pgTable(
     index('idx_flashcards_due').on(t.userId, t.dueDate),
     index('idx_flashcards_deck').on(t.deckId),
     check('ck_flashcards_status', sql`${t.status} IN ('active','retired')`),
-    check('ck_flashcards_tags', sql`jsonb_typeof(${t.tags}) = 'array' AND jsonb_array_length(${t.tags}) <= 20`),
+    check(
+      'ck_flashcards_tags',
+      sql`jsonb_typeof(${t.tags}) = 'array' AND jsonb_array_length(${t.tags}) <= 20`,
+    ),
   ],
 );
 
@@ -236,7 +248,9 @@ export const flashcardQualityReports = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     cardId: uuid('card_id').notNull(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     reason: text('reason').notNull(),
     status: text('status').notNull().default('received'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -255,7 +269,9 @@ export const flashcardQuizSessions = pgTable(
   'flashcard_quiz_sessions',
   {
     id: uuid('id').primaryKey(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').notNull(),
     deckId: uuid('deck_id').notNull(),
     questions: jsonb('questions').notNull(),
@@ -284,7 +300,9 @@ export const flashcardVersions = pgTable(
   'flashcard_versions',
   {
     cardId: uuid('card_id').notNull(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     version: integer('version').notNull(),
     front: text('front').notNull(),
     back: text('back').notNull(),
@@ -312,7 +330,9 @@ export const flashcardGenerationDrafts = pgTable(
   'flashcard_generation_drafts',
   {
     id: uuid('id').primaryKey(),
-    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').notNull(),
     sourceRevision: text('source_revision').notNull(),
     settings: jsonb('settings').notNull(),
@@ -423,6 +443,7 @@ export const aiResponseCache = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    generationRunId: uuid('generation_run_id'),
     cacheKey: varchar('cache_key', { length: 64 }).notNull(),
     content: text('content').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -438,6 +459,12 @@ export const aiResponseCache = pgTable(
     }).onDelete('cascade'),
     index('idx_ai_response_cache_user_expiry').on(t.userId, t.expiresAt),
     index('idx_ai_response_cache_document').on(t.documentId),
+    foreignKey({
+      name: 'fk_response_cache_generation_owner',
+      columns: [t.generationRunId, t.userId],
+      foreignColumns: [courseGenerationRuns.id, courseGenerationRuns.userId],
+    }).onDelete('cascade'),
+    index('idx_ai_response_cache_generation').on(t.generationRunId, t.userId),
   ],
 );
 
@@ -504,6 +531,7 @@ export const aiOperations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     documentId: uuid('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+    generationRunId: uuid('generation_run_id'),
     operationKey: varchar('operation_key', { length: 64 }).notNull(),
     state: text('state').notNull(),
     result: text('result'),
@@ -519,6 +547,12 @@ export const aiOperations = pgTable(
       foreignColumns: [documents.id, documents.userId],
     }).onDelete('cascade'),
     index('idx_ai_operations_owner_expiry').on(t.userId, t.expiresAt),
+    foreignKey({
+      name: 'fk_operations_generation_owner',
+      columns: [t.generationRunId, t.userId],
+      foreignColumns: [courseGenerationRuns.id, courseGenerationRuns.userId],
+    }).onDelete('cascade'),
+    index('idx_ai_operations_generation').on(t.generationRunId, t.userId),
   ],
 );
 

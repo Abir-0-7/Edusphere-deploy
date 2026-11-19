@@ -70,6 +70,7 @@ const publishedCourseNames = [
   'PyTorch Fundamentals',
   'SQL Query Foundations',
   'Git Foundations',
+  'Practical Python Foundations',
 ];
 
 async function expectPublishedCatalog(page: Page) {
@@ -79,7 +80,7 @@ async function expectPublishedCatalog(page: Page) {
   }
 }
 
-test('all four published courses are available in the catalog', async ({ page }) => {
+test('the four existing courses and reviewed full course are available in the catalog', async ({ page }) => {
   await routeLearningServiceToFixture(page);
   await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), `catalog-${randomUUID()}`);
   await page.goto('/courses');
@@ -304,7 +305,7 @@ test('course narration auto-continue pauses at checkpoints and can be interrupte
   await page.goto('/courses');
   const card = page
     .getByRole('article')
-    .filter({ has: page.getByRole('heading', { name: 'Python Foundations' }) });
+    .filter({ has: page.getByRole('heading', { name: 'Python Foundations', exact: true }) });
   await card.getByRole('button', { name: 'View course' }).click();
   await page.getByRole('button', { name: 'Enroll and begin' }).click();
   await expect(page).toHaveURL(/\?enrollment=/);

@@ -54,6 +54,64 @@ class Settings(BaseSettings):
     # development stores from unbounded rows or worker batches.
     max_documents_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_DOCUMENTS_PER_USER")
     max_source_versions_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_SOURCE_VERSIONS_PER_USER")
+    course_outlines_enabled: bool = Field(False, alias="AI_SERVICE_COURSE_OUTLINES_ENABLED")
+    course_generation_enabled: bool = Field(False, alias="AI_SERVICE_COURSE_GENERATION_ENABLED")
+    source_refresh_enabled: bool = Field(False, alias="AI_SERVICE_SOURCE_REFRESH_ENABLED")
+    source_text_import_enabled: bool = Field(False, alias="AI_SERVICE_SOURCE_TEXT_IMPORT_ENABLED")
+    course_upgrades_enabled: bool = Field(False, alias="AI_SERVICE_COURSE_UPGRADES_ENABLED")
+    max_course_generations_per_user: int = Field(10, ge=1, le=1000, alias="AI_SERVICE_MAX_COURSE_GENERATIONS_PER_USER")
+    course_generation_storage_timeout_seconds: float = Field(
+        5, gt=0, le=10, alias="AI_SERVICE_COURSE_GENERATION_STORAGE_TIMEOUT_SECONDS",
+    )
+    course_generation_max_input_bytes: int = Field(
+        24000, ge=1024, le=64000, alias="AI_SERVICE_COURSE_GENERATION_MAX_INPUT_BYTES",
+    )
+    course_generation_max_output_tokens: int = Field(
+        1024, ge=256, le=4096, alias="AI_SERVICE_COURSE_GENERATION_MAX_OUTPUT_TOKENS",
+    )
+    course_generation_max_provider_attempts: int = Field(
+        3, ge=1, le=20, alias="AI_SERVICE_COURSE_GENERATION_MAX_PROVIDER_ATTEMPTS",
+    )
+    course_generation_max_stage_attempts: int = Field(
+        2, ge=1, le=3, alias="AI_SERVICE_COURSE_GENERATION_MAX_STAGE_ATTEMPTS",
+    )
+    course_generation_max_run_tokens: int = Field(
+        2000000, ge=1, le=100000000, alias="AI_SERVICE_COURSE_GENERATION_MAX_RUN_TOKENS",
+    )
+    max_course_outlines_per_user: int = Field(20, ge=1, le=1000, alias="AI_SERVICE_MAX_COURSE_OUTLINES_PER_USER")
+    max_course_outline_approvals: int = Field(10, ge=1, le=50, alias="AI_SERVICE_MAX_COURSE_OUTLINE_APPROVALS")
+    course_outline_storage_timeout_seconds: float = Field(
+        5, gt=0, le=10, alias="AI_SERVICE_COURSE_OUTLINE_STORAGE_TIMEOUT_SECONDS",
+    )
+    github_import_enabled: bool = Field(False, alias="AI_SERVICE_GITHUB_IMPORT_ENABLED")
+    github_import_max_files: int = Field(8, ge=1, le=16, alias="AI_SERVICE_GITHUB_IMPORT_MAX_FILES")
+    github_import_max_file_bytes: int = Field(131072, ge=1, le=262144, alias="AI_SERVICE_GITHUB_IMPORT_MAX_FILE_BYTES")
+    github_import_max_total_bytes: int = Field(
+        524288, ge=1, le=1048576, alias="AI_SERVICE_GITHUB_IMPORT_MAX_TOTAL_BYTES",
+    )
+    github_import_max_wire_bytes: int = Field(
+        2097152, ge=1, le=4194304, alias="AI_SERVICE_GITHUB_IMPORT_MAX_WIRE_BYTES",
+    )
+    github_import_max_response_bytes: int = Field(
+        262144, ge=1, le=1048576, alias="AI_SERVICE_GITHUB_IMPORT_MAX_RESPONSE_BYTES",
+    )
+    github_import_max_api_requests: int = Field(24, ge=1, le=48, alias="AI_SERVICE_GITHUB_IMPORT_MAX_API_REQUESTS")
+    github_import_max_path_depth: int = Field(6, ge=1, le=12, alias="AI_SERVICE_GITHUB_IMPORT_MAX_PATH_DEPTH")
+    github_import_max_selected_lines: int = Field(
+        1000, ge=1, le=1000, alias="AI_SERVICE_GITHUB_IMPORT_MAX_SELECTED_LINES",
+    )
+    github_import_request_timeout_seconds: float = Field(
+        5, gt=0, le=10, alias="AI_SERVICE_GITHUB_IMPORT_REQUEST_TIMEOUT_SECONDS",
+    )
+    github_import_total_timeout_seconds: float = Field(
+        30, gt=0, le=60, alias="AI_SERVICE_GITHUB_IMPORT_TOTAL_TIMEOUT_SECONDS",
+    )
+    github_import_per_user_hour: int = Field(2, ge=1, le=60, alias="AI_SERVICE_GITHUB_IMPORT_PER_USER_HOUR")
+    github_import_global_hour: int = Field(2, ge=1, le=60, alias="AI_SERVICE_GITHUB_IMPORT_GLOBAL_HOUR")
+    github_import_max_active: int = Field(2, ge=1, le=4, alias="AI_SERVICE_GITHUB_IMPORT_MAX_ACTIVE")
+    github_import_save_timeout_seconds: float = Field(
+        5, gt=0, le=10, alias="AI_SERVICE_GITHUB_IMPORT_SAVE_TIMEOUT_SECONDS",
+    )
     max_chunks_per_document: int = Field(5000, ge=1, le=100000, alias="AI_SERVICE_MAX_CHUNKS_PER_DOCUMENT")
     max_flashcards_per_deck: int = Field(2000, ge=1, le=100000, alias="AI_SERVICE_MAX_FLASHCARDS_PER_DECK")
     max_embedding_batch: int = Field(500, ge=1, le=5000, alias="AI_SERVICE_MAX_EMBEDDING_BATCH")
@@ -102,6 +160,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate(self) -> "Settings":
+        if self.github_import_max_total_bytes < self.github_import_max_file_bytes:
+            raise ValueError("AI_SERVICE_GITHUB_IMPORT_MAX_TOTAL_BYTES must cover one selected file")
+        if self.github_import_total_timeout_seconds < self.github_import_request_timeout_seconds:
+            raise ValueError("AI_SERVICE_GITHUB_IMPORT_TOTAL_TIMEOUT_SECONDS must cover one request")
+        if self.github_import_max_api_requests * self.github_import_global_hour > 48:
+            raise ValueError("GitHub imports must stay within the conservative 48 API requests/hour allowance")
         if self.llm_max_retries < 0:
             raise ValueError("AI_SERVICE_LLM_MAX_RETRIES must be >= 0")
         minimum_lease = self.llm_max_provider_attempts * (self.llm_timeout_seconds + 4.25) + 5

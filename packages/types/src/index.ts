@@ -102,3 +102,8 @@ export * from './cover-api';
 export * from './bibliography-api';
 export * from './source-version-api';
 export * from './isbn';
+export * from './github-import-api';
+export * from './course-outline-api';
+export * from './course-generation-api';
+export * from './course-upgrade-api';
+export * from './source-refresh-api';

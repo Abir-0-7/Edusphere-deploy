@@ -1,0 +1,3892 @@
+{
+  "schema_version": "1",
+  "release_id": "78afc1e3-47dc-5e13-a73b-9264662bdb20",
+  "content_hash": "8d0d00657b631698c83363fa4f68fbc3d8f7a24ce75d66090310c32d9fb87f1e",
+  "title": "Practical Python Foundations",
+  "estimated_minutes": 840,
+  "reviewer": {
+    "name": "Abir",
+    "reviewed_at": "2026-11-20T00:03:57+06:00",
+    "human_review_confirmed": true
+  },
+  "rights_review_approved": true,
+  "duration_scope_approved": true,
+  "execution_disabled_confirmed": true,
+  "capstone_cases_checked": true,
+  "claims": [
+    {
+      "id": "claim-pp-contract-explanation",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "block_id": "pp-contract-explanation",
+      "claim_text": "A useful data contract states required fields, allowed types, boundaries and failure behavior before the calculation begins.\n\nOur running task is to summarize study sessions, not to judge whether somebody\nlearned a topic. A session record describes an ID, topic, duration and completion\nflag. Those field names alone do not answer important questions: may duration be\nzero, is the upper boundary included, and should a malformed incomplete record\nbe ignored? An implementation cannot choose a correct policy until the task\ndefines one. Write those decisions down in ordinary language first.\n\nFor this course the duration interval is 1 through 180 minutes, both included.\nThe value must be an integer rather than a numeric-looking string, and Boolean\nvalues are rejected even though Python treats bool as a subtype of int. The flag\nmust be an actual Boolean. Validate every record before reporting anything. A\nbad record fails the dataset instead of quietly disappearing from the totals.\nThese are authored product rules, not universal laws of study tracking.\n\nSeparate input validity from report inclusion. A valid incomplete session is\naccepted input but contributes no completed minutes. An invalid incomplete\nsession still causes rejection. This distinction prevents a filter from hiding\nbad data. A contract should also state the output shape and avoid overstating\nwhat it proves: minutes describe recorded activity, not mastery or readiness.\n\nBefore solving a new variant, make a two-column table: requirement and a small\nexample that would violate it. Include the lower and upper duration boundaries,\nan unexpected field, a missing field, and a string flag. Then explain which\ndecisions came from the task and which came from Python's language behavior.\n",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "source_locators": [
+        "pp-contract-source#authored/pp-contract/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-contract-example",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "block_id": "pp-contract-example",
+      "claim_text": "# Read and reason only; this text is not executed by StudyVault.\nvalid = {\"id\": \"a\", \"topic\": \"Python\", \"minutes\": 1, \"completed\": False}\n# Valid input, but contributes zero completed minutes.\ninvalid = {\"id\": \"b\", \"topic\": \"Python\", \"minutes\": 181, \"completed\": False}\n# Invalid input even though it is incomplete: reject the dataset.\n",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "source_locators": [
+        "pp-contract-source#authored/pp-contract/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-contract-activity",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "block_id": "pp-contract-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Write the analyzer's input and output contract. Classify 0, 1, 180, 181, True and '30' as durations, explain each boundary, and invent two conflicting policies to show why the contract matters.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "source_locators": [
+        "pp-contract-source#authored/pp-contract/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-records-explanation",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "block_id": "pp-records-explanation",
+      "claim_text": "A dictionary lookup uses a key, while a list lookup uses a position; copying a list alone does not copy its nested dictionaries.\n\nA list is useful for the sequence of submitted sessions. Each dictionary is a\nrecord whose keys name the meaning of its values. sessions[0] selects a record;\nsessions[0]['minutes'] selects that record's duration. Swapping the order of a\ndictionary's literal fields does not change which value the minutes key names.\nDo not replace a named field with an assumed position merely because an example\nprints fields in a convenient order.\n\nAssignment can make two names refer to the same mutable dictionary. If alias =\nrecord and alias['minutes'] is changed, reading record['minutes'] sees that change.\nLikewise, list(sessions) creates a new outer list but retains the nested record\nobjects. A shallow outer copy is not permission to edit all nested values. Our\nanalyzer promises not to mutate the input, so build normalized output records or\nseparate totals instead of overwriting submitted records.\n\nRequired-field validation should happen before the direct lookups used in the\ncalculation. A missing field is a contract error, not a reason to fabricate a\nduration of zero. Optional fields can have explicit defaults in a different\ncontract, but required and optional are deliberate distinctions. Avoid hiding\nmissing required information behind a convenient get default.\n\nDraw the list and its record objects as separate boxes. Trace one list append,\none alias mutation and one fresh dictionary construction by hand. State which\noperations affect the original input. The point is to reason about ownership,\nnot to memorize a single copy method or to claim every object requires a deep\ncopy. The safest transformation here never mutates the nested input at all.\n",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "source_locators": [
+        "pp-records-source#authored/pp-records/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-records-example",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "block_id": "pp-records-example",
+      "claim_text": "sessions = [{\"id\": \"a\", \"minutes\": 25}, {\"id\": \"b\", \"minutes\": 40}]\nrecord = sessions[0]\nalias = record\nalias[\"minutes\"] = 30\n# sessions[0][\"minutes\"] is now 30; both names refer to the same record.\nnormalized = {\"id\": record[\"id\"], \"minutes\": record[\"minutes\"]}\n# normalized is a new dictionary; later edits to it need not edit record.\n",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "source_locators": [
+        "pp-records-source#authored/pp-records/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-records-activity",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "block_id": "pp-records-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Draw the object-reference diagram for a two-record list and a shallow outer copy. Make a fresh normalized record on paper, then explain why changing that new record differs from changing an alias.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "source_locators": [
+        "pp-records-source#authored/pp-records/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-validation-explanation",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "block_id": "pp-validation-explanation",
+      "claim_text": "Normalization makes a chosen representation consistent; it does not excuse an invalid value or silently change the stated policy.\n\nOur contract strips outer whitespace from IDs and topics. It does not merge\ndifferent capitalization: Python and python remain different topics. After\nstripping, neither ID nor topic may be empty. Explain this policy before doing\nit; otherwise a learner cannot know whether apparent duplicate labels should\ncombine. Do not turn a missing topic into an invented label.\n\nValidation must be ordered so checks are meaningful. Confirm that a record has\nthe exact required field names, confirm string types before stripping them,\ncheck the duration's exact type and range, and confirm the Boolean flag. A\nstring 'True' is not the actual flag True. For the duration, isinstance(True,\nint) would accept a Boolean; the course's exact-type rule deliberately rejects\nthat value. Type rules are part of this application contract, not a claim that\nPython's numeric relationships are wrong.\n\nKeep a set of normalized IDs seen so far. Reject a repeated ID rather than\ncounting the same submitted event twice. Validate incomplete records too.\nCrucially, do not publish a partial summary as the final result if a later record\nfails. One simple design first constructs a validated normalized list and only\nthen passes it to summarization. This costs another pass but makes the boundary\nbetween accepted data and reporting clear for a small bounded input.\n\nTrace the order with a blank topic, a Boolean duration, and two IDs that become\nequal after stripping. For each case, write the failing rule and the expected\nabsence of a report. Then discuss the tradeoff: normalization can reduce accidental\ndifferences, but more aggressive normalization can merge records the task meant\nto distinguish. The code should implement the written rule, not guess intent.\n",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "source_locators": [
+        "pp-validation-source#authored/pp-validation/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-validation-example",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "block_id": "pp-validation-example",
+      "claim_text": "raw_id = \"  s-7 \"\nnormalized_id = raw_id.strip()  # \"s-7\"\n# A later record with id \"s-7\" is a duplicate under this contract.\n# A topic \"   \" becomes blank and is rejected.\n# minutes=True is rejected: type(True) is bool, not the required exact int.\n",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "source_locators": [
+        "pp-validation-source#authored/pp-validation/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-validation-activity",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "block_id": "pp-validation-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Construct a validation table containing a missing field, extra field, blank string, Boolean duration, duplicate normalized ID and incomplete invalid record. State which dataset is rejected and confirm no partial report is accepted.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "source_locators": [
+        "pp-validation-source#authored/pp-validation/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-module-1-checkpoint-recap",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "block_id": "pp-module-1-checkpoint-recap",
+      "claim_text": "This checkpoint combines the preceding rules in one case. Select every justified statement; a partial selection is not a pass. The question alternatives are fresh variants,not separate required items. A solution reveal is learning support and cannot count as an independent pass.\n\nA useful data contract states required fields, allowed types, boundaries and failure behavior before the calculation begins.\n\nA dictionary lookup uses a key, while a list lookup uses a position; copying a list alone does not copy its nested dictionaries.\n\nNormalization makes a chosen representation consistent; it does not excuse an invalid value or silently change the stated policy.\n\nA composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "source_locators": [
+        "pp-contract-source#authored/pp-contract/explanation/paragraph-1",
+        "pp-records-source#authored/pp-records/explanation/paragraph-1",
+        "pp-validation-source#authored/pp-validation/explanation/paragraph-1",
+        "pp-module-1-checkpoint-source#authored/pp-module-1-checkpoint/review/paragraph-final"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool",
+        "https://docs.python.org/3.12/tutorial/",
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-filter-explanation",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "block_id": "pp-filter-explanation",
+      "claim_text": "Filtering decides which valid records contribute; accumulation combines their values without changing the rule halfway through the loop.\n\nAfter validation, the analyzer can trust each record's shape and types. Now ask\na separate question: does this record's completed flag equal True? Only those\nrecords contribute to the completed count and completed-minute total. An\nincomplete but valid 40-minute record does not contribute 40 and is not itself an\nerror. Keep this distinction visible when tracing the algorithm.\n\nInitialize total and count before the loop. For every included record, add its\nminutes once and increment count once. A useful loop invariant is: after the\nfirst k records, total equals the sum of completed minutes among those k records\nand count equals their number. Check the invariant with a table after every\nrecord; a final plausible answer alone can hide two mistakes that cancel out.\n\nStarting total at the first record's minutes can accidentally include an\nincomplete record or fail on an empty list. Starting inside the loop resets the\nsum on each iteration. Our zero initialization handles both empty valid input\nand all-incomplete input naturally. The summary contains no average, so empty\ninput needs no division and no fabricated denominator.\n\nWork through a mixed sequence twice: once in its given order and once reordered.\nThe intermediate rows change but the count and total should agree, because the\ncontract's selection rule is independent of position. This is a useful test idea,\nnot proof of the entire program. It cannot detect every duplicated ID or type\nerror; those remain the responsibility of the validated-input boundary.\n",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "source_locators": [
+        "pp-filter-source#authored/pp-filter/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-filter-example",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "block_id": "pp-filter-example",
+      "claim_text": "# Assume all records have already passed validation.\ncount = 0\ntotal = 0\nfor record in records:\n    if record[\"completed\"]:\n        count += 1\n        total += record[\"minutes\"]\n# For (25,True), (40,False), (35,True): count=2, total=60.\n",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "source_locators": [
+        "pp-filter-source#authored/pp-filter/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-filter-activity",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "block_id": "pp-filter-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Build an invariant table for the five capstone records. Then reverse the list, trace again, compare the totals and explain why starting total at records[0]['minutes'] is unsafe.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "source_locators": [
+        "pp-filter-source#authored/pp-filter/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-group-explanation",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "block_id": "pp-group-explanation",
+      "claim_text": "Grouping uses the normalized topic as a key and adds to its existing total rather than replacing earlier sessions.\n\nA single total answers how much completed activity was recorded, but a topic\nsummary needs one accumulator per topic. A dictionary maps each normalized topic\nto the completed minutes seen for it so far. A new topic starts at zero; a later\nsession adds to its existing value. Assigning totals[topic] = minutes on every\nrecord loses the earlier sessions for that topic.\n\nFilter first or put the inclusion condition immediately around the update. In\neither design, incomplete records must not create a positive completed total.\nOur report omits a topic that has no completed records; a valid all-incomplete\ndataset produces an empty topic list. This is a stated output policy rather than\nan accidental consequence of iteration.\n\nBuild fresh result structures. Reading record['topic'] and record['minutes']\ndoes not require editing the record. That avoids the aliasing problem from the\nfirst module. A concise comprehension may be appropriate later, but a visible\nloop is helpful while you learn the selection and accumulation rules. Clarity\nlets a reviewer connect each update to the written contract.\n\nTrace two topics interleaved with a repeated topic. After each record, write the\nentire totals dictionary. Finally check that sum(totals.values()) equals the\ncompleted-minute total from the previous lesson. If those differ, investigate\nfiltering and accumulation rather than merely adjusting the displayed final\nnumber. This consistency check is useful but cannot alone prove the topics are\ncorrectly named or that records were valid.\n",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "source_locators": [
+        "pp-group-source#authored/pp-group/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-group-example",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "block_id": "pp-group-example",
+      "claim_text": "totals = {}\nfor record in valid_records:\n    if record[\"completed\"]:\n        topic = record[\"topic\"]\n        totals[topic] = totals.get(topic, 0) + record[\"minutes\"]\n# Completed Python 25, SQL 30, Python 35 -> {'Python': 60, 'SQL': 30}.\n# The input records are read, not overwritten.\n",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "source_locators": [
+        "pp-group-source#authored/pp-group/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-group-activity",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "block_id": "pp-group-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Trace a topic dictionary after each of six interleaved records, including one incomplete record. Compare addition with overwrite, verify its sum against the overall total, and explain the first point where the incorrect algorithm diverges.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "source_locators": [
+        "pp-group-source#authored/pp-group/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-order-explanation",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "block_id": "pp-order-explanation",
+      "claim_text": "A deterministic report specifies a primary sort key and an explicit tie key instead of relying on whichever record happened to arrive first.\n\nThe capstone report orders topics by decreasing completed minutes. Two equal\ntotals still need a policy. We choose increasing normalized topic text for ties.\nThis is a course reporting rule, not a statement that alphabetic order is always\nthe best product choice. Explain the tie key so a reader can predict the report\nwithout knowing the original order of records.\n\nPython's sorted builds a new sorted list. A tuple key is compared component by\ncomponent: (-minutes, topic) puts larger numeric totals first because their\nnegatives are smaller, then compares topic text for equal totals. In this\ncourse's ASCII topic examples Math comes before Python. Do not claim this simple\ntext order is a human-language collation policy for every alphabet.\n\nA sort that uses only -minutes can preserve prior insertion order on ties. That\nbehavior can be deterministic for one exact input but differ when the same\nrecords are reordered. Stable sorting and an explicit secondary business rule\nare different ideas. The report contract calls for the latter. The transformation\nmust also preserve the total values; sorting should change presentation, not\nrecalculate or discard contributions.\n\nOn paper, write the key for each (topic, total) pair, sort the keys, then map back\nto rows. Include equal totals and a single topic. Compare results from two input\norders. Finish by describing which result properties are mathematical totals\nand which are presentation choices. This makes tests more precise: total checks\nalone cannot validate the report order.\n",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "source_locators": [
+        "pp-order-source#authored/pp-order/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-order-example",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "block_id": "pp-order-example",
+      "claim_text": "pairs = [(\"Python\", 20), (\"SQL\", 35), (\"Math\", 20)]\nordered = sorted(pairs, key=lambda pair: (-pair[1], pair[0]))\n# [('SQL',35), ('Math',20), ('Python',20)]\n# Keys: SQL -> (-35,'SQL'); Math -> (-20,'Math'); Python -> (-20,'Python').\n",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "source_locators": [
+        "pp-order-source#authored/pp-order/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-order-activity",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "block_id": "pp-order-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Make two differently ordered inputs with equal topic totals. Derive each tuple key and the expected final row order. Contrast an explicit tie rule with an insertion-order tie and discuss the ASCII-only examples' limitation.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "source_locators": [
+        "pp-order-source#authored/pp-order/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-module-2-checkpoint-recap",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "block_id": "pp-module-2-checkpoint-recap",
+      "claim_text": "This checkpoint combines the preceding rules in one case. Select every justified statement; a partial selection is not a pass. The question alternatives are fresh variants,not separate required items. A solution reveal is learning support and cannot count as an independent pass.\n\nFiltering decides which valid records contribute; accumulation combines their values without changing the rule halfway through the loop.\n\nGrouping uses the normalized topic as a key and adds to its existing total rather than replacing earlier sessions.\n\nA deterministic report specifies a primary sort key and an explicit tie key instead of relying on whichever record happened to arrive first.\n\nA composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "source_locators": [
+        "pp-filter-source#authored/pp-filter/explanation/paragraph-1",
+        "pp-group-source#authored/pp-group/explanation/paragraph-1",
+        "pp-order-source#authored/pp-order/explanation/paragraph-1",
+        "pp-module-2-checkpoint-source#authored/pp-module-2-checkpoint/review/paragraph-final"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions",
+        "https://docs.python.org/3.12/tutorial/",
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements",
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-functions-explanation",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "block_id": "pp-functions-explanation",
+      "claim_text": "A function's inputs and returned result form a clearer testing boundary when it does not also change hidden shared state.\n\nThink of summarize(valid_records) as a transformation from accepted data to a\nfresh report. The caller supplies the records, the function calculates local\ntotals, and return hands a result back. A printed report is not the same thing\nas a returned data structure. Printing may help a person read a result, but a\ncaller that needs totals should not have to scrape output text.\n\nLocal accumulator variables are created for each call. If an accumulator instead\nlives in a shared global dictionary, a second call may add to the first call's\nresults. A test that calls the function once cannot expose that contamination.\nCall the same function with the same valid data twice in a proposed test plan\nand compare both outputs and the unchanged input. These are useful properties\nfor this pure transformation design.\n\nDo not confuse rebinding a local name with mutating an argument. total += n on a\nlocal integer accumulator does not edit the submitted record, while assigning to\nrecord['minutes'] does. Returning a new report helps keep the ownership boundary\nvisible. Other applications legitimately have effects, but here the contract\nexplicitly promises no input mutation and no external writes.\n\nTrace a small function call by drawing a new frame for its local count and total.\nFollow the returned value into the caller. Then trace an intentionally faulty\nglobal accumulator across two calls. Explain why a correct first output is not\nsufficient evidence. The objective is to make results reproducible and reviewable,\nnot to label every short function 'pure' without examining what it touches.\n",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "source_locators": [
+        "pp-functions-source#authored/pp-functions/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-functions-example",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "block_id": "pp-functions-example",
+      "claim_text": "def add_completed(records):\n    total = 0\n    for record in records:\n        if record[\"completed\"]:\n            total += record[\"minutes\"]\n    return total\n\n# Two calls with the same unchanged valid records each return their own sum.\n# They do not share a total variable from the previous call.\n",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "source_locators": [
+        "pp-functions-source#authored/pp-functions/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-functions-activity",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "block_id": "pp-functions-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Draw two call frames for the same records and compare returned data with printed text. Design a test that exposes a shared-global accumulator and a second test that detects an argument mutation.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "source_locators": [
+        "pp-functions-source#authored/pp-functions/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-pipeline-explanation",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "block_id": "pp-pipeline-explanation",
+      "claim_text": "Validate and normalize the entire input before summarizing it, then order and present the resulting report without silently changing the accepted data.\n\nDecomposition is more useful when each function has one clear responsibility\nthan when an arbitrary number of lines is moved into helpers. A normalizer can\nreturn fresh valid records or an error. A summarizer can consume those accepted\nrecords and return counts and grouped totals. A presenter can order the topic\nrows and format a report. State the input/output contract of each boundary.\n\nThe ordering matters. If aggregation runs before validation, an invalid later\nrecord may leave a plausible partial total. If filtering out incomplete records\nhappens before their validation, malformed incomplete records can bypass the\ndataset contract. A helper's convenient name does not prove it has preserved the\npolicy. Trace the data that crosses each boundary.\n\nPassing ordinary data rather than a preformatted report between helpers keeps\ntests precise. Test normalization on one invalid record without involving\nsorting. Test summation on a short already-valid list. Test ordering on two equal\ntopic totals. Then add an integration test that checks their composition. A\nunit test can isolate a failure, but only a whole-pipeline example can catch a\ncaller using the helpers in the wrong order.\n\nDraw the pipeline as four boxes with a success arrow and one error exit from\nvalidation. Write the shape of the data on every arrow. Finally remove a helper\nand explain what becomes harder to test or reason about. Do not introduce files,\nnetwork calls, databases or a framework merely to make this small transformation\nlook sophisticated; those are outside this authored contract.\n",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "source_locators": [
+        "pp-pipeline-source#authored/pp-pipeline/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-pipeline-example",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "block_id": "pp-pipeline-example",
+      "claim_text": "# Proposed order, shown as inert pseudocode:\nnormalized_records = validate_and_normalize(all_records)\nsummary = summarize(normalized_records)\nordered_topics = order_topic_rows(summary[\"topic_totals\"])\nreport = present(summary, ordered_topics)\n# If validation fails, no later step produces a final report.\n",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "source_locators": [
+        "pp-pipeline-source#authored/pp-pipeline/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-pipeline-activity",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "block_id": "pp-pipeline-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Specify each helper's input, output and failure behavior. Trace an invalid final record, identify which functions must not run, and design one isolated test plus one end-to-end test for the same pipeline.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "source_locators": [
+        "pp-pipeline-source#authored/pp-pipeline/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-tests-explanation",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "block_id": "pp-tests-explanation",
+      "claim_text": "An expected result must be justified independently of the implementation under test, and boundary cases should distinguish plausible wrong rules.\n\nA test consists of a chosen input, an expected outcome and a reason that outcome\nfollows from the contract. Copying a program's current output into the expected\ncolumn only records what it did; it does not establish correctness. Derive small\ntotals by hand, write down which records are excluded, and verify the result with\nanother representation such as a trace table.\n\nNormal cases are necessary but weak on their own. A duration of 30 cannot tell\nwhether an incorrect strict upper-bound check rejects 180. Use 1 and 180 as\naccepted boundary cases and 0 and 181 as rejected neighbors. Use empty input,\nall-incomplete input, duplicate normalized IDs, a blank topic and Boolean minutes\nto test different rules. State why each case is in the suite instead of collecting\nmany large examples that all exercise the same happy path.\n\nTests should also check important properties beyond one final number. Reordering\nvalid records should not change the completed count or topic totals, while the\nexplicit tie rule should make the report row order agree. Repeating a call should\nnot accumulate old state. An unchanged input check can expose an alias mutation.\nNone of these properties makes the function universally correct; they target\nspecific failure modes that a human can review.\n\nMake a table with columns case ID, input, expected report/error, rule and a named\nfault the test catches. Add one deliberately insufficient test and explain why\nboth a correct and faulty implementation would pass it. Test design is an\nargument about evidence, not a count of green indicators. The app stores your\nproject text; it does not run it or award a code correctness grade.\n",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "source_locators": [
+        "pp-tests-source#authored/pp-tests/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-tests-example",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "block_id": "pp-tests-example",
+      "claim_text": "# Proposed test cases, not executed learner code:\n# duration=180 -> valid: catches an incorrect minutes < 180 boundary.\n# duration=True -> invalid: catches an isinstance(minutes, int)-only check.\n# [] -> count0,total0,topics[]: catches first-record initialization.\n# repeat the same valid call -> same report: catches shared accumulation.\n",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "source_locators": [
+        "pp-tests-source#authored/pp-tests/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-tests-activity",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "block_id": "pp-tests-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Design at least eight cases and name the fault caught by each. Independently calculate one normal report, then compare which faults are not detected by a suite containing only ordinary 30-minute sessions.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "source_locators": [
+        "pp-tests-source#authored/pp-tests/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-module-3-checkpoint-recap",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "block_id": "pp-module-3-checkpoint-recap",
+      "claim_text": "This checkpoint combines the preceding rules in one case. Select every justified statement; a partial selection is not a pass. The question alternatives are fresh variants,not separate required items. A solution reveal is learning support and cannot count as an independent pass.\n\nA function's inputs and returned result form a clearer testing boundary when it does not also change hidden shared state.\n\nValidate and normalize the entire input before summarizing it, then order and present the resulting report without silently changing the accepted data.\n\nAn expected result must be justified independently of the implementation under test, and boundary cases should distinguish plausible wrong rules.\n\nA composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "source_locators": [
+        "pp-functions-source#authored/pp-functions/explanation/paragraph-1",
+        "pp-pipeline-source#authored/pp-pipeline/explanation/paragraph-1",
+        "pp-tests-source#authored/pp-tests/explanation/paragraph-1",
+        "pp-module-3-checkpoint-source#authored/pp-module-3-checkpoint/review/paragraph-final"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example",
+        "https://docs.python.org/3.12/tutorial/",
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-errors-explanation",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "block_id": "pp-errors-explanation",
+      "claim_text": "A failure path should state which rule failed and prevent a normal-looking partial report from being mistaken for accepted output.\n\nAn exception is one possible way for a Python function to signal invalid input;\na structured error return is another design. Our educational contract does not\nrequire a particular UI or framework. It requires the same observable policy:\ninvalid input produces no accepted report, and the explanation identifies a\nmeaningful rule without pretending the data was repaired.\n\nFor a Boolean duration, invalid_minutes is more useful review evidence than a\ncatch-all 'something happened.' For a repeated normalized ID, duplicate_id tells\nthe caller which uniqueness rule needs attention. Do not expose unrelated\ninternal details or claim a source fact changed merely because a user entered a\nbad record. Errors about input validity and comments about learning progress are\ndifferent kinds of information.\n\nAvoid a broad catch that returns whatever total has accumulated so far. That\ncan turn a genuine failure into a plausible but incomplete answer. Likewise,\ncatching a missing key and silently substituting zero violates the required-field\ncontract. Catch specific failures only when you can preserve the stated meaning;\notherwise allow the validation error to reach the designated error boundary.\n\nTrace one valid record followed by an invalid record. Write the local work that\nmay have occurred and the single observable error result that is allowed. Then\ncompare a failure-before-calculation design with a design that validates while\ncollecting fresh records but still never publishes partial output. Both can\nrespect the policy if no partial report is accepted; a hidden catch that changes\nthe policy cannot. Your project explanation should make this choice reviewable.\n",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "source_locators": [
+        "pp-errors-source#authored/pp-errors/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/errors.html#handling-exceptions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-errors-example",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "block_id": "pp-errors-example",
+      "claim_text": "# Inert pseudocode illustrating the policy, not a required API:\nnormalized = validate_every_record(records)  # may signal invalid_minutes\n# Only a successful validation result reaches the following line.\nreport = summarize(normalized)\n# Do not catch invalid_minutes merely to return an earlier partial total.\n",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "source_locators": [
+        "pp-errors-source#authored/pp-errors/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/errors.html#handling-exceptions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-errors-activity",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "block_id": "pp-errors-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Trace late invalid input and write an error message for each contract rule. Compare exceptions with structured errors, explain why silent skip/default behavior is disallowed, and identify the exact point a normal report becomes accepted.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "source_locators": [
+        "pp-errors-source#authored/pp-errors/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/errors.html#handling-exceptions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-integration-explanation",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "block_id": "pp-integration-explanation",
+      "claim_text": "An integration trace follows validation, selection, totals, grouping and ordering together; agreement at only one intermediate stage is insufficient.\n\nUse the five fixed capstone records, not a changing remote dataset. First check\ntheir fields, types, duration bounds and unique normalized IDs. Then mark the\nfour completed records. The incomplete SQL40 record stays valid input but does\nnot contribute to the completed report. The completed count is four and the\ncompleted-minute total is 25+35+20+30=110.\n\nGroup the same included records: Python receives 60 minutes, SQL30 and Math20.\nTheir sum is again 110. This reconciles the global and grouped totals. Order the\ntopic rows by the stated key to produce Python60, SQL30, Math20. A display that\nshows 110 but omits Math is not correct; a grouped sum of110 with two wrongly\nlabelled topics is not proven correct by its sum either.\n\nNow change one assumption at a time. Mark SQL40 complete and recompute both\nglobal and per-topic totals. Change a valid duration to181 and explain why the\ncorrect result is an error, not the new arithmetic total. Reverse the valid\ninput and check that the report still follows the explicit ordering rule. This\ndistinguishes rules that depend on content from incidental input order.\n\nYour final manual trace should be understandable without running the code. Show\nthe included-record markers, accumulator changes, topic rows and resulting\nreport. Keep expected results separate from any implementation output. Those\nartifacts let a human assess the reasoning while the app's execution gate remains\nclosed. They do not turn a read-and-reason submission into evidence of successful\nruntime execution or measured learner competence.\n",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "source_locators": [
+        "pp-integration-source#authored/pp-integration/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#looping-techniques"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-integration-example",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "block_id": "pp-integration-example",
+      "claim_text": "[\n  {\n    \"id\": \"s-1\",\n    \"topic\": \"Python\",\n    \"minutes\": 25,\n    \"completed\": true\n  },\n  {\n    \"id\": \"s-2\",\n    \"topic\": \"SQL\",\n    \"minutes\": 40,\n    \"completed\": false\n  },\n  {\n    \"id\": \"s-3\",\n    \"topic\": \"Python\",\n    \"minutes\": 35,\n    \"completed\": true\n  },\n  {\n    \"id\": \"s-4\",\n    \"topic\": \"Math\",\n    \"minutes\": 20,\n    \"completed\": true\n  },\n  {\n    \"id\": \"s-5\",\n    \"topic\": \"SQL\",\n    \"minutes\": 30,\n    \"completed\": true\n  }\n]\n# Expected: count4,total110,topics Python60 / SQL30 / Math20.\n",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "source_locators": [
+        "pp-integration-source#authored/pp-integration/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#looping-techniques"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-integration-activity",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "block_id": "pp-integration-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Complete the five-record trace and reconciliation. Mark SQL40 complete and derive the changed report; then replace one duration with181 and explain why no arithmetic report is accepted. Check that reversed valid input yields the same ordered report.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "source_locators": [
+        "pp-integration-source#authored/pp-integration/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#looping-techniques"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-evidence-explanation",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "block_id": "pp-evidence-explanation",
+      "claim_text": "A saved explanation, a passing checkpoint and a submitted project are different evidence events; none alone proves that learner code executed correctly.\n\nThe analyzer describes recorded completed activity under an authored contract.\nIt cannot infer that25minutes caused learning, that a topic was mastered, or\nthat the learner is ready for a career. Those would need different measures and\nvalidation. A careful report states the data and assumptions it used instead of\nturning an activity count into a capability claim.\n\nCourse evidence links should identify the exact authored explanation that\nsupports a rule or reasoning step. The explicit duration range comes from this\nproject's specification. Dictionary and function behavior is supported by the\nversioned Python3.12 references. Those are different sources of authority. A\nlink to a Python tutorial does not by itself establish our product's180-minute\nmaximum, and an exact quote locator does not automatically prove every sentence\nin a learner explanation is semantically supported.\n\nThe app records answers to deterministic static checkpoints separately from a\ncapstone submission. A required capstone can be submitted with structured text,\nexpected cases and selected evidence, but it still needs human rubric review.\nAn evidence checkbox, word count or model-generated comment is not a correctness\ngrade. Explain limitations rather than silently promoting submission to mastery.\n\nPrepare a short design note with a claim, its supporting authored evidence ID,\nand a sentence explaining the connection. Include one deliberately unsupported\nclaim and explain why the source cannot establish it. End with the execution\nlimitation: StudyVault does not execute the submitted Python, SQL or shell code.\nThe reviewable result here is a reasoned project artifact, not a measured runtime\nor automatically certified program.\n",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "source_locators": [
+        "pp-evidence-source#authored/pp-evidence/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-evidence-example",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "block_id": "pp-evidence-example",
+      "claim_text": "Claim: The example's completed-minute total is110.\nSupport: pp-integration-evidence and the fixed-record trace.\nLimitation:110 recorded minutes do not establish mastery of Python.\nSubmission status: submitted for human review; code was not executed by StudyVault.\n",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "source_locators": [
+        "pp-evidence-source#authored/pp-evidence/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-evidence-activity",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "block_id": "pp-evidence-activity",
+      "claim_text": "Extended paper activity (planning estimate25–35minutes): Write three supported design claims and their exact evidence IDs, plus two claims the report cannot establish. Distinguish specification authority from language references, and draft a limitation statement for your capstone.\n\nExplain your trace and assumptions before checking the independent question.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "source_locators": [
+        "pp-evidence-source#authored/pp-evidence/explanation/paragraph-1"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    },
+    {
+      "id": "claim-pp-module-4-checkpoint-recap",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "block_id": "pp-module-4-checkpoint-recap",
+      "claim_text": "This checkpoint combines the preceding rules in one case. Select every justified statement; a partial selection is not a pass. The question alternatives are fresh variants,not separate required items. A solution reveal is learning support and cannot count as an independent pass.\n\nA useful data contract states required fields, allowed types, boundaries and failure behavior before the calculation begins.\n\nA dictionary lookup uses a key, while a list lookup uses a position; copying a list alone does not copy its nested dictionaries.\n\nNormalization makes a chosen representation consistent; it does not excuse an invalid value or silently change the stated policy.\n\nFiltering decides which valid records contribute; accumulation combines their values without changing the rule halfway through the loop.\n\nGrouping uses the normalized topic as a key and adds to its existing total rather than replacing earlier sessions.\n\nA deterministic report specifies a primary sort key and an explicit tie key instead of relying on whichever record happened to arrive first.\n\nA function's inputs and returned result form a clearer testing boundary when it does not also change hidden shared state.\n\nValidate and normalize the entire input before summarizing it, then order and present the resulting report without silently changing the accepted data.\n\nAn expected result must be justified independently of the implementation under test, and boundary cases should distinguish plausible wrong rules.\n\nA failure path should state which rule failed and prevent a normal-looking partial report from being mistaken for accepted output.\n\nAn integration trace follows validation, selection, totals, grouping and ordering together; agreement at only one intermediate stage is insufficient.\n\nA saved explanation, a passing checkpoint and a submitted project are different evidence events; none alone proves that learner code executed correctly.\n\nA composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "source_locators": [
+        "pp-contract-source#authored/pp-contract/explanation/paragraph-1",
+        "pp-records-source#authored/pp-records/explanation/paragraph-1",
+        "pp-validation-source#authored/pp-validation/explanation/paragraph-1",
+        "pp-filter-source#authored/pp-filter/explanation/paragraph-1",
+        "pp-group-source#authored/pp-group/explanation/paragraph-1",
+        "pp-order-source#authored/pp-order/explanation/paragraph-1",
+        "pp-functions-source#authored/pp-functions/explanation/paragraph-1",
+        "pp-pipeline-source#authored/pp-pipeline/explanation/paragraph-1",
+        "pp-tests-source#authored/pp-tests/explanation/paragraph-1",
+        "pp-errors-source#authored/pp-errors/explanation/paragraph-1",
+        "pp-integration-source#authored/pp-integration/explanation/paragraph-1",
+        "pp-evidence-source#authored/pp-evidence/explanation/paragraph-1",
+        "pp-module-4-checkpoint-source#authored/pp-module-4-checkpoint/review/paragraph-final"
+      ],
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions",
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool",
+        "https://docs.python.org/3.12/library/unittest.html#basic-example",
+        "https://docs.python.org/3.12/tutorial/",
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions",
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements",
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries",
+        "https://docs.python.org/3.12/tutorial/datastructures.html#looping-techniques",
+        "https://docs.python.org/3.12/tutorial/errors.html#handling-exceptions"
+      ],
+      "excerpt_matches_source": true,
+      "human_support": "supported",
+      "human_reference": "Abir approved this claim and its listed supporting references in the exact unchanged packet on 2026-11-20; see reference_urls and source_locators.",
+      "human_notes": "Transcribed from the explicit entire-packet approval; no item-specific corrections were supplied."
+    }
+  ],
+  "assessments": [
+    {
+      "exercise_id": "pp-contract-practice",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "mode": "practice",
+      "kind": "choice",
+      "prompt": "Under the stated 1..180 exact-integer contract, which duration is valid?",
+      "choices": [
+        {
+          "id": "one",
+          "label": "1"
+        },
+        {
+          "id": "zero",
+          "label": "0"
+        },
+        {
+          "id": "bool",
+          "label": "True"
+        },
+        {
+          "id": "text",
+          "label": "'30'"
+        }
+      ],
+      "expected_answer": "one",
+      "explanation": "1 is an integer inside the inclusive interval.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-contract-checkpoint-1",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A completed flag is False. Its duration is 1. What should validation do?",
+      "choices": [
+        {
+          "id": "accept",
+          "label": "Accept as valid input; exclude it from completed totals"
+        },
+        {
+          "id": "reject",
+          "label": "Reject the dataset as invalid input"
+        },
+        {
+          "id": "ignore",
+          "label": "Skip all validation because it is incomplete"
+        }
+      ],
+      "expected_answer": "accept",
+      "explanation": "1 is the included lower boundary.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-contract-checkpoint-2",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A completed flag is False. Its duration is 180. What should validation do?",
+      "choices": [
+        {
+          "id": "accept",
+          "label": "Accept as valid input; exclude it from completed totals"
+        },
+        {
+          "id": "reject",
+          "label": "Reject the dataset as invalid input"
+        },
+        {
+          "id": "ignore",
+          "label": "Skip all validation because it is incomplete"
+        }
+      ],
+      "expected_answer": "accept",
+      "explanation": "180 is the included upper boundary.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-contract-checkpoint-3",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A completed flag is False. Its duration is 0. What should validation do?",
+      "choices": [
+        {
+          "id": "accept",
+          "label": "Accept as valid input; exclude it from completed totals"
+        },
+        {
+          "id": "reject",
+          "label": "Reject the dataset as invalid input"
+        },
+        {
+          "id": "ignore",
+          "label": "Skip all validation because it is incomplete"
+        }
+      ],
+      "expected_answer": "reject",
+      "explanation": "0 lies below the allowed interval.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-contract-checkpoint-4",
+      "lesson_id": "pp-contract",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A completed flag is False. Its duration is 181. What should validation do?",
+      "choices": [
+        {
+          "id": "accept",
+          "label": "Accept as valid input; exclude it from completed totals"
+        },
+        {
+          "id": "reject",
+          "label": "Reject the dataset as invalid input"
+        },
+        {
+          "id": "ignore",
+          "label": "Skip all validation because it is incomplete"
+        }
+      ],
+      "expected_answer": "reject",
+      "explanation": "181 lies above the allowed interval.",
+      "evidence_ids": [
+        "pp-contract-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-records-practice",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "mode": "practice",
+      "kind": "number",
+      "prompt": "For rows = [{'minutes': 25}, {'minutes': 40}], what is rows[1]['minutes']?",
+      "choices": [],
+      "expected_answer": 40,
+      "explanation": "Position 1 selects the second record, whose minutes is 40.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-records-checkpoint-1",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "record = {'minutes': 12}; alias = record; alias['minutes'] += 3. What is record['minutes']?",
+      "choices": [],
+      "expected_answer": 15,
+      "explanation": "The shared dictionary now contains 15 minutes.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-records-checkpoint-2",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "record = {'minutes': 18}; alias = record; alias['minutes'] += 2. What is record['minutes']?",
+      "choices": [],
+      "expected_answer": 20,
+      "explanation": "The shared dictionary now contains 20 minutes.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-records-checkpoint-3",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "record = {'minutes': 24}; alias = record; alias['minutes'] += 6. What is record['minutes']?",
+      "choices": [],
+      "expected_answer": 30,
+      "explanation": "The shared dictionary now contains 30 minutes.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-records-checkpoint-4",
+      "lesson_id": "pp-records",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "record = {'minutes': 35}; alias = record; alias['minutes'] += 5. What is record['minutes']?",
+      "choices": [],
+      "expected_answer": 40,
+      "explanation": "The shared dictionary now contains 40 minutes.",
+      "evidence_ids": [
+        "pp-records-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-validation-practice",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "mode": "practice",
+      "kind": "choice",
+      "prompt": "After stripping IDs, are ' s-7 ' and 's-7' unique events under this contract?",
+      "choices": [
+        {
+          "id": "unique",
+          "label": "Yes, because their original strings differ"
+        },
+        {
+          "id": "duplicate",
+          "label": "No; the normalized IDs duplicate one another"
+        }
+      ],
+      "expected_answer": "duplicate",
+      "explanation": "Both normalize to s-7.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-validation-checkpoint-1",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A record has id='a', topic=' Math ', minutes=10, completed=True. Is it valid (assuming unique ID and exact fields)?",
+      "choices": [
+        {
+          "id": "valid",
+          "label": "Valid"
+        },
+        {
+          "id": "invalid",
+          "label": "Invalid"
+        }
+      ],
+      "expected_answer": "valid",
+      "explanation": "The topic normalizes to Math and all other fields pass.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-validation-checkpoint-2",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A record has id='a', topic='   ', minutes=10, completed=True. Is it valid (assuming unique ID and exact fields)?",
+      "choices": [
+        {
+          "id": "valid",
+          "label": "Valid"
+        },
+        {
+          "id": "invalid",
+          "label": "Invalid"
+        }
+      ],
+      "expected_answer": "invalid",
+      "explanation": "Stripping leaves a blank topic.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-validation-checkpoint-3",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A record has id='a', topic='Math', minutes=True, completed=False. Is it valid (assuming unique ID and exact fields)?",
+      "choices": [
+        {
+          "id": "valid",
+          "label": "Valid"
+        },
+        {
+          "id": "invalid",
+          "label": "Invalid"
+        }
+      ],
+      "expected_answer": "invalid",
+      "explanation": "A Boolean is rejected as the duration.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-validation-checkpoint-4",
+      "lesson_id": "pp-validation",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A record has id='a', topic='Math', minutes=10, completed='False'. Is it valid (assuming unique ID and exact fields)?",
+      "choices": [
+        {
+          "id": "valid",
+          "label": "Valid"
+        },
+        {
+          "id": "invalid",
+          "label": "Invalid"
+        }
+      ],
+      "expected_answer": "invalid",
+      "explanation": "The text 'False' is not a Boolean flag.",
+      "evidence_ids": [
+        "pp-validation-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-1-checkpoint-practice",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "mode": "practice",
+      "kind": "multiple",
+      "prompt": "Prepare for Reliable input contracts. Select EVERY sound review action.",
+      "choices": [
+        {
+          "id": "contract",
+          "label": "Restate the relevant input/output and failure rules"
+        },
+        {
+          "id": "trace",
+          "label": "Trace the stated case and explain each inclusion or rejection"
+        },
+        {
+          "id": "derive",
+          "label": "Derive expected results from the contract rather than copying program output"
+        },
+        {
+          "id": "guess",
+          "label": "Mark every option correct whenever a final total looks plausible"
+        }
+      ],
+      "expected_answer": [
+        "contract",
+        "trace",
+        "derive"
+      ],
+      "explanation": "Restate the rules,trace the case,and independently justify results. Guessing from appearance is insufficient.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-1-checkpoint-1",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module1 case: record A has id=' a ',topic='Math',minutes=20,completed=False; record B has id='a',topic='SQL',minutes=10,completed=True. Select EVERY true statement.",
+      "choices": [
+        {
+          "id": "normalized",
+          "label": "A's normalized ID is a"
+        },
+        {
+          "id": "duplicate",
+          "label": "Together A and B violate the normalized-ID uniqueness rule"
+        },
+        {
+          "id": "type",
+          "label": "A's integer duration20 passes the duration type/range rule"
+        },
+        {
+          "id": "skip",
+          "label": "A needs no validation because it is incomplete"
+        },
+        {
+          "id": "report",
+          "label": "The pair must produce a successful partial10-minute report"
+        },
+        {
+          "id": "positions",
+          "label": "A's dictionary fields must be read by numeric position"
+        }
+      ],
+      "expected_answer": [
+        "normalized",
+        "duplicate",
+        "type"
+      ],
+      "explanation": "Strip A's ID to a; its duration is valid, but B duplicates that ID, so reject the pair.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-1-checkpoint-2",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module1 case: record A has id=' a ',topic='Math',minutes=25,completed=False; record B has id='a',topic='SQL',minutes=10,completed=True. Select EVERY true statement.",
+      "choices": [
+        {
+          "id": "normalized",
+          "label": "A's normalized ID is a"
+        },
+        {
+          "id": "duplicate",
+          "label": "Together A and B violate the normalized-ID uniqueness rule"
+        },
+        {
+          "id": "type",
+          "label": "A's integer duration25 passes the duration type/range rule"
+        },
+        {
+          "id": "skip",
+          "label": "A needs no validation because it is incomplete"
+        },
+        {
+          "id": "report",
+          "label": "The pair must produce a successful partial10-minute report"
+        },
+        {
+          "id": "positions",
+          "label": "A's dictionary fields must be read by numeric position"
+        }
+      ],
+      "expected_answer": [
+        "normalized",
+        "duplicate",
+        "type"
+      ],
+      "explanation": "Strip A's ID to a; its duration is valid, but B duplicates that ID, so reject the pair.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-1-checkpoint-3",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module1 case: record A has id=' a ',topic='Math',minutes=30,completed=False; record B has id='a',topic='SQL',minutes=10,completed=True. Select EVERY true statement.",
+      "choices": [
+        {
+          "id": "normalized",
+          "label": "A's normalized ID is a"
+        },
+        {
+          "id": "duplicate",
+          "label": "Together A and B violate the normalized-ID uniqueness rule"
+        },
+        {
+          "id": "type",
+          "label": "A's integer duration30 passes the duration type/range rule"
+        },
+        {
+          "id": "skip",
+          "label": "A needs no validation because it is incomplete"
+        },
+        {
+          "id": "report",
+          "label": "The pair must produce a successful partial10-minute report"
+        },
+        {
+          "id": "positions",
+          "label": "A's dictionary fields must be read by numeric position"
+        }
+      ],
+      "expected_answer": [
+        "normalized",
+        "duplicate",
+        "type"
+      ],
+      "explanation": "Strip A's ID to a; its duration is valid, but B duplicates that ID, so reject the pair.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-1-checkpoint-4",
+      "lesson_id": "pp-module-1-checkpoint",
+      "module_id": "pp-module-1",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module1 case: record A has id=' a ',topic='Math',minutes=35,completed=False; record B has id='a',topic='SQL',minutes=10,completed=True. Select EVERY true statement.",
+      "choices": [
+        {
+          "id": "normalized",
+          "label": "A's normalized ID is a"
+        },
+        {
+          "id": "duplicate",
+          "label": "Together A and B violate the normalized-ID uniqueness rule"
+        },
+        {
+          "id": "type",
+          "label": "A's integer duration35 passes the duration type/range rule"
+        },
+        {
+          "id": "skip",
+          "label": "A needs no validation because it is incomplete"
+        },
+        {
+          "id": "report",
+          "label": "The pair must produce a successful partial10-minute report"
+        },
+        {
+          "id": "positions",
+          "label": "A's dictionary fields must be read by numeric position"
+        }
+      ],
+      "expected_answer": [
+        "normalized",
+        "duplicate",
+        "type"
+      ],
+      "explanation": "Strip A's ID to a; its duration is valid, but B duplicates that ID, so reject the pair.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-module-1-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-filter-practice",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "mode": "practice",
+      "kind": "number",
+      "prompt": "Valid durations/flags are (25,True), (40,False), (35,True). What is the completed total?",
+      "choices": [],
+      "expected_answer": 60,
+      "explanation": "25 + 35 is 60.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-filter-checkpoint-1",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "Valid durations/flags are (12,True), (50,False), (18,True). What is the completed total?",
+      "choices": [],
+      "expected_answer": 30,
+      "explanation": "The completed total is 12 + 18 = 30.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-filter-checkpoint-2",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "Valid durations/flags are (15,True), (20,False), (25,True). What is the completed total?",
+      "choices": [],
+      "expected_answer": 40,
+      "explanation": "The completed total is 15 + 25 = 40.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-filter-checkpoint-3",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "Valid durations/flags are (1,True), (180,False), (9,True). What is the completed total?",
+      "choices": [],
+      "expected_answer": 10,
+      "explanation": "The completed total is 1 + 9 = 10.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-filter-checkpoint-4",
+      "lesson_id": "pp-filter",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "Valid durations/flags are (60,True), (30,False), (45,True). What is the completed total?",
+      "choices": [],
+      "expected_answer": 105,
+      "explanation": "The completed total is 60 + 45 = 105.",
+      "evidence_ids": [
+        "pp-filter-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-group-practice",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "mode": "practice",
+      "kind": "number",
+      "prompt": "Completed Python sessions have 25 and 35 minutes; SQL has 30. What is Python's grouped total?",
+      "choices": [],
+      "expected_answer": 60,
+      "explanation": "25 + 35 is 60.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-group-checkpoint-1",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "A grouping loop uses totals[t] = totals.get(t,0) + minutes. Completed topic X appears with 10 and 15 minutes. What is totals['X']?",
+      "choices": [],
+      "expected_answer": 25,
+      "explanation": "The total is 25, not only 15.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-group-checkpoint-2",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "A grouping loop uses totals[t] = totals.get(t,0) + minutes. Completed topic X appears with 1 and 1 minutes. What is totals['X']?",
+      "choices": [],
+      "expected_answer": 2,
+      "explanation": "The total is 2, not only 1.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-group-checkpoint-3",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "A grouping loop uses totals[t] = totals.get(t,0) + minutes. Completed topic X appears with 60 and 40 minutes. What is totals['X']?",
+      "choices": [],
+      "expected_answer": 100,
+      "explanation": "The total is 100, not only 40.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-group-checkpoint-4",
+      "lesson_id": "pp-group",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "A grouping loop uses totals[t] = totals.get(t,0) + minutes. Completed topic X appears with 75 and 5 minutes. What is totals['X']?",
+      "choices": [],
+      "expected_answer": 80,
+      "explanation": "The total is 80, not only 5.",
+      "evidence_ids": [
+        "pp-group-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-order-practice",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "mode": "practice",
+      "kind": "ordered",
+      "prompt": "Order rows by descending minutes then ascending topic: Python20, SQL35, Math20.",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python20"
+        },
+        {
+          "id": "sql",
+          "label": "SQL35"
+        },
+        {
+          "id": "math",
+          "label": "Math20"
+        }
+      ],
+      "expected_answer": [
+        "sql",
+        "math",
+        "python"
+      ],
+      "explanation": "SQL35 precedes Math20 and Python20; Math precedes Python.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-order-checkpoint-1",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "ordered",
+      "prompt": "Use descending minutes then ascending topic. Order Python30, Math20, SQL30.",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python30"
+        },
+        {
+          "id": "math",
+          "label": "Math20"
+        },
+        {
+          "id": "sql",
+          "label": "SQL30"
+        }
+      ],
+      "expected_answer": [
+        "python",
+        "sql",
+        "math"
+      ],
+      "explanation": "Python and SQL tie at30; Python precedes SQL.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-order-checkpoint-2",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "ordered",
+      "prompt": "Use descending minutes then ascending topic. Order Python20, Math30, SQL30.",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python20"
+        },
+        {
+          "id": "math",
+          "label": "Math30"
+        },
+        {
+          "id": "sql",
+          "label": "SQL30"
+        }
+      ],
+      "expected_answer": [
+        "math",
+        "sql",
+        "python"
+      ],
+      "explanation": "Math and SQL tie at30; Math precedes SQL.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-order-checkpoint-3",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "ordered",
+      "prompt": "Use descending minutes then ascending topic. Order Python35, Math20, SQL10.",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python35"
+        },
+        {
+          "id": "math",
+          "label": "Math20"
+        },
+        {
+          "id": "sql",
+          "label": "SQL10"
+        }
+      ],
+      "expected_answer": [
+        "python",
+        "math",
+        "sql"
+      ],
+      "explanation": "All totals differ:35,20,10 in descending order.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-order-checkpoint-4",
+      "lesson_id": "pp-order",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "ordered",
+      "prompt": "Use descending minutes then ascending topic. Order Python20, Math20, SQL40.",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python20"
+        },
+        {
+          "id": "math",
+          "label": "Math20"
+        },
+        {
+          "id": "sql",
+          "label": "SQL40"
+        }
+      ],
+      "expected_answer": [
+        "sql",
+        "math",
+        "python"
+      ],
+      "explanation": "SQL is largest; Math precedes Python on the20 tie.",
+      "evidence_ids": [
+        "pp-order-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-2-checkpoint-practice",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "mode": "practice",
+      "kind": "multiple",
+      "prompt": "Prepare for Deterministic transformations. Select EVERY sound review action.",
+      "choices": [
+        {
+          "id": "contract",
+          "label": "Restate the relevant input/output and failure rules"
+        },
+        {
+          "id": "trace",
+          "label": "Trace the stated case and explain each inclusion or rejection"
+        },
+        {
+          "id": "derive",
+          "label": "Derive expected results from the contract rather than copying program output"
+        },
+        {
+          "id": "guess",
+          "label": "Mark every option correct whenever a final total looks plausible"
+        }
+      ],
+      "expected_answer": [
+        "contract",
+        "trace",
+        "derive"
+      ],
+      "explanation": "Restate the rules,trace the case,and independently justify results. Guessing from appearance is insufficient.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-2-checkpoint-1",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module2 case: completed Python20, completed Math20, incomplete SQL40, completed Python10. All input validates. Select EVERY true report statement.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The total is50"
+        },
+        {
+          "id": "python",
+          "label": "Python's grouped total is30"
+        },
+        {
+          "id": "order",
+          "label": "Ordered topics are Python30, then Math20"
+        },
+        {
+          "id": "sql",
+          "label": "Incomplete SQL40 adds40 to the completed total"
+        },
+        {
+          "id": "overwrite",
+          "label": "Python's total should be overwritten with the final10"
+        },
+        {
+          "id": "mutation",
+          "label": "The original records must be edited to build totals"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "python",
+        "order"
+      ],
+      "explanation": "Filter SQL40, add repeated Python contributions, then order:30>20.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-2-checkpoint-2",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module2 case: completed Python25, completed Math25, incomplete SQL40, completed Python10. All input validates. Select EVERY true report statement.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The total is60"
+        },
+        {
+          "id": "python",
+          "label": "Python's grouped total is35"
+        },
+        {
+          "id": "order",
+          "label": "Ordered topics are Python35, then Math25"
+        },
+        {
+          "id": "sql",
+          "label": "Incomplete SQL40 adds40 to the completed total"
+        },
+        {
+          "id": "overwrite",
+          "label": "Python's total should be overwritten with the final10"
+        },
+        {
+          "id": "mutation",
+          "label": "The original records must be edited to build totals"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "python",
+        "order"
+      ],
+      "explanation": "Filter SQL40, add repeated Python contributions, then order:35>25.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-2-checkpoint-3",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module2 case: completed Python30, completed Math30, incomplete SQL40, completed Python10. All input validates. Select EVERY true report statement.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The total is70"
+        },
+        {
+          "id": "python",
+          "label": "Python's grouped total is40"
+        },
+        {
+          "id": "order",
+          "label": "Ordered topics are Python40, then Math30"
+        },
+        {
+          "id": "sql",
+          "label": "Incomplete SQL40 adds40 to the completed total"
+        },
+        {
+          "id": "overwrite",
+          "label": "Python's total should be overwritten with the final10"
+        },
+        {
+          "id": "mutation",
+          "label": "The original records must be edited to build totals"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "python",
+        "order"
+      ],
+      "explanation": "Filter SQL40, add repeated Python contributions, then order:40>30.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-2-checkpoint-4",
+      "lesson_id": "pp-module-2-checkpoint",
+      "module_id": "pp-module-2",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Module2 case: completed Python35, completed Math35, incomplete SQL40, completed Python10. All input validates. Select EVERY true report statement.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The total is80"
+        },
+        {
+          "id": "python",
+          "label": "Python's grouped total is45"
+        },
+        {
+          "id": "order",
+          "label": "Ordered topics are Python45, then Math35"
+        },
+        {
+          "id": "sql",
+          "label": "Incomplete SQL40 adds40 to the completed total"
+        },
+        {
+          "id": "overwrite",
+          "label": "Python's total should be overwritten with the final10"
+        },
+        {
+          "id": "mutation",
+          "label": "The original records must be edited to build totals"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "python",
+        "order"
+      ],
+      "explanation": "Filter SQL40, add repeated Python contributions, then order:45>35.",
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-module-2-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-functions-practice",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "mode": "practice",
+      "kind": "number",
+      "prompt": "A function starts local total=0, adds 12 then 18 and returns total. What does a second identical call return?",
+      "choices": [],
+      "expected_answer": 30,
+      "explanation": "The second call again returns 30, not 60.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-functions-checkpoint-1",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "f(records) initializes local total=0 and returns the sum of 4 and 6. After one call, what does a second identical call return?",
+      "choices": [],
+      "expected_answer": 10,
+      "explanation": "Both calls independently return 10.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-functions-checkpoint-2",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "f(records) initializes local total=0 and returns the sum of 11 and 9. After one call, what does a second identical call return?",
+      "choices": [],
+      "expected_answer": 20,
+      "explanation": "Both calls independently return 20.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-functions-checkpoint-3",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "f(records) initializes local total=0 and returns the sum of 20 and 30. After one call, what does a second identical call return?",
+      "choices": [],
+      "expected_answer": 50,
+      "explanation": "Both calls independently return 50.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-functions-checkpoint-4",
+      "lesson_id": "pp-functions",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "f(records) initializes local total=0 and returns the sum of 1 and 179. After one call, what does a second identical call return?",
+      "choices": [],
+      "expected_answer": 180,
+      "explanation": "Both calls independently return 180.",
+      "evidence_ids": [
+        "pp-functions-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-pipeline-practice",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "mode": "practice",
+      "kind": "ordered",
+      "prompt": "Order the pipeline so malformed incomplete records cannot bypass validation.",
+      "choices": [
+        {
+          "id": "present",
+          "label": "Present report"
+        },
+        {
+          "id": "order",
+          "label": "Order grouped rows"
+        },
+        {
+          "id": "summarize",
+          "label": "Summarize valid completed records"
+        },
+        {
+          "id": "validate",
+          "label": "Validate and normalize every record"
+        }
+      ],
+      "expected_answer": [
+        "validate",
+        "summarize",
+        "order",
+        "present"
+      ],
+      "explanation": "Validate all input, summarize, order rows, then present.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-pipeline-checkpoint-1",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Validation fails on the last row. Which next action would violate the pipeline contract?",
+      "choices": [
+        {
+          "id": "summarize",
+          "label": "Summarize earlier rows and present a successful report"
+        },
+        {
+          "id": "signal",
+          "label": "Signal the validation error without an accepted report"
+        }
+      ],
+      "expected_answer": "summarize",
+      "explanation": "A normal-looking partial report would bypass the validation boundary.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-pipeline-checkpoint-2",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which input contract should summarize(valid_records) rely on?",
+      "choices": [
+        {
+          "id": "raw",
+          "label": "Arbitrary unvalidated rows"
+        },
+        {
+          "id": "validated",
+          "label": "Every row has passed normalization and validation"
+        },
+        {
+          "id": "printed",
+          "label": "Already formatted display text"
+        }
+      ],
+      "expected_answer": "validated",
+      "explanation": "The summarizer consumes accepted records rather than reinterpreting arbitrary input or display text.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-pipeline-checkpoint-3",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "An incomplete row has minutes181. Which pipeline ordering violates the contract?",
+      "choices": [
+        {
+          "id": "validate-first",
+          "label": "Validate every row before selecting completed rows"
+        },
+        {
+          "id": "filter-first",
+          "label": "Remove incomplete rows before validating the remaining rows"
+        }
+      ],
+      "expected_answer": "filter-first",
+      "explanation": "Filtering first hides the malformed incomplete row that should reject the whole dataset.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-pipeline-checkpoint-4",
+      "lesson_id": "pp-pipeline",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Select every useful pairing of helper and isolated test.",
+      "choices": [
+        {
+          "id": "normalizer",
+          "label": "Normalizer: a blank topic must reject input"
+        },
+        {
+          "id": "ordering",
+          "label": "Ordering helper: equal totals use topic-text order"
+        },
+        {
+          "id": "composition",
+          "label": "Whole pipeline: invalid last row produces no accepted report"
+        },
+        {
+          "id": "skip",
+          "label": "Normalizer: silently drop any invalid incomplete row"
+        }
+      ],
+      "expected_answer": [
+        "normalizer",
+        "ordering",
+        "composition"
+      ],
+      "explanation": "The first three cases verify distinct boundaries; silently dropping invalid rows changes the policy.",
+      "evidence_ids": [
+        "pp-pipeline-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-tests-practice",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "mode": "practice",
+      "kind": "choice",
+      "prompt": "Which case distinguishes minutes <=180 from the incorrect minutes <180?",
+      "choices": [
+        {
+          "id": "normal",
+          "label": "minutes=30"
+        },
+        {
+          "id": "edge",
+          "label": "minutes=180"
+        },
+        {
+          "id": "outside",
+          "label": "minutes=181"
+        }
+      ],
+      "expected_answer": "edge",
+      "explanation": "180 is accepted by <= and rejected by <.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-tests-checkpoint-1",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which case exposes starting total from records[0]?",
+      "choices": [
+        {
+          "id": "empty",
+          "label": "Empty input"
+        },
+        {
+          "id": "one",
+          "label": "One completed record"
+        }
+      ],
+      "expected_answer": "empty",
+      "explanation": "Empty input has no first record but must return a zero report.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-tests-checkpoint-2",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which duration exposes accepting every isinstance(x,int) value?",
+      "choices": [
+        {
+          "id": "bool",
+          "label": "True"
+        },
+        {
+          "id": "int",
+          "label": "30"
+        }
+      ],
+      "expected_answer": "bool",
+      "explanation": "The contract rejects bool even though it is an int subtype.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-tests-checkpoint-3",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which pair exposes missing normalized-ID uniqueness?",
+      "choices": [
+        {
+          "id": "duplicate",
+          "label": "IDs ' a ' and 'a'"
+        },
+        {
+          "id": "unique",
+          "label": "IDs 'a' and 'b'"
+        }
+      ],
+      "expected_answer": "duplicate",
+      "explanation": "The first pair becomes duplicate after stripping.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-tests-checkpoint-4",
+      "lesson_id": "pp-tests",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which case exposes reporting before validating incomplete records?",
+      "choices": [
+        {
+          "id": "valid",
+          "label": "Valid incomplete duration30"
+        },
+        {
+          "id": "invalid",
+          "label": "Incomplete duration181"
+        }
+      ],
+      "expected_answer": "invalid",
+      "explanation": "An invalid incomplete record must reject the dataset.",
+      "evidence_ids": [
+        "pp-tests-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-3-checkpoint-practice",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "mode": "practice",
+      "kind": "multiple",
+      "prompt": "Prepare for Functions and testable design. Select EVERY sound review action.",
+      "choices": [
+        {
+          "id": "contract",
+          "label": "Restate the relevant input/output and failure rules"
+        },
+        {
+          "id": "trace",
+          "label": "Trace the stated case and explain each inclusion or rejection"
+        },
+        {
+          "id": "derive",
+          "label": "Derive expected results from the contract rather than copying program output"
+        },
+        {
+          "id": "guess",
+          "label": "Mark every option correct whenever a final total looks plausible"
+        }
+      ],
+      "expected_answer": [
+        "contract",
+        "trace",
+        "derive"
+      ],
+      "explanation": "Restate the rules,trace the case,and independently justify results. Guessing from appearance is insufficient.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-3-checkpoint-1",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "A helper keeps a global total,filters before validation,and has only an ordinary30-minute test. Select EVERY justified repair.",
+      "choices": [
+        {
+          "id": "local",
+          "label": "Initialize a fresh local accumulator for each call"
+        },
+        {
+          "id": "validate",
+          "label": "Validate every input row before summarizing"
+        },
+        {
+          "id": "tests",
+          "label": "Add independently justified empty,boundary and repeated-call cases"
+        },
+        {
+          "id": "copy",
+          "label": "Copy the current program output as the sole expected result"
+        },
+        {
+          "id": "hide",
+          "label": "Skip malformed incomplete records before validation"
+        }
+      ],
+      "expected_answer": [
+        "local",
+        "validate",
+        "tests"
+      ],
+      "explanation": "Fresh locals,correct pipeline order and discriminating independent tests target the three faults.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-3-checkpoint-2",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "A proposed analyzer edits input records,prints its report instead of returning data,and catches late validation failure to return a partial sum. Select EVERY justified repair.",
+      "choices": [
+        {
+          "id": "fresh",
+          "label": "Construct fresh result structures without editing submitted records"
+        },
+        {
+          "id": "return",
+          "label": "Return a report data structure for the caller"
+        },
+        {
+          "id": "error",
+          "label": "Signal invalid input without an accepted partial report"
+        },
+        {
+          "id": "global",
+          "label": "Keep totals globally so repeated calls can accumulate old work"
+        },
+        {
+          "id": "skip",
+          "label": "Leave incomplete rows unvalidated"
+        }
+      ],
+      "expected_answer": [
+        "fresh",
+        "return",
+        "error"
+      ],
+      "explanation": "Preserve ownership,return usable data,and keep the whole-dataset failure boundary visible.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-3-checkpoint-3",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "A test plan copies current implementation output,omits duration endpoints,and calls the analyzer only once. Select EVERY improvement that supplies independent evidence.",
+      "choices": [
+        {
+          "id": "manual",
+          "label": "Derive small expected reports manually from the written contract"
+        },
+        {
+          "id": "boundaries",
+          "label": "Include accepted1/180 and rejected0/181 durations"
+        },
+        {
+          "id": "repeat",
+          "label": "Repeat unchanged valid input and verify stable output and unchanged input"
+        },
+        {
+          "id": "count",
+          "label": "Replace these checks with many ordinary30-minute examples only"
+        },
+        {
+          "id": "belief",
+          "label": "Assume a helper name proves the implementation obeys its contract"
+        }
+      ],
+      "expected_answer": [
+        "manual",
+        "boundaries",
+        "repeat"
+      ],
+      "explanation": "Independent results,boundary distinctions and repeat/nonmutation checks target different faults.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-3-checkpoint-4",
+      "lesson_id": "pp-module-3-checkpoint",
+      "module_id": "pp-module-3",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "A pipeline formats raw input first,then validates only completed rows,and sends formatted text to a numeric summarizer. Select EVERY justified boundary repair.",
+      "choices": [
+        {
+          "id": "all",
+          "label": "Validate and normalize all records before selection"
+        },
+        {
+          "id": "data",
+          "label": "Pass accepted record data to the summarizer"
+        },
+        {
+          "id": "last",
+          "label": "Order and present the report after summarization"
+        },
+        {
+          "id": "ignore",
+          "label": "Treat a formatted string as proof the numeric fields are valid"
+        },
+        {
+          "id": "partial",
+          "label": "Publish early totals before the last row is checked"
+        }
+      ],
+      "expected_answer": [
+        "all",
+        "data",
+        "last"
+      ],
+      "explanation": "Trust boundaries and helper input/output shapes must agree across the complete pipeline.",
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-module-3-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-errors-practice",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "mode": "practice",
+      "kind": "choice",
+      "prompt": "A valid completed25-minute record is followed by duration181. What is the accepted result?",
+      "choices": [
+        {
+          "id": "partial",
+          "label": "A 25-minute report"
+        },
+        {
+          "id": "error",
+          "label": "An invalid_minutes error and no accepted report"
+        },
+        {
+          "id": "skip",
+          "label": "Silently skip the second record"
+        }
+      ],
+      "expected_answer": "error",
+      "explanation": "The later invalid record prevents an accepted report.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-errors-checkpoint-1",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A dataset has three valid records followed by an invalid incomplete record. What is accepted?",
+      "choices": [
+        {
+          "id": "partial",
+          "label": "A report for only the first three records"
+        },
+        {
+          "id": "error",
+          "label": "A validation error; no normal report"
+        },
+        {
+          "id": "zero",
+          "label": "A zero report, labelled successful"
+        }
+      ],
+      "expected_answer": "error",
+      "explanation": "A late invalid record rejects the whole dataset.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-errors-checkpoint-2",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A required minutes field is missing. Which handling preserves the contract?",
+      "choices": [
+        {
+          "id": "zero",
+          "label": "Substitute zero and mark the report successful"
+        },
+        {
+          "id": "reject",
+          "label": "Signal invalid_fields and accept no normal report"
+        }
+      ],
+      "expected_answer": "reject",
+      "explanation": "A missing required field is a validation failure.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-errors-checkpoint-3",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A broad catch returns the partial total after any validation exception. What is wrong?",
+      "choices": [
+        {
+          "id": "policy",
+          "label": "It disguises failure as an accepted partial report"
+        },
+        {
+          "id": "nothing",
+          "label": "Nothing: catching any error proves robustness"
+        }
+      ],
+      "expected_answer": "policy",
+      "explanation": "The contract rejects the whole dataset; suppressing an error does not repair its meaning.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-errors-checkpoint-4",
+      "lesson_id": "pp-errors",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which signaling design can satisfy the authored failure policy?",
+      "choices": [
+        {
+          "id": "exception-only",
+          "label": "Only exceptions, regardless of what the caller does"
+        },
+        {
+          "id": "either",
+          "label": "A specific exception or structured error, provided invalid input has no accepted report"
+        },
+        {
+          "id": "partial",
+          "label": "Any design that returns the earlier total"
+        }
+      ],
+      "expected_answer": "either",
+      "explanation": "Either error mechanism can work when the caller preserves whole-dataset failure.",
+      "evidence_ids": [
+        "pp-errors-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-integration-practice",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "mode": "practice",
+      "kind": "number",
+      "prompt": "For the five fixed capstone records, what is the completed-minute total?",
+      "choices": [],
+      "expected_answer": 110,
+      "explanation": "25+35+20+30 = 110.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-integration-checkpoint-1",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "The fixed report totals110. If the incomplete SQL40 session becomes completed and a new valid completed Math5 session is added, what is the new total?",
+      "choices": [],
+      "expected_answer": 155,
+      "explanation": "110+40+5 = 155.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-integration-checkpoint-2",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "The fixed report totals110. If the incomplete SQL40 session becomes completed and a new valid completed Math10 session is added, what is the new total?",
+      "choices": [],
+      "expected_answer": 160,
+      "explanation": "110+40+10 = 160.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-integration-checkpoint-3",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "The fixed report totals110. If the incomplete SQL40 session becomes completed and a new valid completed Math15 session is added, what is the new total?",
+      "choices": [],
+      "expected_answer": 165,
+      "explanation": "110+40+15 = 165.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-integration-checkpoint-4",
+      "lesson_id": "pp-integration",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "number",
+      "prompt": "The fixed report totals110. If the incomplete SQL40 session becomes completed and a new valid completed Math25 session is added, what is the new total?",
+      "choices": [],
+      "expected_answer": 175,
+      "explanation": "110+40+25 = 175.",
+      "evidence_ids": [
+        "pp-integration-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-evidence-practice",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "mode": "practice",
+      "kind": "choice",
+      "prompt": "Which statement is justified by a saved project submission alone?",
+      "choices": [
+        {
+          "id": "executed",
+          "label": "The submitted code executed correctly"
+        },
+        {
+          "id": "mastered",
+          "label": "The learner mastered Python"
+        },
+        {
+          "id": "submitted",
+          "label": "A project artifact was submitted for human review"
+        }
+      ],
+      "expected_answer": "submitted",
+      "explanation": "Saving text establishes submission, not execution or mastery.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-evidence-checkpoint-1",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "A review note says: 'The capstone text is saved and has evidence links.' Which conclusion is supported?",
+      "choices": [
+        {
+          "id": "artifact",
+          "label": "There is a reviewable saved artifact"
+        },
+        {
+          "id": "runtime",
+          "label": "All code passed runtime tests"
+        },
+        {
+          "id": "career",
+          "label": "The learner is career-ready"
+        }
+      ],
+      "expected_answer": "artifact",
+      "explanation": "The saved artifact supports a review workflow only.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-evidence-checkpoint-2",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Which source establishes this project's maximum duration of180 minutes?",
+      "choices": [
+        {
+          "id": "python",
+          "label": "Python's general dictionary documentation"
+        },
+        {
+          "id": "spec",
+          "label": "The authored analyzer specification"
+        },
+        {
+          "id": "timer",
+          "label": "The learner's recorded study time"
+        }
+      ],
+      "expected_answer": "spec",
+      "explanation": "The180-minute boundary is an authored project rule,not a Python dictionary rule.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-evidence-checkpoint-3",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "What can a completed-minute total of110 establish?",
+      "choices": [
+        {
+          "id": "activity",
+          "label": "The amount of recorded completed activity under the stated contract"
+        },
+        {
+          "id": "mastery",
+          "label": "Calibrated mastery of Python"
+        },
+        {
+          "id": "execution",
+          "label": "Successful execution of the submitted program"
+        }
+      ],
+      "expected_answer": "activity",
+      "explanation": "The report summarizes its records; it does not calibrate ability or execute a program.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-evidence-checkpoint-4",
+      "lesson_id": "pp-evidence",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "choice",
+      "prompt": "Every quote locator resolves. Which further review is still needed?",
+      "choices": [
+        {
+          "id": "none",
+          "label": "None; matching text proves every claim correct"
+        },
+        {
+          "id": "support",
+          "label": "A human must assess whether the located material supports each teaching claim"
+        }
+      ],
+      "expected_answer": "support",
+      "explanation": "Exact locators establish where text is stored,not that every interpretation is justified.",
+      "evidence_ids": [
+        "pp-evidence-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-4-checkpoint-practice",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "mode": "practice",
+      "kind": "multiple",
+      "prompt": "Prepare for Integrated report and evidence. Select EVERY sound review action.",
+      "choices": [
+        {
+          "id": "contract",
+          "label": "Restate the relevant input/output and failure rules"
+        },
+        {
+          "id": "trace",
+          "label": "Trace the stated case and explain each inclusion or rejection"
+        },
+        {
+          "id": "derive",
+          "label": "Derive expected results from the contract rather than copying program output"
+        },
+        {
+          "id": "guess",
+          "label": "Mark every option correct whenever a final total looks plausible"
+        }
+      ],
+      "expected_answer": [
+        "contract",
+        "trace",
+        "derive"
+      ],
+      "explanation": "Restate the rules,trace the case,and independently justify results. Guessing from appearance is insufficient.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-4-checkpoint-1",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Fixed records: completed Python25, incomplete SQL40, completed Python35, completed Math20, completed SQL30; all IDs are distinct and other fields valid. Cumulative case: the incomplete SQL40 becomes completed and a new valid completed Math5 record with unique ID is added. Separately, consider a variant with an additional Boolean duration. Select EVERY statement justified by the whole course contract.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The valid changed dataset totals155 completed minutes"
+        },
+        {
+          "id": "groups",
+          "label": "Its topics have SQL70,Python60,Math25 minutes"
+        },
+        {
+          "id": "order",
+          "label": "The row order is SQL70,Python60,Math25"
+        },
+        {
+          "id": "invalid",
+          "label": "The separate Boolean-duration variant must error instead of returning a partial report"
+        },
+        {
+          "id": "repeat",
+          "label": "A fresh local,nonmutating analyzer should return the same report on repeated unchanged valid input"
+        },
+        {
+          "id": "test",
+          "label": "Expected test results should be justified from the contract,not copied only from program output"
+        },
+        {
+          "id": "evidence",
+          "label": "The input contract and authored integration trace can support these design claims"
+        },
+        {
+          "id": "status",
+          "label": "A saved text capstone is submitted evidence for human review,not proof of runtime success"
+        },
+        {
+          "id": "skip",
+          "label": "Incomplete records never need validation"
+        },
+        {
+          "id": "overwrite",
+          "label": "Grouping replaces Python's earlier25 with35"
+        },
+        {
+          "id": "execution",
+          "label": "Submitting code text authorizes the app to execute it"
+        },
+        {
+          "id": "mastery",
+          "label": "Recorded minutes certify career readiness"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "groups",
+        "order",
+        "invalid",
+        "repeat",
+        "test",
+        "evidence",
+        "status"
+      ],
+      "explanation": "110+40+5=155; topic totals follow the same included records. Validation,repeatability,independent testing and honest submission/evidence limits still apply.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-4-checkpoint-2",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Fixed records: completed Python25, incomplete SQL40, completed Python35, completed Math20, completed SQL30; all IDs are distinct and other fields valid. Cumulative case: the incomplete SQL40 becomes completed and a new valid completed Math10 record with unique ID is added. Separately, consider a variant with an additional Boolean duration. Select EVERY statement justified by the whole course contract.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The valid changed dataset totals160 completed minutes"
+        },
+        {
+          "id": "groups",
+          "label": "Its topics have SQL70,Python60,Math30 minutes"
+        },
+        {
+          "id": "order",
+          "label": "The row order is SQL70,Python60,Math30"
+        },
+        {
+          "id": "invalid",
+          "label": "The separate Boolean-duration variant must error instead of returning a partial report"
+        },
+        {
+          "id": "repeat",
+          "label": "A fresh local,nonmutating analyzer should return the same report on repeated unchanged valid input"
+        },
+        {
+          "id": "test",
+          "label": "Expected test results should be justified from the contract,not copied only from program output"
+        },
+        {
+          "id": "evidence",
+          "label": "The input contract and authored integration trace can support these design claims"
+        },
+        {
+          "id": "status",
+          "label": "A saved text capstone is submitted evidence for human review,not proof of runtime success"
+        },
+        {
+          "id": "skip",
+          "label": "Incomplete records never need validation"
+        },
+        {
+          "id": "overwrite",
+          "label": "Grouping replaces Python's earlier25 with35"
+        },
+        {
+          "id": "execution",
+          "label": "Submitting code text authorizes the app to execute it"
+        },
+        {
+          "id": "mastery",
+          "label": "Recorded minutes certify career readiness"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "groups",
+        "order",
+        "invalid",
+        "repeat",
+        "test",
+        "evidence",
+        "status"
+      ],
+      "explanation": "110+40+10=160; topic totals follow the same included records. Validation,repeatability,independent testing and honest submission/evidence limits still apply.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-4-checkpoint-3",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Fixed records: completed Python25, incomplete SQL40, completed Python35, completed Math20, completed SQL30; all IDs are distinct and other fields valid. Cumulative case: the incomplete SQL40 becomes completed and a new valid completed Math15 record with unique ID is added. Separately, consider a variant with an additional Boolean duration. Select EVERY statement justified by the whole course contract.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The valid changed dataset totals165 completed minutes"
+        },
+        {
+          "id": "groups",
+          "label": "Its topics have SQL70,Python60,Math35 minutes"
+        },
+        {
+          "id": "order",
+          "label": "The row order is SQL70,Python60,Math35"
+        },
+        {
+          "id": "invalid",
+          "label": "The separate Boolean-duration variant must error instead of returning a partial report"
+        },
+        {
+          "id": "repeat",
+          "label": "A fresh local,nonmutating analyzer should return the same report on repeated unchanged valid input"
+        },
+        {
+          "id": "test",
+          "label": "Expected test results should be justified from the contract,not copied only from program output"
+        },
+        {
+          "id": "evidence",
+          "label": "The input contract and authored integration trace can support these design claims"
+        },
+        {
+          "id": "status",
+          "label": "A saved text capstone is submitted evidence for human review,not proof of runtime success"
+        },
+        {
+          "id": "skip",
+          "label": "Incomplete records never need validation"
+        },
+        {
+          "id": "overwrite",
+          "label": "Grouping replaces Python's earlier25 with35"
+        },
+        {
+          "id": "execution",
+          "label": "Submitting code text authorizes the app to execute it"
+        },
+        {
+          "id": "mastery",
+          "label": "Recorded minutes certify career readiness"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "groups",
+        "order",
+        "invalid",
+        "repeat",
+        "test",
+        "evidence",
+        "status"
+      ],
+      "explanation": "110+40+15=165; topic totals follow the same included records. Validation,repeatability,independent testing and honest submission/evidence limits still apply.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    },
+    {
+      "exercise_id": "pp-module-4-checkpoint-4",
+      "lesson_id": "pp-module-4-checkpoint",
+      "module_id": "pp-module-4",
+      "mode": "checkpoint",
+      "kind": "multiple",
+      "prompt": "Fixed records: completed Python25, incomplete SQL40, completed Python35, completed Math20, completed SQL30; all IDs are distinct and other fields valid. Cumulative case: the incomplete SQL40 becomes completed and a new valid completed Math20 record with unique ID is added. Separately, consider a variant with an additional Boolean duration. Select EVERY statement justified by the whole course contract.",
+      "choices": [
+        {
+          "id": "total",
+          "label": "The valid changed dataset totals170 completed minutes"
+        },
+        {
+          "id": "groups",
+          "label": "Its topics have SQL70,Python60,Math40 minutes"
+        },
+        {
+          "id": "order",
+          "label": "The row order is SQL70,Python60,Math40"
+        },
+        {
+          "id": "invalid",
+          "label": "The separate Boolean-duration variant must error instead of returning a partial report"
+        },
+        {
+          "id": "repeat",
+          "label": "A fresh local,nonmutating analyzer should return the same report on repeated unchanged valid input"
+        },
+        {
+          "id": "test",
+          "label": "Expected test results should be justified from the contract,not copied only from program output"
+        },
+        {
+          "id": "evidence",
+          "label": "The input contract and authored integration trace can support these design claims"
+        },
+        {
+          "id": "status",
+          "label": "A saved text capstone is submitted evidence for human review,not proof of runtime success"
+        },
+        {
+          "id": "skip",
+          "label": "Incomplete records never need validation"
+        },
+        {
+          "id": "overwrite",
+          "label": "Grouping replaces Python's earlier25 with35"
+        },
+        {
+          "id": "execution",
+          "label": "Submitting code text authorizes the app to execute it"
+        },
+        {
+          "id": "mastery",
+          "label": "Recorded minutes certify career readiness"
+        }
+      ],
+      "expected_answer": [
+        "total",
+        "groups",
+        "order",
+        "invalid",
+        "repeat",
+        "test",
+        "evidence",
+        "status"
+      ],
+      "explanation": "110+40+20=170; topic totals follow the same included records. Validation,repeatability,independent testing and honest submission/evidence limits still apply.",
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence",
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence",
+        "pp-integration-evidence",
+        "pp-evidence-evidence",
+        "pp-module-4-checkpoint-evidence"
+      ],
+      "human_correct": true,
+      "severe_issue": false,
+      "human_notes": "Abir explicitly approved all assessment keys with no corrections."
+    }
+  ],
+  "lessons": [
+    {
+      "lesson_id": "pp-contract",
+      "title": "Turn a question into an explicit data contract",
+      "module_id": "pp-module-1",
+      "objective_ids": [
+        "pp-contract-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-records",
+      "title": "Read records without confusing keys, positions and aliases",
+      "module_id": "pp-module-1",
+      "objective_ids": [
+        "pp-records-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-validation",
+      "title": "Validate and normalize before accepting a dataset",
+      "module_id": "pp-module-1",
+      "objective_ids": [
+        "pp-validation-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-module-1-checkpoint",
+      "title": "Module1 composite checkpoint",
+      "module_id": "pp-module-1",
+      "objective_ids": [
+        "pp-contract-objective",
+        "pp-records-objective",
+        "pp-validation-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-filter",
+      "title": "Trace selection and accumulation as separate decisions",
+      "module_id": "pp-module-2",
+      "objective_ids": [
+        "pp-filter-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-group",
+      "title": "Group transformed records without overwriting earlier work",
+      "module_id": "pp-module-2",
+      "objective_ids": [
+        "pp-group-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-order",
+      "title": "Specify deterministic presentation and tie behavior",
+      "module_id": "pp-module-2",
+      "objective_ids": [
+        "pp-order-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-module-2-checkpoint",
+      "title": "Module2 composite checkpoint",
+      "module_id": "pp-module-2",
+      "objective_ids": [
+        "pp-filter-objective",
+        "pp-group-objective",
+        "pp-order-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-functions",
+      "title": "Separate returned results from hidden state changes",
+      "module_id": "pp-module-3",
+      "objective_ids": [
+        "pp-functions-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-pipeline",
+      "title": "Decompose a pipeline at meaningful trust boundaries",
+      "module_id": "pp-module-3",
+      "objective_ids": [
+        "pp-pipeline-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-tests",
+      "title": "Choose test cases that distinguish correct and incorrect rules",
+      "module_id": "pp-module-3",
+      "objective_ids": [
+        "pp-tests-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-module-3-checkpoint",
+      "title": "Module3 composite checkpoint",
+      "module_id": "pp-module-3",
+      "objective_ids": [
+        "pp-functions-objective",
+        "pp-pipeline-objective",
+        "pp-tests-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-errors",
+      "title": "Make invalid input a visible whole-pipeline outcome",
+      "module_id": "pp-module-4",
+      "objective_ids": [
+        "pp-errors-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-integration",
+      "title": "Trace the complete analyzer and reconcile its invariants",
+      "module_id": "pp-module-4",
+      "objective_ids": [
+        "pp-integration-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-evidence",
+      "title": "Explain what the report and its evidence can actually establish",
+      "module_id": "pp-module-4",
+      "objective_ids": [
+        "pp-evidence-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    },
+    {
+      "lesson_id": "pp-module-4-checkpoint",
+      "title": "Cumulative course checkpoint",
+      "module_id": "pp-module-4",
+      "objective_ids": [
+        "pp-contract-objective",
+        "pp-records-objective",
+        "pp-validation-objective",
+        "pp-filter-objective",
+        "pp-group-objective",
+        "pp-order-objective",
+        "pp-functions-objective",
+        "pp-pipeline-objective",
+        "pp-tests-objective",
+        "pp-errors-objective",
+        "pp-integration-objective",
+        "pp-evidence-objective"
+      ],
+      "human_sufficient": true,
+      "human_notes": ""
+    }
+  ],
+  "rubric": [
+    {
+      "assignment_id": "pp-capstone",
+      "criterion_id": "specification",
+      "description": "State and apply the exact input/output contract.",
+      "objective_ids": [
+        "pp-contract-objective",
+        "pp-records-objective",
+        "pp-validation-objective"
+      ],
+      "evidence_ids": [
+        "pp-contract-evidence",
+        "pp-records-evidence",
+        "pp-validation-evidence"
+      ],
+      "review_guidance": "Check all required fields,strict types,1..180,normalized-ID uniqueness,case-sensitive stripped topics,validation of incomplete records and whole-dataset failure.",
+      "human_approved": true,
+      "human_notes": ""
+    },
+    {
+      "assignment_id": "pp-capstone",
+      "criterion_id": "report",
+      "description": "Justify the full report with a nonmutating trace.",
+      "objective_ids": [
+        "pp-filter-objective",
+        "pp-group-objective",
+        "pp-order-objective",
+        "pp-integration-objective"
+      ],
+      "evidence_ids": [
+        "pp-filter-evidence",
+        "pp-group-evidence",
+        "pp-order-evidence",
+        "pp-integration-evidence"
+      ],
+      "review_guidance": "For fixed input require count4,total110,Python60/SQL30/Math20 in that order. Check mixed completion,repeated topics and tie order; do not infer correctness from a matching total alone.",
+      "human_approved": true,
+      "human_notes": ""
+    },
+    {
+      "assignment_id": "pp-capstone",
+      "criterion_id": "tests",
+      "description": "Provide a decomposed design and discriminating independent tests.",
+      "objective_ids": [
+        "pp-functions-objective",
+        "pp-pipeline-objective",
+        "pp-tests-objective",
+        "pp-errors-objective"
+      ],
+      "evidence_ids": [
+        "pp-functions-evidence",
+        "pp-pipeline-evidence",
+        "pp-tests-evidence",
+        "pp-errors-evidence"
+      ],
+      "review_guidance": "Require fresh local state,no input mutation and validation-before-summary. Verify at least six cases including accepted endpoints,an invalid type,late invalid input,empty input and ties/repeated calls; expected results must be derived independently.",
+      "human_approved": true,
+      "human_notes": ""
+    },
+    {
+      "assignment_id": "pp-capstone",
+      "criterion_id": "evidence",
+      "description": "Explain source support and the limits of submission evidence.",
+      "objective_ids": [
+        "pp-evidence-objective"
+      ],
+      "evidence_ids": [
+        "pp-evidence-evidence",
+        "pp-capstone-evidence"
+      ],
+      "review_guidance": "Each key design claim should cite a relevant stored source. Reject claims that text length,self-review,stored minutes or app submission proves code execution,semantic correctness or career readiness.",
+      "human_approved": true,
+      "human_notes": ""
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "pp-contract-evidence",
+      "source_id": "pp-contract-source",
+      "locator": "authored/pp-contract/explanation/paragraph-1",
+      "quote": "A useful data contract states required fields, allowed types, boundaries and failure behavior before the calculation begins.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-records-evidence",
+      "source_id": "pp-records-source",
+      "locator": "authored/pp-records/explanation/paragraph-1",
+      "quote": "A dictionary lookup uses a key, while a list lookup uses a position; copying a list alone does not copy its nested dictionaries.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-validation-evidence",
+      "source_id": "pp-validation-source",
+      "locator": "authored/pp-validation/explanation/paragraph-1",
+      "quote": "Normalization makes a chosen representation consistent; it does not excuse an invalid value or silently change the stated policy.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/stdtypes.html#boolean-type-bool"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-module-1-checkpoint-evidence",
+      "source_id": "pp-module-1-checkpoint-source",
+      "locator": "authored/pp-module-1-checkpoint/review/paragraph-final",
+      "quote": "A composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-filter-evidence",
+      "source_id": "pp-filter-source",
+      "locator": "authored/pp-filter/explanation/paragraph-1",
+      "quote": "Filtering decides which valid records contribute; accumulation combines their values without changing the rule halfway through the loop.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#for-statements"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-group-evidence",
+      "source_id": "pp-group-source",
+      "locator": "authored/pp-group/explanation/paragraph-1",
+      "quote": "Grouping uses the normalized topic as a key and adds to its existing total rather than replacing earlier sessions.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#dictionaries"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-order-evidence",
+      "source_id": "pp-order-source",
+      "locator": "authored/pp-order/explanation/paragraph-1",
+      "quote": "A deterministic report specifies a primary sort key and an explicit tie key instead of relying on whichever record happened to arrive first.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/howto/sorting.html#key-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-module-2-checkpoint-evidence",
+      "source_id": "pp-module-2-checkpoint-source",
+      "locator": "authored/pp-module-2-checkpoint/review/paragraph-final",
+      "quote": "A composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-functions-evidence",
+      "source_id": "pp-functions-source",
+      "locator": "authored/pp-functions/explanation/paragraph-1",
+      "quote": "A function's inputs and returned result form a clearer testing boundary when it does not also change hidden shared state.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-pipeline-evidence",
+      "source_id": "pp-pipeline-source",
+      "locator": "authored/pp-pipeline/explanation/paragraph-1",
+      "quote": "Validate and normalize the entire input before summarizing it, then order and present the resulting report without silently changing the accepted data.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/controlflow.html#defining-functions"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-tests-evidence",
+      "source_id": "pp-tests-source",
+      "locator": "authored/pp-tests/explanation/paragraph-1",
+      "quote": "An expected result must be justified independently of the implementation under test, and boundary cases should distinguish plausible wrong rules.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-module-3-checkpoint-evidence",
+      "source_id": "pp-module-3-checkpoint-source",
+      "locator": "authored/pp-module-3-checkpoint/review/paragraph-final",
+      "quote": "A composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-errors-evidence",
+      "source_id": "pp-errors-source",
+      "locator": "authored/pp-errors/explanation/paragraph-1",
+      "quote": "A failure path should state which rule failed and prevent a normal-looking partial report from being mistaken for accepted output.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/errors.html#handling-exceptions"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-integration-evidence",
+      "source_id": "pp-integration-source",
+      "locator": "authored/pp-integration/explanation/paragraph-1",
+      "quote": "An integration trace follows validation, selection, totals, grouping and ordering together; agreement at only one intermediate stage is insufficient.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html#looping-techniques"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-evidence-evidence",
+      "source_id": "pp-evidence-source",
+      "locator": "authored/pp-evidence/explanation/paragraph-1",
+      "quote": "A saved explanation, a passing checkpoint and a submitted project are different evidence events; none alone proves that learner code executed correctly.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/library/unittest.html#basic-example"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-module-4-checkpoint-evidence",
+      "source_id": "pp-module-4-checkpoint-source",
+      "locator": "authored/pp-module-4-checkpoint/review/paragraph-final",
+      "quote": "A composite checkpoint requires the complete justified selection for its stated case; selecting only some correct statements is insufficient.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    },
+    {
+      "evidence_id": "pp-capstone-evidence",
+      "source_id": "pp-capstone-source",
+      "locator": "authored/pp-capstone/specification/final-paragraph",
+      "quote": "No submitted code runs in StudyVault. Submission is\nnot a correctness grade, an execution result or certification of mastery.",
+      "reference_urls": [
+        "https://docs.python.org/3.12/tutorial/datastructures.html",
+        "https://docs.python.org/3.12/library/unittest.html"
+      ],
+      "excerpt_matches_source": true,
+      "human_locator_checked": true,
+      "human_notes": ""
+    }
+  ],
+  "review_notes": "On 2026-11-20 Abir answered 'Approve the entire packet; no corrections' to the explicit human-review confirmation covering claims/supporting references, all keys/locators, lessons/rubric, rights, duration/scope and execution limits. Abir separately answered 'Add it to the local catalog'. Per-item decisions transcribe that blanket approval; no independent reviewer-study or separate item-specific rationale is claimed. reviewed_at records the confirmation receipt time. Authorization covers repository catalog publication only, not production deployment."
+}

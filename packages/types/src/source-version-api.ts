@@ -60,6 +60,12 @@ export const GithubOriginSchema = z.strictObject({
 });
 export type GithubOrigin = z.infer<typeof GithubOriginSchema>;
 
+export const TextOriginSchema = z.strictObject({
+  kind: z.literal('text').default('text'),
+  format: z.enum(['notes', 'txt', 'html', 'epub']),
+  line_count: z.number().int().min(1).max(2000),
+});
+
 export const PdfLocatorSchema = z.strictObject({
   kind: z.literal('pdf').default('pdf'),
   // ONE-based physical position in the PDF, independent from the printed label.
@@ -99,9 +105,27 @@ export const GithubLocatorSchema = z
   });
 export type GithubLocator = z.infer<typeof GithubLocatorSchema>;
 
-export const SourceLocatorSchema = z.discriminatedUnion('kind', [PdfLocatorSchema, GithubLocatorSchema]);
+export const TextLocatorSchema = z
+  .strictObject({
+    kind: z.literal('text').default('text'),
+    start_line: z.number().int().min(1).max(2000),
+    end_line: z.number().int().min(1).max(2000),
+  })
+  .refine(({ start_line, end_line }) => end_line >= start_line, {
+    message: 'Text lines must be ordered.',
+  });
+
+export const SourceLocatorSchema = z.discriminatedUnion('kind', [
+  PdfLocatorSchema,
+  GithubLocatorSchema,
+  TextLocatorSchema,
+]);
 export type SourceLocator = z.infer<typeof SourceLocatorSchema>;
-export const SourceOriginSchema = z.discriminatedUnion('kind', [PdfOriginSchema, GithubOriginSchema]);
+export const SourceOriginSchema = z.discriminatedUnion('kind', [
+  PdfOriginSchema,
+  GithubOriginSchema,
+  TextOriginSchema,
+]);
 export type SourceOrigin = z.infer<typeof SourceOriginSchema>;
 
 export const SourceRightsSchema = z
@@ -124,7 +148,7 @@ export type GithubFileProvenance = z.infer<typeof GithubFileProvenanceSchema>;
 
 export const SourceProvenanceSchema = z
   .strictObject({
-    adapter: z.enum(['legacy_pdf_chunks', 'github_selected_text']),
+    adapter: z.enum(['legacy_pdf_chunks', 'github_selected_text', 'local_utf8_text']),
     parser_name: boundedText(1, 120).nullable().default(null),
     parser_version: boundedText(1, 120).nullable().default(null),
     original_sha256: Hash.nullable().default(null),
@@ -133,6 +157,12 @@ export const SourceProvenanceSchema = z
       .array(GithubFileProvenanceSchema)
       .min(1)
       .max(16)
+      .nullish()
+      .transform((value) => value ?? undefined),
+    extraction_notes: z
+      .array(Text)
+      .min(1)
+      .max(8)
       .nullish()
       .transform((value) => value ?? undefined),
   })
@@ -150,6 +180,26 @@ export const SourceProvenanceSchema = z
       context.addIssue({
         code: 'custom',
         message: 'Legacy extraction cannot attest a parser or original-file hash.',
+      });
+    }
+    if (
+      value.adapter === 'local_utf8_text' &&
+      (value.parser_name !== 'studyvault-local-text' ||
+        value.parser_version !== '1' ||
+        value.original_sha256 === null ||
+        value.repository_files !== undefined ||
+        value.rights.status !== 'user_declared' ||
+        !value.rights.statement?.trim())
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Local text requires extraction provenance and a rights declaration.',
+      });
+    }
+    if (value.adapter !== 'local_utf8_text' && value.extraction_notes !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Extraction notes are reserved for local source adapters.',
       });
     }
   });
@@ -184,7 +234,7 @@ export const SourceSegmentSchema = z
   })
   .refine(
     (value) =>
-      value.locator.kind !== 'github' ||
+      value.locator.kind === 'pdf' ||
       lineCount(value.text) === value.locator.end_line - value.locator.start_line + 1,
     { message: 'Repository text must contain exactly the selected lines.' },
   );
@@ -206,14 +256,15 @@ export const SourceSnapshotSchema = z
         message: 'Segment identifiers must be unique.',
       });
     }
-    const adapter = value.origin.kind === 'pdf' ? 'legacy_pdf_chunks' : 'github_selected_text';
-    if (value.provenance.adapter !== adapter) {
+    const adapters = { pdf: 'legacy_pdf_chunks', github: 'github_selected_text', text: 'local_utf8_text' };
+    if (value.provenance.adapter !== adapters[value.origin.kind]) {
       context.addIssue({
         code: 'custom',
         path: ['provenance'],
         message: 'Adapter does not match the source kind.',
       });
     }
+    let nextTextLine = 1;
     value.segments.forEach((segment, index) => {
       if (segment.locator.kind !== value.origin.kind) {
         context.addIssue({
@@ -238,7 +289,35 @@ export const SourceSnapshotSchema = z
           });
         }
       }
+      if (segment.locator.kind === 'text') {
+        const { start_line: start, end_line: end } = segment.locator;
+        if (start !== nextTextLine || segment.id !== `text:L${start}-L${end}`) {
+          context.addIssue({
+            code: 'custom',
+            path: ['segments', index],
+            message: 'Text segments must use consecutive line ranges and stable identifiers.',
+          });
+        }
+        nextTextLine = end + 1;
+      }
     });
+    if (value.origin.kind === 'text' && value.origin.line_count !== nextTextLine - 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['origin', 'line_count'],
+        message: 'Text segments must cover the declared lines.',
+      });
+    }
+    if (
+      value.origin.kind === 'text' &&
+      ['html', 'epub'].includes(value.origin.format) !== (value.provenance.extraction_notes !== undefined)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['provenance'],
+        message: 'Markup-derived line locators require extraction notes.',
+      });
+    }
     if (value.provenance.repository_files !== undefined) {
       const paths = value.provenance.repository_files.map((file) => file.path);
       if (
@@ -301,3 +380,41 @@ export const ResolvedEvidenceSchema = z.strictObject({
   source_version_url: WireString,
 });
 export type ResolvedEvidence = z.infer<typeof ResolvedEvidenceSchema>;
+
+const LocalTextMetadata = {
+  title: boundedText(1, 200).refine((value) => !!value.trim()),
+  rights_statement: boundedText(1, 1000).refine((value) => !!value.trim()),
+};
+
+const localFileBody = {
+  ...LocalTextMetadata,
+  filename: boundedText(5, 200),
+  content_base64: z
+    .string()
+    .min(4)
+    .max(Math.ceil((128 * 1024) / 3) * 4),
+};
+
+export const LocalTextImportSchema = z.discriminatedUnion('format', [
+  z.strictObject({
+    ...LocalTextMetadata,
+    format: z.literal('notes'),
+    text: boundedText(1, 128 * 1024),
+  }),
+  z.strictObject({
+    ...localFileBody,
+    format: z.literal('txt'),
+    media_type: z.literal('text/plain'),
+  }),
+  z.strictObject({
+    ...localFileBody,
+    format: z.literal('html'),
+    media_type: z.literal('text/html'),
+  }),
+  z.strictObject({
+    ...localFileBody,
+    format: z.literal('epub'),
+    media_type: z.literal('application/epub+zip'),
+  }),
+]);
+export type LocalTextImport = z.infer<typeof LocalTextImportSchema>;

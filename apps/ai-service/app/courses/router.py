@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from app.contracts import LEARNING_ERRORS
 from app.courses import engine
 from app.courses.adaptation import adaptation_for_session, infer_role
 from app.courses.catalog import DIAGNOSTIC
@@ -31,12 +32,20 @@ from app.courses.contracts import (
     StudyNotesRequest,
 )
 from app.courses.labs import public_lab
-from app.errors import ApiError, InvalidInput, error_body
+from app.courses.upgrade_contracts import (
+    CourseUpgradeApplyRequest,
+    CourseUpgradePreview,
+    CourseUpgradePreviewRequest,
+    CourseUpgradeResponse,
+)
+from app.errors import ApiError, InvalidInput, NotFound, error_body
 from app.llm.router import AllProvidersFailed
 
 
-def create_course_router(get_user_id, store, course_tutor=None, course_tutor_streamer=None, profiles=None) -> APIRouter:
-    router = APIRouter(tags=["courses"])
+def create_course_router(
+    get_user_id, store, course_tutor=None, course_tutor_streamer=None, profiles=None, *, upgrades_enabled=False
+) -> APIRouter:
+    router = APIRouter(tags=["courses"], responses=LEARNING_ERRORS)
     user_dependency = Depends(get_user_id)
 
     def adapt(user_id: str, session: SessionResponse) -> SessionResponse:
@@ -70,9 +79,7 @@ def create_course_router(get_user_id, store, course_tutor=None, course_tutor_str
     def list_courses(user_id: str = user_dependency):
         return CatalogResponse(courses=[engine.summary(release) for release in store.list_courses(user_id)])
 
-    @router.get("/api/courses/{slug}", response_model=CourseDetail)
-    def get_course(slug: str, user_id: str = user_dependency):
-        release = store.get_release(slug, user_id)
+    def course_detail(user_id, release):
         return CourseDetail(
             **engine.summary(release).model_dump(),
             objectives=release.objectives,
@@ -83,7 +90,12 @@ def create_course_router(get_user_id, store, course_tutor=None, course_tutor_str
             prerequisite_met=engine.prerequisite_met(release, store.completed_slugs(user_id)),
             labs=[public_lab(lab) for lab in release.labs],
             assignments=release.assignments,
+            required_assignment_ids=release.required_assignment_ids,
         )
+
+    @router.get("/api/courses/{slug}", response_model=CourseDetail)
+    def get_course(slug: str, user_id: str = user_dependency):
+        return course_detail(user_id, store.get_release(slug, user_id))
 
     @router.get("/api/courses/{slug}/diagnostic", response_model=DiagnosticResponse)
     def diagnostic(slug: str, user_id: str = user_dependency):
@@ -109,6 +121,23 @@ def create_course_router(get_user_id, store, course_tutor=None, course_tutor_str
     @router.get("/api/course-enrollments/{enrollment_id}", response_model=SessionResponse)
     def get_session(enrollment_id: UUID, user_id: str = user_dependency):
         return adapt(user_id, store.get_session(user_id, str(enrollment_id)))
+
+    @router.get("/api/course-enrollments/{enrollment_id}/course", response_model=CourseDetail)
+    def get_pinned_course(enrollment_id: UUID, user_id: str = user_dependency):
+        return course_detail(user_id, store.pinned_course_detail(user_id, str(enrollment_id)))
+
+    @router.post("/api/course-enrollments/{enrollment_id}/upgrade-preview", response_model=CourseUpgradePreview)
+    def preview_upgrade(enrollment_id: UUID, request: CourseUpgradePreviewRequest, user_id: str = user_dependency):
+        if not upgrades_enabled:
+            raise NotFound("Course upgrades are disabled")
+        return store.preview_upgrade(user_id, str(enrollment_id), request)
+
+    @router.post("/api/course-enrollments/{enrollment_id}/upgrade", response_model=CourseUpgradeResponse)
+    def apply_upgrade(enrollment_id: UUID, request: CourseUpgradeApplyRequest, user_id: str = user_dependency):
+        if not upgrades_enabled:
+            raise NotFound("Course upgrades are disabled")
+        result = store.apply_upgrade(user_id, str(enrollment_id), request)
+        return result.model_copy(update={"session": adapt(user_id, result.session)})
 
     @router.post("/api/course-enrollments/{enrollment_id}/attempts", response_model=AttemptResponse)
     def attempt(enrollment_id: UUID, request: AttemptRequest, user_id: str = user_dependency):

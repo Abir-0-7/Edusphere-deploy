@@ -26,6 +26,8 @@ import {
 import Link from 'next/link';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { CourseProjectPanel } from '@/components/course-project-panel';
+import { CourseUpgradePanel } from '@/components/course-upgrade-panel';
+import { getPinnedCourse } from '@/lib/course-upgrade-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type PendingAction = { id: string; exerciseId: string; kind: 'attempt' | 'hint' | 'reveal'; answer?: Answer };
@@ -62,6 +64,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
   const [selectedChoices, setSelectedChoices] = useState<string[]>([]);
   const [notes, setNotes] = useState<StudyNotesRequest['notes']>([]);
   const [bookmarks, setBookmarks] = useState<StudyNotesRequest['bookmarks']>([]);
+  const [dirtyProjects, setDirtyProjects] = useState<string[]>([]);
   const [savedMessage, setSavedMessage] = useState('');
   const [speechRate, setSpeechRate] = useState(1);
   const [autoContinueAfterNarration, setAutoContinueAfterNarration] = useState(false);
@@ -86,7 +89,10 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
   }, [enrollmentId, getToken]);
 
   const refresh = useCallback(async () => {
-    const [detail, current] = await Promise.all([getCourse(getToken, slug), getSession()]);
+    const [detail, current] = await Promise.all([
+      enrollmentId ? getPinnedCourse(getToken, enrollmentId) : getCourse(getToken, slug),
+      getSession(),
+    ]);
     setCourse(detail);
     setSession(current);
     if (!current && detail.prerequisites.length && !detail.prerequisite_met) {
@@ -102,7 +108,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
         : [...current.lesson.practice, ...(current.lesson.checkpoint ? [current.lesson.checkpoint] : [])];
       setSelectedExercise((old) => available.find((item) => item.id === old?.id) ?? available[0] ?? null);
     }
-  }, [getSession, getToken, slug]);
+  }, [getSession, getToken, slug, enrollmentId]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -367,6 +373,17 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
 
   const completed = new Set(session?.completed_lesson_ids ?? []);
   const noteForLesson = notes.find((note) => note.lesson_id === session?.lesson.id);
+  const hasUnsavedWork =
+    session !== null &&
+    (JSON.stringify(notes) !== JSON.stringify(session.notes) ||
+      JSON.stringify(bookmarks) !== JSON.stringify(session.bookmarks) ||
+      dirtyProjects.length > 0);
+  const hasNextLesson = session
+    ? session.lessons.findIndex((item) => item.id === session.lesson.id) < session.lessons.length - 1
+    : false;
+  const pendingProjects = session
+    ? course.required_assignment_ids.filter((id) => session.assignment_status[id] !== 'submitted')
+    : [];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-10">
@@ -400,6 +417,16 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
         </p>
       ) : null}
 
+      {session ? (
+        <CourseUpgradePanel
+          key={session.id}
+          getToken={getToken}
+          course={course}
+          session={session}
+          hasUnsavedWork={hasUnsavedWork || busy}
+          onRefresh={refresh}
+        />
+      ) : null}
       {!session ? (
         <section className="rounded-2xl border bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Start this release</h2>
@@ -458,7 +485,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
       ) : (
         <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-6">
-            <section className="rounded-2xl border bg-white p-5 shadow-sm sm:p-8">
+            <section id="course-study" className="rounded-2xl border bg-white p-5 shadow-sm sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-sm text-slate-600">
@@ -587,7 +614,21 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
               </div>
             </section>
 
-            <CourseProjectPanel course={course} session={session} getToken={getToken} onUpdated={refresh} />
+            <CourseProjectPanel
+              course={course}
+              session={session}
+              getToken={getToken}
+              onUpdated={refresh}
+              onDirtyChange={(assignmentId, dirty) =>
+                setDirtyProjects((current) =>
+                  dirty
+                    ? current.includes(assignmentId)
+                      ? current
+                      : [...current, assignmentId]
+                    : current.filter((id) => id !== assignmentId),
+                )
+              }
+            />
 
             {selectedExercise && !completed.has(session.lesson.id) ? (
               <section
@@ -621,6 +662,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
                           <input
                             type={multiple ? 'checkbox' : 'radio'}
                             name="course-answer"
+                            value={choice.id}
                             checked={checked}
                             onChange={() => setChoice(choice.id, multiple)}
                           />
@@ -696,7 +738,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
                 <Link className="mt-3 inline-block font-semibold text-emerald-950 underline" href="/review">
                   Open flashcard review
                 </Link>
-                {session.status !== 'completed' ? (
+                {hasNextLesson ? (
                   <button
                     type="button"
                     disabled={busy}
@@ -705,11 +747,18 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
                   >
                     Continue to next lesson
                   </button>
-                ) : (
+                ) : session.status === 'completed' ? (
                   <p className="mt-4 font-semibold">
-                    Course complete. You can revisit this lesson or review your cards.
+                    {course.required_assignment_ids.length
+                      ? 'Learning activities complete. Your capstone submission remains ungraded; no code was executed.'
+                      : 'Course complete. You can revisit this lesson or review your cards.'}
                   </p>
-                )}
+                ) : pendingProjects.length ? (
+                  <p className="mt-4 font-semibold">
+                    Lesson checkpoints complete. Submit the required capstone project to finish the learning
+                    activities. Submission is not a rubric pass.
+                  </p>
+                ) : null}
               </section>
             ) : null}
 
@@ -720,7 +769,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 {session.remediation?.step === 'checkpoint'
                   ? 'Tutor questions resume after you finish the fresh checkpoint on your own.'
-                  : "Answers use this course's reviewed lesson sources. If the sources do not support an answer, the tutor will say so."}
+                  : "Answers use this course's lesson sources. If the sources do not support an answer, the tutor will say so."}
               </p>
               <ol className="mt-4 space-y-4" aria-live="polite">
                 {session.conversation.map((message) => (
@@ -868,6 +917,23 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
           <aside className="min-w-0 space-y-5 lg:sticky lg:top-6">
             <section className="rounded-2xl border bg-white p-5">
               <h2 className="font-semibold">Course outline</h2>
+              {course.size === 'full' ? (
+                <ol className="mt-3 space-y-3 border-b pb-4" aria-label="Module progress">
+                  {course.modules.map((module, index) => {
+                    const count = module.lesson_ids.filter((id) => completed.has(id)).length;
+                    return (
+                      <li key={module.id} className="text-sm leading-6">
+                        <p className="font-semibold">
+                          Module {index + 1}: {module.title}
+                        </p>
+                        <p>
+                          {count}/{module.lesson_ids.length} lesson checkpoints complete
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : null}
               <ol className="mt-3 space-y-3">
                 {session.lessons.map((lesson, index) => (
                   <li key={lesson.id} className="flex gap-3 text-sm">
