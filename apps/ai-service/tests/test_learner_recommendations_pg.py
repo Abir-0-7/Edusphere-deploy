@@ -26,8 +26,8 @@ def test_persisted_snapshot_is_owner_scoped_exported_and_cascades():
     if not url:
         pytest.skip("STUDYVAULT_TEST_DATABASE_URL not set")
     owner, other = str(uuid4()), str(uuid4())
-    with psycopg.connect(url) as conn:
-        conn.executemany(
+    with psycopg.connect(url) as conn, conn.cursor() as cur:
+        cur.executemany(
             "INSERT INTO users (id,clerk_id,email) VALUES (%s,%s,%s)",
             [(uid, f"recommendation-{uid}", f"{uid}@example.test") for uid in (owner, other)],
         )
