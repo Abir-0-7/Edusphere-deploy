@@ -16,7 +16,7 @@ export function getContentSecurityPolicyDirectives(aiServiceUrl: string): Conten
   const aiOrigin = new URL(aiServiceUrl).origin;
   return {
     'base-uri': ["'self'"],
-    'connect-src': [aiOrigin],
+    'connect-src': ["'self'", aiOrigin],
     'font-src': ["'self'", 'data:'],
     'form-action': ["'self'"],
     'frame-ancestors': ["'none'"],

@@ -26,6 +26,20 @@ export async function authFetch(getToken: GetToken, path: string, init: RequestI
   }
 }
 
+/** Same-origin bridge for guided courses and learner-profile APIs. */
+export async function learningFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
+  const token = await getToken();
+  try {
+    return await fetch(`/api/learning-service${path}`, {
+      ...init,
+      cache: 'no-store',
+      headers: { ...(init.headers ?? {}), authorization: `Bearer ${token ?? ''}` },
+    });
+  } catch {
+    throw new Error('Cannot reach the learning service. Check your connection and try again.');
+  }
+}
+
 export async function readResponse<T>(
   response: Response,
   schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } },

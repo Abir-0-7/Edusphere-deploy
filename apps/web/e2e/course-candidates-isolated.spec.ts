@@ -55,6 +55,16 @@ const courses = [
   },
 ];
 
+async function routeLearningServiceToFixture(page: Page) {
+  await page.route('**/api/learning-service/**', async (route) => {
+    const upstream = route
+      .request()
+      .url()
+      .replace('http://127.0.0.1:4324/api/learning-service', 'http://127.0.0.1:4325');
+    await route.fulfill({ response: await route.fetch({ url: upstream }) });
+  });
+}
+
 async function checkAnswer(page: Page, answer: string | number) {
   const exercise = page.locator('section[aria-labelledby="exercise-title"]');
   if (typeof answer === 'number') {
@@ -78,6 +88,7 @@ for (const course of courses) {
   }) => {
     const owner = `course-candidate-${randomUUID()}`;
     const browserErrors: string[] = [];
+    await routeLearningServiceToFixture(page);
     page.on('pageerror', (error) => browserErrors.push(error.message));
     await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), owner);
 
@@ -158,6 +169,7 @@ for (const course of courses) {
         try {
           await secondDevice.addInitScript((id) => localStorage.setItem('fixture-learner', id), owner);
           const returning = await secondDevice.newPage();
+          await routeLearningServiceToFixture(returning);
           await returning.goto(enrolledUrl);
           await expect(returning.getByRole('heading', { name: 'Checkpoint complete' })).toBeVisible();
           await expect(returning.getByRole('progressbar', { name: 'Course progress' })).toHaveAttribute(
@@ -213,6 +225,7 @@ for (const course of courses) {
 }
 
 test('course narration auto-continue pauses at checkpoints and can be interrupted', async ({ page }) => {
+  await routeLearningServiceToFixture(page);
   await page.addInitScript(() => {
     let active: SpeechSynthesisUtterance | null = null;
     const host = window as unknown as { finishCourseNarration: () => boolean };

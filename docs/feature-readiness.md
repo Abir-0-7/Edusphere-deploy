@@ -20,14 +20,15 @@ workspace. It does not represent completion of every item in the product plan.
    outside the root directory included. Use the dependency-aware build:
    `cd ../.. && pnpm exec turbo run build --filter=@studyvault/web...`.
    It builds the game bundle and prepares pinned same-origin OCR assets.
-2. Keep both web service URL variables pointed at
-   `https://studyvault-ai-q3rc.onrender.com`. These identify the existing service;
-   the product shown in the app is EduSphere.
+2. Set server-side `AI_SERVICE_URL` to `https://studyvault-ai-q3rc.onrender.com`.
+   Guided courses and learning-profile requests use the authenticated
+   same-origin `/api/learning-service` proxy, avoiding browser CORS.
+   `NEXT_PUBLIC_AI_SERVICE_URL` is still used by other browser-direct tools.
 3. Use `https://edusphere-deploy.vercel.app` for testing. On Render, configure
-   that exact origin in both `AI_SERVICE_CORS_ORIGINS` and
-   `AI_SERVICE_JWT_AUTHORIZED_PARTIES`. If testing from a preview domain, add
-   that exact additional origin explicitly using the configuration's comma
-   separated format. Do not use a wildcard.
+   that exact origin in `AI_SERVICE_JWT_AUTHORIZED_PARTIES`; add it to
+   `AI_SERVICE_CORS_ORIGINS` for browser-direct AI tools. If testing a Vercel
+   preview, add that exact preview origin to both allowlists while testing.
+   Never use a wildcard.
 4. To enable Bangla scanned-PDF OCR, deploy the updated API Docker image and
    set `AI_SERVICE_OCR_LANG=eng+ben`. The Blueprint's automatic deploy trigger
    is off, so use Render's manual deploy for the updated image.

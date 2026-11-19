@@ -10,6 +10,13 @@ for (const course of publishedCourses) {
   test(`${course.title}: coding lab runs in the bounded practice flow`, async ({ page }) => {
     const runnerRequests: Array<Record<string, unknown>> = [];
     const progressRequests: Array<Record<string, unknown>> = [];
+    await page.route('**/api/learning-service/**', async (route) => {
+      const upstream = route
+        .request()
+        .url()
+        .replace('http://127.0.0.1:4324/api/learning-service', 'http://127.0.0.1:4325');
+      await route.fulfill({ response: await route.fetch({ url: upstream }) });
+    });
     await page.addInitScript(
       (id) => localStorage.setItem('fixture-learner', id),
       `published-${randomUUID()}`,

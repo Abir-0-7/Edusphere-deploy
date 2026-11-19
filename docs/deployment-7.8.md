@@ -99,6 +99,14 @@ separate staging database and Clerk test instance for Preview. Set at least:
 - `AI_DAILY_LIMIT` and `AI_RATE_LIMIT_PER_MIN` to the approved quotas
 - `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` when Sentry is configured
 
+Guided-course and learning-profile requests go through the authenticated
+same-origin `/api/learning-service` route and use server-only `AI_SERVICE_URL`.
+The AI service must still allow the exact Clerk authorized party for each web
+origin that issues session tokens, including preview origins used for testing.
+Other browser features that call the AI service directly also need
+`NEXT_PUBLIC_AI_SERVICE_URL`, CSP `connect-src` coverage, and their deployed
+origin in the AI service's exact CORS allowlist.
+
 Set `NEXT_PUBLIC_AI_SERVICE_URL` before building because it determines the AI
 origin allowed by the nonce-based Content Security Policy. Verify the emitted
 CSP includes the deployed AI origin and the configured Clerk production

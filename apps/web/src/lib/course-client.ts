@@ -46,7 +46,7 @@ import {
   SessionResponseSchema,
   StudyNotesRequestSchema,
 } from '@studyvault/types';
-import { authFetch, readResponse, type GetToken } from './ai-client';
+import { learningFetch, readResponse, type GetToken } from './ai-client';
 import { readEventStream } from './event-stream';
 
 type Schema<T> = { safeParse(value: unknown): { success: true; data: T } | { success: false } };
@@ -57,7 +57,7 @@ async function request<T>(
   schema: Schema<T>,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await authFetch(getToken, path, init);
+  const response = await learningFetch(getToken, path, init);
   let payload: unknown;
   try {
     payload = await response.json();
@@ -238,7 +238,7 @@ export async function streamCourseTutor(
   onToken: (text: string) => void,
 ): Promise<CourseChatResponse> {
   const requestBody = CourseChatRequestSchema.parse(body);
-  const response = await authFetch(
+  const response = await learningFetch(
     getToken,
     `/api/course-enrollments/${encodeURIComponent(enrollmentId)}/tutor/stream`,
     {

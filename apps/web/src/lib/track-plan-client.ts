@@ -10,7 +10,7 @@ import {
   type TrackChangePreview,
   type TrackId,
 } from '@studyvault/types';
-import { authFetch, readResponse, type GetToken } from './ai-client';
+import { learningFetch, readResponse, type GetToken } from './ai-client';
 
 const BASE = '/api/learner-profile/track-plan';
 const json = (data: unknown): RequestInit => ({
@@ -20,13 +20,13 @@ const json = (data: unknown): RequestInit => ({
 });
 
 export async function getTrackOptions(getToken: GetToken) {
-  const res = await authFetch(getToken, `${BASE}/options`, { cache: 'no-store' });
+  const res = await learningFetch(getToken, `${BASE}/options`, { cache: 'no-store' });
   return readResponse(res, TrackCatalogResponseSchema, 'Load learning tracks');
 }
 
 export async function previewTrackChange(getToken: GetToken, targetTrack: TrackId) {
   const body = TrackChangeRequestSchema.parse({ target_track_id: targetTrack });
-  const res = await authFetch(getToken, `${BASE}/preview`, json(body));
+  const res = await learningFetch(getToken, `${BASE}/preview`, json(body));
   return readResponse(res, TrackChangePreviewSchema, 'Preview learning track');
 }
 
@@ -36,12 +36,12 @@ export async function applyTrackChange(getToken: GetToken, preview: TrackChangeP
     expected_revision: preview.expected_revision,
     preview_id: preview.preview_id,
   });
-  const res = await authFetch(getToken, `${BASE}/apply`, json(body));
+  const res = await learningFetch(getToken, `${BASE}/apply`, json(body));
   return readResponse(res, TrackChangeAppliedSchema, 'Save learning track');
 }
 
 export async function getTrackHistory(getToken: GetToken, beforeRevision?: number) {
   const suffix = beforeRevision === undefined ? '' : `?before_revision=${beforeRevision}`;
-  const res = await authFetch(getToken, `${BASE}/history${suffix}`, { cache: 'no-store' });
+  const res = await learningFetch(getToken, `${BASE}/history${suffix}`, { cache: 'no-store' });
   return readResponse(res, TrackPlanHistoryResponseSchema, 'Load track history');
 }
