@@ -159,13 +159,17 @@ export async function getChapters(getToken: GetToken, documentId: string): Promi
   return readResponse(res, ChapterListResponseSchema, 'chapters');
 }
 
-export async function getSavedConceptGraph(getToken: GetToken, documentId: string) {
-  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph`);
+export async function getSavedConceptGraph(getToken: GetToken, documentId: string, signal?: AbortSignal) {
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph`, {
+    signal,
+  });
   return readResponse(res, ConceptGraphRecordSchema, 'saved concept graph');
 }
 
-export async function getGeneratedMindMap(getToken: GetToken, documentId: string) {
-  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/mindmap`);
+export async function getGeneratedMindMap(getToken: GetToken, documentId: string, signal?: AbortSignal) {
+  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/mindmap`, {
+    signal,
+  });
   return readResponse(res, MindMapResponseSchema, 'mind map');
 }
 
@@ -174,6 +178,7 @@ export async function saveConceptGraph(
   documentId: string,
   graph: unknown,
   expectedRevision?: number,
+  signal?: AbortSignal,
 ) {
   const body = ConceptGraphSaveRequestSchema.parse({
     graph,
@@ -183,6 +188,7 @@ export async function saveConceptGraph(
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   });
   return readResponse(res, ConceptGraphRecordSchema, 'save concept graph');
 }
@@ -192,10 +198,12 @@ export async function getConceptGraphNodeActions(
   documentId: string,
   nodeId: string,
   revision: number,
+  signal?: AbortSignal,
 ) {
   const res = await authFetch(
     getToken,
     `/api/documents/${encodeURIComponent(documentId)}/concept-graph/nodes/${encodeURIComponent(nodeId)}/actions?revision=${revision}`,
+    { signal },
   );
   const actions = await readResponse(res, ConceptGraphNodeActionsSchema, 'concept graph learning actions');
   if (
@@ -213,6 +221,7 @@ export async function regenerateConceptGraph(
   getToken: GetToken,
   documentId: string,
   expectedRevision: number,
+  signal?: AbortSignal,
 ) {
   const body = ConceptGraphRegenerateRequestSchema.parse({ expected_revision: expectedRevision });
   const res = await authFetch(
@@ -222,6 +231,7 @@ export async function regenerateConceptGraph(
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
+      signal,
     },
   );
   return readResponse(res, ConceptGraphRecordSchema, 'regenerate concept graph');
@@ -334,26 +344,50 @@ export function pollJob(
   onError?: (error: Error) => void,
 ): () => void {
   let stopped = false;
-  const started = Date.now();
+  let lastError: Error | null = null;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const stop = () => {
+    stopped = true;
+    controller.abort();
+    clearTimeout(timer);
+  };
+  const deadline = setTimeout(() => {
+    if (stopped) return;
+    stop();
+    onError?.(lastError ?? new Error('job polling timed out'));
+  }, timeoutMs);
   const tick = async () => {
-    let lastError: Error | null = null;
-    while (!stopped && Date.now() - started < timeoutMs) {
+    while (!stopped) {
       try {
-        const job = await getJob(getToken, jobId);
+        const job = await getJob(getToken, jobId, controller.signal);
+        if (stopped) return;
         onUpdate(job);
-        if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return;
+        if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') {
+          stop();
+          clearTimeout(deadline);
+          return;
+        }
         lastError = null;
       } catch (error) {
+        if (stopped) return;
         lastError = error instanceof Error ? error : new Error('job status request failed');
+        if (error instanceof AiHttpError && [400, 401, 403, 404].includes(error.status)) {
+          stop();
+          clearTimeout(deadline);
+          onError?.(lastError);
+          return;
+        }
       }
-      await new Promise((r) => setTimeout(r, intervalMs));
-    }
-    if (!stopped) {
-      onError?.(lastError ?? new Error('job polling timed out'));
+      if (!stopped)
+        await new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, intervalMs);
+        });
     }
   };
   void tick();
   return () => {
-    stopped = true;
+    stop();
+    clearTimeout(deadline);
   };
 }

@@ -61,6 +61,8 @@ jobs:
       - run: pip install -r apps/ai-service/requirements-dev.txt
       - run: pnpm --filter @studyvault/web test:e2e:whiteboards
       - run: pnpm --filter @studyvault/web test:e2e:ocr
+      - run: pnpm --filter @studyvault/web test:e2e:document-tools
+      - run: pnpm --filter @studyvault/web test:e2e:tools-responsive
       - run: pnpm --filter @studyvault/web test:e2e:code-review
       - run: pnpm --filter @studyvault/web test:e2e:checklists
       - run: pnpm --filter @studyvault/web exec playwright test --config e2e/cover-docx-isolated.config.ts

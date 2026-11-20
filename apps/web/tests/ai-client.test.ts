@@ -76,6 +76,96 @@ describe('pollJob', () => {
     expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
     expect(onError.mock.calls[0]?.[0].message).toBe('job polling timed out');
   });
+
+  it('aborts a stalled request at the polling deadline', async () => {
+    let signal: AbortSignal | null | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal;
+        return new Promise<Response>(() => {});
+      }),
+    );
+    const onUpdate = vi.fn();
+    const onError = vi.fn();
+    pollJob(token, '11111111-1111-4111-8111-111111111111', onUpdate, 1, 8, onError);
+    await vi.advanceTimersByTimeAsync(8);
+
+    expect(signal?.aborted).toBe(true);
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ message: 'job polling timed out' }),
+    );
+  });
+
+  it('reaches the deadline even after response headers arrive but the body stalls', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(new ReadableStream(), {
+            headers: { 'content-type': 'application/json' },
+          }),
+      ),
+    );
+    const onUpdate = vi.fn();
+    const onError = vi.fn();
+    pollJob(token, '11111111-1111-4111-8111-111111111111', onUpdate, 1, 8, onError);
+    await vi.advanceTimersByTimeAsync(8);
+
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
+  it('stopping aborts the request and ignores a response that arrives later', async () => {
+    let signal: AbortSignal | null | undefined;
+    let respond: (response: Response) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        signal = init?.signal;
+        return new Promise<Response>((resolve) => {
+          respond = resolve;
+        });
+      }),
+    );
+    const onUpdate = vi.fn();
+    const onError = vi.fn();
+    const stop = pollJob(token, '11111111-1111-4111-8111-111111111111', onUpdate, 1, 8, onError);
+    await vi.advanceTimersByTimeAsync(0);
+
+    stop();
+    respond(new Response(JSON.stringify(job('done')), { status: 200 }));
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(signal?.aborted).toBe(true);
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('ends on an unavailable job immediately and preserves the owner-safe service error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: { code: 'not_found', message: 'job not found' },
+            }),
+            { status: 404 },
+          ),
+      ),
+    );
+    const onError = vi.fn();
+    const onUpdate = vi.fn();
+    pollJob(token, '11111111-1111-4111-8111-111111111111', onUpdate, 1, 100, onError);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onError).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ status: 404, message: 'job not found' }),
+    );
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe('uploadPdf', () => {

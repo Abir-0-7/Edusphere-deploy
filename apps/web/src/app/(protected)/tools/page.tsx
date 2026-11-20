@@ -11,14 +11,14 @@ import { DraftChecklistWorkspace } from '@/components/draft-checklist-workspace'
 export default function ToolsPage() {
   const { isLoaded, userId, getToken } = useAuth();
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
+    <main className="workspace-page tools-page space-y-6">
       <h1 className="text-2xl font-bold">Tools</h1>
       {isLoaded && userId ? (
         <WhiteboardWorkspace key={userId} ownerId={userId} getToken={getToken} />
       ) : (
         <p role="status">Loading your whiteboard account.</p>
       )}
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="tools-primary-grid">
         <CoverBuilder
           key={isLoaded ? (userId ?? 'signed-out') : 'auth-loading'}
           ownerId={isLoaded ? (userId ?? null) : null}

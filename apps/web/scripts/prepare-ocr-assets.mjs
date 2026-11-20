@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import process from 'node:process';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,6 +47,14 @@ export async function prepareOcrAssets() {
   const assetRoot = path.join(webRoot, 'public', 'ocr');
   const coreDestination = path.join(assetRoot, 'core');
   const languageDestination = path.join(assetRoot, 'lang');
+  const pdfRoot = path.dirname(require.resolve('pdfjs-dist/package.json'));
+  const pdfDestination = path.join(assetRoot, 'pdf');
+  await mkdir(pdfDestination, { recursive: true });
+  await Promise.all([
+    copyFile(path.join(pdfRoot, 'build', 'pdf.worker.min.mjs'), path.join(pdfDestination, 'pdf.worker.min.mjs')),
+    copyFile(path.join(pdfRoot, 'LICENSE'), path.join(pdfDestination, 'LICENSE.txt')),
+    ...['cmaps', 'standard_fonts', 'wasm', 'iccs'].map((directory) => cp(path.join(pdfRoot, directory), path.join(pdfDestination, directory), { recursive: true })),
+  ]);
   await Promise.all([mkdir(coreDestination, { recursive: true }), mkdir(languageDestination, { recursive: true })]);
   await Promise.all([
     copyFile(path.join(tesseractRoot, 'dist', 'worker.min.js'), path.join(assetRoot, 'worker.min.js')),
@@ -64,6 +72,7 @@ export async function prepareOcrAssets() {
     })),
   ]);
   await writeFile(path.join(assetRoot, 'NOTICE.txt'), [
+    'PDF rendering: pdfjs-dist 6.5.438 (Apache-2.0). Worker, character maps, fonts, WASM and ICC profiles are copied from the installed package; notices are retained under pdf/.',
     `Generated OCR runtime: tesseract.js ${runtimeVersion}; tesseract.js-core ${runtimeVersion}.`,
     `Language data: @tesseract.js-data/eng and @tesseract.js-data/ben ${modelVersion}, 4.0.0_best_int.`,
     'Upstream: https://github.com/naptha/tesseract.js and https://github.com/naptha/tessdata.',

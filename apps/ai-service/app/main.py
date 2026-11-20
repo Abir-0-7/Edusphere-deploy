@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from app.ai.code_review import CodeReview
 from app.ai.outline import Outline
+from app.ai.schemas import StructuredOutputError
 from app.ai.structure import build_outline
 from app.ai.summaries import LEVELS, stream_summary
 from app.ai.tool_contracts import CodeReviewRequest
@@ -52,7 +53,7 @@ from app.courses.store import MemoryCourseStore, PgCourseStore
 from app.courses.tutor import answer_with_router, stream_answer_with_router
 from app.documents.pg_store import PgDocumentStore
 from app.documents.store import InMemoryDocumentStore
-from app.errors import ApiError, InvalidInput, NotFound, TooLarge, Unauthorized, api_error_handler, error_body
+from app.errors import ApiError, Conflict, InvalidInput, NotFound, TooLarge, Unauthorized, api_error_handler, error_body
 from app.flashcard_studio.quiz import MemoryQuizSessionStore, PgQuizSessionStore, build_quiz, export_cards_csv
 from app.flashcard_studio.quiz_contracts import QuizGradeRequest, QuizGradeResult, QuizSession, QuizStartRequest
 from app.flashcard_studio.router import create_studio_router
@@ -77,7 +78,7 @@ from app.llm.budgets import MemoryBudgetStore, PgBudgetStore
 from app.llm.cache_scope import PrivateResponseCache, response_scope
 from app.llm.operations import MemoryOperations, PgOperations, operation_scope
 from app.llm.response_cache import MemoryResponseCache, PgResponseCache
-from app.llm.router import router_from_settings
+from app.llm.router import AllProvidersFailed, router_from_settings
 from app.llm.usage_ledger import MemoryUsageLedger, PgUsageLedger
 from app.logging_config import configure_logging
 from app.parsing.pages import Page
@@ -109,6 +110,7 @@ from app.source_versions.store import MemorySourceVersionStore, PgSourceVersionS
 from app.study.readiness import ReadinessInputs, breakdown
 from app.study.store import FOCUS_KINDS, InMemoryStudyStore, PgStudyStore
 from app.study.tokens import settle
+from app.voice.viva import VivaGrade, VivaGradeRequest, VivaQuestion
 from app.whiteboards.router import whiteboard_router
 from app.whiteboards.store import MemoryWhiteboardStore, PgWhiteboardStore
 
@@ -1241,27 +1243,36 @@ async def text_to_speech_stream(
     )
 
 
-@app.post("/api/documents/{document_id}/viva-questions")
+@app.post("/api/documents/{document_id}/viva-questions", response_model=list[VivaQuestion], responses=LEARNING_ERRORS)
 async def viva_questions(document_id: str, user_id: Annotated[str, Depends(current_user_id)]) -> list[dict[str, Any]]:
     from app.voice.viva import ask, to_dict
 
     doc = documents.get_for_user(document_id, user_id)
     if doc is None:
         raise NotFound("document not found")
-    question_set = await asyncio.to_thread(ask, llm_router, doc.chunks)
+    if not any(chunk.content.strip() for chunk in doc.chunks):
+        raise Conflict("Document text is not ready for viva questions. Wait for document processing, then try again.")
+    try:
+        question_set = await asyncio.to_thread(ask, llm_router, doc.chunks)
+    except AllProvidersFailed as exc:
+        raise ApiError("Viva generation is temporarily unavailable. Try again shortly.", status_code=503) from exc
+    except StructuredOutputError as exc:
+        raise ApiError("Viva questions could not be generated. Try again.", status_code=502) from exc
     return [to_dict(q) for q in question_set.questions]
 
 
-@app.post("/api/viva-grade")
-async def viva_grade(body: dict[str, Any], user_id: Annotated[str, Depends(current_user_id)]) -> dict[str, Any]:
+@app.post("/api/viva-grade", response_model=VivaGrade, responses=LEARNING_ERRORS)
+async def viva_grade(body: VivaGradeRequest, user_id: Annotated[str, Depends(current_user_id)]) -> dict[str, Any]:
     from app.voice.viva import grade
 
-    question = str((body or {}).get("question", "")).strip()
-    answer = str((body or {}).get("answer", "")).strip()
-    expected = (body or {}).get("expected_points") or []
-    if not question or not answer:
-        raise InvalidInput("question and answer are required")
-    result = await asyncio.to_thread(grade, llm_router, question=question, expected=expected, answer=answer)
+    try:
+        result = await asyncio.to_thread(
+            grade, llm_router, question=body.question, expected=body.expected_points, answer=body.answer,
+        )
+    except AllProvidersFailed as exc:
+        raise ApiError("Viva grading is temporarily unavailable. Try again shortly.", status_code=503) from exc
+    except StructuredOutputError as exc:
+        raise ApiError("The answer could not be evaluated. Try grading again.", status_code=502) from exc
     return result.model_dump()
 
 

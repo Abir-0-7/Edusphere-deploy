@@ -63,13 +63,15 @@ const studyPaths: Readonly<Record<string, RegExp>> = {
     '^(?:' +
       [
         '/api/jobs/' + id + '/cancel',
-        document + '/(?:chat|flashcards|concept-graph/regenerate|flashcard-studio/drafts|flashcard-quizzes)',
+        document +
+          '/(?:chat|flashcards|concept-graph/regenerate|flashcard-studio/drafts|flashcard-quizzes|viva-questions)',
         card + '/(?:review|retire|report)',
         draft + '/merge',
         quiz + '/grade',
         summary,
         '/api/tts/stream',
         '/api/code-review',
+        '/api/viva-grade',
       ].join('|') +
       ')$',
   ),

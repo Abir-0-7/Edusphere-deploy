@@ -1,7 +1,8 @@
 # Editable OCR workspace (8.E09)
 
-The Tools page accepts a PNG, JPEG or WebP image, shows its actual crop/rotation
-preview, and reads English, Bangla or both with Tesseract.js in browser workers.
+The Tools page has an explicit **Source format** selector for images, PDFs, and
+Word `.docx` documents. PNG, JPEG and WebP images show an actual crop/rotation
+preview and are read in English, Bangla or both with Tesseract.js browser workers.
 The input limit is 15 MiB; decoded images are limited to 16 million pixels.
 Crop controls describe original-image edges and apply before quarter-turn rotation.
 Empty/corrupt/unsupported images fail visibly. Each read has a 60-second limit
@@ -15,6 +16,35 @@ must be checked against the image. Changing crop, rotation or language keeps the
 previous corrected output visible but prevents note handoff until a fresh read.
 Selecting a different image clears the prior result. Images and OCR drafts remain
 in transient browser memory; neither is uploaded or retained by the server.
+
+## PDF and Word imports
+
+- PDFs are limited to 15 MiB and 30 pages. PDF.js **6.5.438** renders the selected
+  page locally, using a same-origin worker, character maps, fonts and WASM assets.
+  Embedded images are capped at 16 million pixels before decoding. Blank pages
+  and pages whose unsupported or oversized images were omitted show a visible
+  explanation rather than silently presenting an empty preview as readable.
+  **Extract PDF text** reads selectable text from every page and identifies pages
+  that need OCR. **Read PDF page** recognizes only the selected crop/rotation.
+  **Read all PDF pages** recognizes full pages sequentially without preview crops
+  and publishes the combined result only when complete. Cancel preserves any
+  previously corrected result. Each image recognition has a 60-second deadline;
+  a whole-PDF OCR operation has a five-minute deadline. Account changes terminate
+  the PDF worker and any active OCR worker. Password-protected, corrupt and
+  oversized PDFs fail visibly and can be retried.
+- Word `.docx` imports extract paragraph and table text, including Unicode Bangla,
+  without uploading the archive. `fflate` **0.8.3** opens only `word/document.xml`,
+  in a disposable worker with 4 MiB actual emitted XML, 2,000 ZIP-entry and 500,000
+  extracted-character limits. Cancellation terminates decompression, and incorrect
+  ZIP size metadata cannot bypass the emitted-byte limit. XML
+  declarations with DTD/entities are rejected. Deleted text, field instructions,
+  macros, relationships and embedded active content are not imported or executed.
+  Image-only Word pages should be exported as PDF and read through PDF OCR.
+- Google Docs can be downloaded as `.docx` or PDF first. Legacy binary `.doc`
+  files must be saved as `.docx` or PDF; they are not silently treated as `.docx`.
+- Extracted document text is editable and shares the explicit course-note handoff
+  used by image OCR. A confidence estimate is shown only for actual OCR, not
+  selectable PDF or Word text extraction.
 
 The user explicitly chooses an existing enrollment and lesson to save corrected
 text through the existing revision-checked study-notes API. Existing lesson notes
@@ -49,6 +79,13 @@ Primary references: [Tesseract.js API](https://github.com/naptha/tesseract.js/bl
 [tessdata_best license](https://github.com/tesseract-ocr/tessdata_best/blob/main/LICENSE).
 
 ## Verification on 2026-11-20
+
+- Nine Chromium journeys now include selectable multi-page PDFs, actual scanned
+  PDF OCR with cancellation, Unicode Word import, invalid/oversized document
+  recovery and the five original image-to-note journeys. Five Word parser/worker
+  tests cover emitted-byte bounds, unused entries, malformed packages, cancelled
+  work and deadline/retry. A PDF stream test confirms cancellation stops a stalled
+  text reader and permits a clean retry. Source account changes release workers.
 
 - Five Chromium journeys pass at **390 × 844**, using actual browser Tesseract
   recognition and the real local course-note API: English crop/correction/handoff,

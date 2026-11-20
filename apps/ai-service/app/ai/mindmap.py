@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.ai.schemas import StructuredOutputError, complete_validated
 from app.documents.store import ChapterRecord, ChunkRecord
-from app.llm.router import LLMRouter
+from app.llm.router import AllProvidersFailed, LLMRouter
 
 logger = logging.getLogger("studyvault.mindmap")
 
@@ -58,7 +58,7 @@ def build(router: LLMRouter, chapters: list[ChapterRecord], chunks: list[ChunkRe
         mm = complete_validated(router, MindMap, _SYSTEM, f"Document:\n{material}")
         if mm.nodes and mm.edges:
             return mm
-    except (StructuredOutputError, ValidationError, ValueError):
+    except (AllProvidersFailed, StructuredOutputError, ValidationError, ValueError):
         logger.warning("mind map generation failed; using the deterministic fallback", exc_info=True)
     return fallback(chapters, chunks)
 

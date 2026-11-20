@@ -493,19 +493,19 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
     }
   };
 
-  const inputClass = 'mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm';
-  const labelClass = 'block text-sm font-medium text-neutral-800';
+  const inputClass = 'mt-1 min-w-0 w-full max-w-full rounded border border-neutral-300 px-3 py-2 text-sm';
+  const labelClass = 'block min-w-0 text-sm font-medium text-neutral-800';
 
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="cover-builder rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="mb-5">
         <h2 className="text-lg font-semibold">Academic cover page</h2>
         <p className="mt-1 text-sm text-neutral-600">
           Enter the details you want printed. Blank optional fields are left out.
         </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
-        <form className="space-y-4" onSubmit={(event) => void exportPdf(event)}>
+      <div className="cover-builder-layout">
+        <form className="cover-builder-form space-y-4" onSubmit={(event) => void exportPdf(event)}>
           <fieldset>
             <legend className="text-sm font-medium text-neutral-800">Choose a cover template</legend>
             <div role="radiogroup" aria-label="Cover template" className="mt-2 grid grid-cols-2 gap-3">
@@ -546,7 +546,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
             </div>
           </fieldset>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="cover-builder-fields">
             <label className={labelClass}>
               Paper size
               <select
@@ -579,7 +579,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
             />
           </label>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="cover-builder-fields">
             <label className={labelClass}>
               Institution
               <input
@@ -639,7 +639,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
           <fieldset className="space-y-3 rounded-lg border border-neutral-200 p-3">
             <legend className="px-1 text-sm font-medium">Students or group members</legend>
             {draft.content.students.map((student, index) => (
-              <div className="grid gap-2 sm:grid-cols-[1fr_0.7fr_0.7fr_auto]" key={`student-${index}`}>
+              <div className="cover-builder-student" key={`student-${index}`}>
                 <label className={labelClass}>
                   <span className="sr-only">Student {index + 1} name</span>
                   <input
@@ -700,7 +700,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
             </button>
           </fieldset>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="cover-builder-fields">
             <label className={labelClass}>
               Group name
               <input
@@ -764,7 +764,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
 
           <fieldset disabled={!ownerId} className="space-y-3 rounded-lg border border-neutral-200 p-3">
             <legend className="px-1 text-sm font-medium">Saved cover work on this browser</legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="cover-builder-saved-drafts">
               <button
                 type="button"
                 onClick={() => void persistDraft()}
@@ -805,7 +805,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
                 Delete
               </button>
             </div>
-            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+            <div className="cover-builder-presets">
               <label className="text-sm">
                 <span className="sr-only">Preset name</span>
                 <input

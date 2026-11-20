@@ -21,13 +21,34 @@ function BoardFixture() {
         handoff={boardHandoff}
         onInsert={(board) => setNotes((current) => [...current, graphBoardPreviewText(board)])}
       />
-      <ul aria-label="Existing local board shapes">{notes.map((note, index) => <li key={index}>{note}</li>)}</ul>
+      <ul aria-label="Existing local board shapes">
+        {notes.map((note, index) => (
+          <li key={index}>{note}</li>
+        ))}
+      </ul>
     </main>
   );
 }
 
-createRoot(host).render(location.pathname.startsWith('/document/')
-  ? <DocumentPage />
-  : new URLSearchParams(location.search).has('board_preview')
-  ? <BoardFixture />
-  : <main style={{ margin: '20px auto', maxWidth: 1100, fontFamily: 'Arial' }}><h1>Saved concept graph acceptance</h1><MindMapPanel documentId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" /></main>);
+function MapFixture() {
+  const [documentId, setDocumentId] = useState('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  return (
+    <main style={{ margin: '20px auto', maxWidth: 1100, fontFamily: 'Arial' }}>
+      <h1>Saved concept graph acceptance</h1>
+      {new URLSearchParams(location.search).has('switch_source') && (
+        <button onClick={() => setDocumentId('cccccccc-cccc-4ccc-8ccc-cccccccccccc')}>Switch source</button>
+      )}
+      <MindMapPanel documentId={documentId} />
+    </main>
+  );
+}
+
+createRoot(host).render(
+  location.pathname.startsWith('/document/') ? (
+    <DocumentPage />
+  ) : new URLSearchParams(location.search).has('board_preview') ? (
+    <BoardFixture />
+  ) : (
+    <MapFixture />
+  ),
+);
