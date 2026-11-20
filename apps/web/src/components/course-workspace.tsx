@@ -22,6 +22,7 @@ import {
   saveCourseStudyNotes,
   streamCourseTutor,
   submitCourseAttempt,
+  TutorOperationUncertainError,
 } from '@/lib/course-client';
 import Link from 'next/link';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
@@ -72,6 +73,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
   const pendingAction = useRef<PendingAction | null>(null);
   const pendingChat = useRef<{ id: string; question: string; revision: number } | null>(null);
   const tutorAbort = useRef<AbortController | null>(null);
+  const tutorQuestionInput = useRef<HTMLTextAreaElement | null>(null);
   const narrationRun = useRef(0);
   const autoContinueRef = useRef(false);
   const mounted = useRef(false);
@@ -272,6 +274,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
     pendingChat.current = action;
     setBusy(true);
     setError(null);
+    setSavedMessage('');
     stopNarration();
     try {
       const controller = new AbortController();
@@ -291,6 +294,33 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
       await refresh();
     } catch (cause) {
       if (mounted.current) setStreamingAnswer('');
+      if (cause instanceof TutorOperationUncertainError) {
+        try {
+          const checked = await getCourseSession(getToken, session.id);
+          if (!mounted.current) return;
+          const saved = checked.conversation.some(
+            (message) => message.role === 'user' && message.id === action.id && message.content === question,
+          );
+          setSession(checked);
+          pendingChat.current = null;
+          if (saved) {
+            setChatQuestion('');
+            setError(null);
+            setSavedMessage('Your tutor answer was already saved. The conversation is up to date.');
+          } else {
+            setError('The interrupted response was not saved. Ask again to start a new response.');
+          }
+        } catch (checkError) {
+          if (mounted.current) {
+            setError(
+              checkError instanceof Error
+                ? `Could not check the saved conversation: ${checkError.message} Retry to check before starting again.`
+                : 'Could not check the saved conversation. Retry to check before starting again.',
+            );
+          }
+        }
+        return;
+      }
       if (mounted.current) {
         if (
           tutorAbort.current?.signal.aborted ||
@@ -384,6 +414,17 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
   const pendingProjects = session
     ? course.required_assignment_ids.filter((id) => session.assignment_status[id] !== 'submitted')
     : [];
+  const activeEvidenceIds = new Set(session?.lesson.blocks.flatMap((block) => block.evidence_ids) ?? []);
+  const lastTutorMessage = [...(session?.conversation ?? [])]
+    .reverse()
+    .find((message) => message.role === 'assistant');
+  const tutorSuggestions = [
+    { label: 'Explain simply', question: 'Explain this lesson in simpler terms.' },
+    { label: 'Show a worked example', question: 'Walk me through an example from this lesson.' },
+    ...(lastTutorMessage?.evidence_ids.some((id) => activeEvidenceIds.has(id))
+      ? [{ label: 'Go deeper', question: 'Why does that matter?' }]
+      : []),
+  ];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-10">
@@ -771,7 +812,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
                   ? 'Tutor questions resume after you finish the fresh checkpoint on your own.'
                   : "Answers use this course's lesson sources. If the sources do not support an answer, the tutor will say so."}
               </p>
-              <ol className="mt-4 space-y-4" aria-live="polite">
+              <ol className="mt-4 space-y-4" aria-label="Course tutor conversation" aria-live="polite">
                 {session.conversation.map((message) => (
                   <li
                     key={message.id}
@@ -815,15 +856,38 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
                 ) : null}
               </ol>
               <form onSubmit={(event) => void askTutor(event)} className="mt-4">
+                <div className="mb-4" role="group" aria-label="Tutor question suggestions">
+                  <p id="course-tutor-suggestions-help" className="text-sm leading-6 text-slate-600">
+                    Suggestions fill an empty draft. Edit your question before choosing Ask tutor.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {tutorSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.question}
+                        type="button"
+                        disabled={busy || session.remediation?.step === 'checkpoint' || !!chatQuestion.trim()}
+                        aria-describedby="course-tutor-suggestions-help"
+                        onClick={() => {
+                          setChatQuestion(suggestion.question);
+                          tutorQuestionInput.current?.focus();
+                        }}
+                        className="rounded-full border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:opacity-50"
+                      >
+                        {suggestion.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label htmlFor="course-tutor-question" className="block text-sm font-medium">
                   Your question
                 </label>
                 <textarea
                   id="course-tutor-question"
+                  ref={tutorQuestionInput}
                   rows={3}
                   maxLength={2000}
                   required
-                  disabled={session.remediation?.step === 'checkpoint'}
+                  disabled={busy || session.remediation?.step === 'checkpoint'}
                   value={chatQuestion}
                   onChange={(event) => setChatQuestion(event.target.value)}
                   className="mt-1 block w-full rounded-lg border border-slate-300 p-3"

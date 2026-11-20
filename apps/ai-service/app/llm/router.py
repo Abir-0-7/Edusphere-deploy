@@ -408,6 +408,8 @@ class LLMRouter:
                         usage_known = False
                         attempt_outcome = "failed"
                         emitted = False
+                        done = False
+                        finish_reason: str | None = None
                         response_text: list[str] = []
                         body = {
                             "model": provider.model,
@@ -429,7 +431,10 @@ class LLMRouter:
                                         if not line.startswith("data:"):
                                             continue
                                         data = line[5:].strip()
-                                        if not data or data == "[DONE]":
+                                        if data == "[DONE]":
+                                            done = True
+                                            break
+                                        if not data:
                                             continue
                                         try:
                                             event = json.loads(data)
@@ -442,8 +447,15 @@ class LLMRouter:
                                             if type(pt) is int and pt >= 0 and type(ct) is int and ct >= 0:
                                                 prompt_tokens, completion_tokens, usage_known = pt, ct, True
                                         choices = event.get("choices", []) if isinstance(event, dict) else []
+                                        if not isinstance(choices, list):
+                                            raise LLMError("provider returned malformed stream choices")
                                         if not choices:
                                             continue
+                                        if not isinstance(choices[0], dict):
+                                            raise LLMError("provider returned a malformed stream choice")
+                                        reason = choices[0].get("finish_reason")
+                                        if isinstance(reason, str):
+                                            finish_reason = reason
                                         delta = choices[0].get("delta", {})
                                         token = delta.get("content") if isinstance(delta, dict) else None
                                         if isinstance(token, str) and token:
@@ -454,6 +466,8 @@ class LLMRouter:
                                             await asyncio.sleep(0)
                             if not emitted:
                                 raise LLMError("provider returned an empty stream")
+                            if finish_reason != "stop" and (finish_reason is not None or not done):
+                                raise LLMError("provider stream did not finish a complete answer")
                             attempt_outcome = "succeeded"
                             tracking.observed_tokens += prompt_tokens + completion_tokens
                             tracking.uncertain = tracking.uncertain or not usage_known
@@ -480,7 +494,8 @@ class LLMRouter:
                             if emitted:
                                 outcome = "uncertain"
                                 raise ApiError(
-                                    "Tutor stream ended before completion; retry with a new request", status_code=503
+                                    "Tutor stream ended before completion; retry with a new request",
+                                    details={"reason": "operation_uncertain"}, status_code=503,
                                 ) from exc
                             if retry < self.max_retries and self._can_retry(provider, exc, remaining):
                                 await asyncio.sleep(min(2**retry, 4) + random.uniform(0, 0.25))
@@ -512,7 +527,8 @@ class LLMRouter:
                 tracking.uncertain = tracking.uncertain or attempted
                 raise
             except ApiError as exc:
-                outcome = exc.code
+                if outcome != "uncertain":
+                    outcome = exc.code
                 raise
             except Exception:
                 if outcome == "failed":

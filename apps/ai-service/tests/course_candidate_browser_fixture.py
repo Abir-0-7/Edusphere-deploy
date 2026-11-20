@@ -16,6 +16,9 @@ os.environ.update(
     AI_SERVICE_LLM_LOGFARE_BASE_URL="http://127.0.0.1:1/no-provider",
     AI_SERVICE_LLM_LOGFARE_MODELS="fixture",
     AI_SERVICE_LLM_LOGFARE_API_KEY="",
+    AI_SERVICE_LLM_TIMEOUT_SECONDS="0.2",
+    AI_SERVICE_LLM_MAX_RETRIES="0",
+    AI_SERVICE_LLM_MAX_PROVIDER_ATTEMPTS="1",
 )
 
 from app.courses.store import MemoryCourseStore  # noqa: E402

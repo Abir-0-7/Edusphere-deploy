@@ -46,10 +46,32 @@ import {
   SessionResponseSchema,
   StudyNotesRequestSchema,
 } from '@studyvault/types';
-import { learningFetch, readResponse, type GetToken } from './ai-client';
+import { learningFetch, type GetToken } from './ai-client';
 import { readEventStream } from './event-stream';
 
 type Schema<T> = { safeParse(value: unknown): { success: true; data: T } | { success: false } };
+
+export class TutorOperationUncertainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TutorOperationUncertainError';
+  }
+}
+
+function tutorRequestError(payload: unknown, fallback: string): Error {
+  const parsed = ErrorEnvelopeSchema.safeParse(payload);
+  if (!parsed.success) return new Error(fallback);
+  const { message, details } = parsed.data.error;
+  if (
+    typeof details === 'object' &&
+    details !== null &&
+    'reason' in details &&
+    details.reason === 'operation_uncertain'
+  ) {
+    return new TutorOperationUncertainError(message);
+  }
+  return new Error(message);
+}
 
 async function request<T>(
   getToken: GetToken,
@@ -255,8 +277,13 @@ export async function streamCourseTutor(
       onToken(fallback.answer);
       return fallback;
     }
-    await readResponse(response, CourseChatResponseSchema, 'course tutor stream');
-    throw new Error('Course tutor stream failed.');
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error('Course tutor stream returned an invalid error response.');
+    }
+    throw tutorRequestError(payload, `Course tutor stream failed (${response.status}).`);
   }
   if (!response.headers.get('content-type')?.includes('text/event-stream')) {
     throw new Error('Course tutor returned an invalid stream.');
@@ -289,8 +316,7 @@ export async function streamCourseTutor(
       } catch {
         throw new Error('Tutor stream failed.');
       }
-      const parsed = ErrorEnvelopeSchema.safeParse(payload);
-      throw new Error(parsed.success ? parsed.data.error.message : 'Tutor stream failed.');
+      throw tutorRequestError(payload, 'Tutor stream failed.');
     }
     if (frame.event === 'done') {
       let payload: unknown;

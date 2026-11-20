@@ -9,6 +9,10 @@
 
 Evidence: `docs/game-vault-focus-lock.md`. Publishing these changes does not declare any outstanding hosted Phase 8 release gate complete.
 
+## Guided-course tutor upgrade (2026-11-20)
+
+- [x] **8.B11 Quick prompts and recovery.** Editable simpler-explanation/example/follow-up prompts, active-lesson evidence and public worked examples, citation-free refusals, labeled outage excerpts, bounded stream completion and safe explicit retry. Check: keyboard/citations/history/reload/retry/Stop/checkpoint browser journeys, API/stream regressions, lint/typecheck/test/build pass on the release branch. (Release verification: uncached lint/typecheck/tests 25/25 tasks pass; production build passes; Python 1,248 passed/84 environment-gated skips and Ruff clean; 14 Chromium course/tutor/practice journeys pass. Decision: preserve token/completion text identity, and check saved state before an explicit fresh request after an uncertain provider outcome.) Production models, quotas, schema and strict output validation are preserved. Details: `docs/ai-tutor-upgrade.md`. Hosted API rollout remains separate.
+
 ## Academic tools and repair integration (2026-11-20)
 
 - [x] **8.E07-E08 Owned whiteboards, learning previews and exports.** Added Excalidraw projects, owner-scoped images, device recovery, reviewed selected-area tutor/cards/maps and whole/region PNG/SVG/PDF export. All 12 Chromium journeys and five PostgreSQL migration tests pass. Canonical additive migration: `0022_whiteboards`; migrations 0000–0021 are unchanged. Pointer offsets refresh after panel expansion and scrolling; manual save cancels its queued autosave.

@@ -12,7 +12,6 @@ from fastapi.testclient import TestClient
 from app.courses.store import MemoryCourseStore
 from app.courses.tutor import answer_course_question, answer_with_router, stream_answer_with_router
 from app.documents.store import InMemoryDocumentStore
-from app.errors import ApiError
 from app.llm.admission import ai_scope
 from app.llm.cache_scope import PrivateResponseCache
 from app.llm.response_cache import MemoryResponseCache
@@ -99,9 +98,10 @@ def test_course_tutor_provider_outage_is_explicit_and_does_not_erase_lesson():
         def complete(self, messages):
             raise AllProvidersFailed("offline")
 
-    with ai_scope("tutor-test"), pytest.raises(ApiError) as failure:
-        answer_with_router(Router(), session, "Explain a name", document)
-    assert failure.value.status_code == 503
+    with ai_scope("tutor-test"):
+        answer, evidence_ids = answer_with_router(Router(), session, "Explain a name", document)
+    assert answer.startswith("The AI tutor is temporarily unavailable. Related excerpt from this lesson:")
+    assert evidence_ids and session.evidence[0].quote in answer
     assert session.conversation == [] and session.lesson.blocks
 
 

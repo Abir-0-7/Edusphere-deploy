@@ -32,6 +32,7 @@ from app.courses.contracts import (
     StudyNotesRequest,
 )
 from app.courses.labs import public_lab
+from app.courses.tutor import answer_course_question, is_lesson_decline
 from app.courses.upgrade_contracts import (
     CourseUpgradeApplyRequest,
     CourseUpgradePreview,
@@ -212,18 +213,43 @@ def create_course_router(
 
         async def events() -> AsyncIterator[str]:
             answer_parts: list[str] = []
+            answer_length = 0
+            evidence_ids = token_ids
             try:
-                async for chunk in token_stream:
+                try:
+                    async for chunk in token_stream:
+                        if await http_request.is_disconnected():
+                            return
+                        answer_length += len(chunk)
+                        if answer_length > 4000:
+                            raise ApiError(
+                                "Course tutor returned an oversized answer",
+                                details={"reason": "operation_uncertain"}, status_code=502,
+                            )
+                        answer_parts.append(chunk)
+                        yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"
+                except AllProvidersFailed:
+                    if answer_parts:
+                        raise ApiError(
+                            "Tutor stream ended before completion; retry with a new request",
+                            details={"reason": "operation_uncertain"}, status_code=503,
+                        ) from None
                     if await http_request.is_disconnected():
                         return
-                    answer_parts.append(chunk)
-                    yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"
+                    excerpt, evidence_ids = answer_course_question(session, request.question, provider_unavailable=True)
+                    answer_parts.append(excerpt)
+                    yield f"event: token\ndata: {json.dumps({'text': excerpt})}\n\n"
+
                 answer_text = "".join(answer_parts).strip()
-                if not answer_text or len(answer_text) > 4000:
-                    raise ApiError("Course tutor returned an empty or oversized answer", status_code=502)
+                if not answer_text:
+                    raise ApiError("Course tutor returned an empty answer", status_code=502)
+                if is_lesson_decline(answer_text):
+                    evidence_ids = []
+                if await http_request.is_disconnected():
+                    return
 
                 def commit_answer(_session, _question, _owner):
-                    return answer_text, token_ids
+                    return answer_text, evidence_ids
 
                 result = store.ask_tutor(user_id, str(enrollment_id), request, commit_answer)
                 if not await http_request.is_disconnected():
@@ -231,10 +257,6 @@ def create_course_router(
             except ApiError as exc:
                 if not await http_request.is_disconnected():
                     yield f"event: error\ndata: {json.dumps(error_body(exc.message, exc.code, exc.details))}\n\n"
-            except AllProvidersFailed:
-                if not await http_request.is_disconnected():
-                    body = error_body("Course tutor is temporarily unavailable", "provider_unavailable")
-                    yield f"event: error\ndata: {json.dumps(body)}\n\n"
             finally:
                 close = getattr(token_stream, "aclose", None)
                 if close is not None:

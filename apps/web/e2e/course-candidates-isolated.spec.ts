@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
+import { CourseChatRequestSchema, SessionResponseSchema } from '@studyvault/types';
 
 const courses = [
   {
@@ -276,6 +277,283 @@ for (const course of courses) {
     expect(browserErrors).toEqual([]);
   });
 }
+
+async function openTutor(page: Page) {
+  await routeLearningServiceToFixture(page);
+  const owner = `tutor-${randomUUID()}`;
+  await page.addInitScript((id) => localStorage.setItem('fixture-learner', id), owner);
+  await page.goto('/courses/python-foundations');
+  await page.getByRole('button', { name: 'Enroll and begin', exact: true }).click();
+  await expect(page).toHaveURL(/\?enrollment=/);
+  const id = new URL(page.url()).searchParams.get('enrollment');
+  if (!id) throw new Error('Missing tutor fixture enrollment');
+  const tutor = page.getByRole('region', { name: 'Ask the course tutor', exact: true });
+  await expect(tutor).toBeVisible();
+  const readSession = async () => {
+    const response = await page.request.get(`http://127.0.0.1:4325/api/course-enrollments/${id}`, {
+      headers: { Authorization: `Bearer ${owner}` },
+    });
+    expect(response.ok()).toBe(true);
+    return SessionResponseSchema.parse(await response.json());
+  };
+  return { tutor, readSession };
+}
+
+test('course tutor suggestions remain editable, cite lesson evidence and support follow-ups', async ({
+  page,
+}, testInfo) => {
+  const { tutor, readSession } = await openTutor(page);
+  const input = tutor.getByLabel('Your question', { exact: true });
+  const requests: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/tutor/stream')) requests.push(request.url());
+  });
+  await expect(tutor.getByRole('button', { name: 'Go deeper', exact: true })).toHaveCount(0);
+  await tutor.getByRole('button', { name: 'Explain simply', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(input).toHaveValue('Explain this lesson in simpler terms.');
+  await expect(input).toBeFocused();
+  await expect(tutor.getByRole('button', { name: 'Show a worked example', exact: true })).toBeDisabled();
+  await input.fill('My own editable question');
+  expect(requests).toHaveLength(0);
+  expect((await readSession()).conversation).toEqual([]);
+  await input.fill('Explain this lesson in simpler terms.');
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  const conversation = tutor.getByRole('list', { name: 'Course tutor conversation' });
+  await expect(conversation.locator(':scope > li')).toHaveCount(2);
+  await expect(conversation.locator(':scope > li').last()).toContainText(
+    'The AI tutor is temporarily unavailable. Related excerpt from this lesson:',
+  );
+  await expect(input).toHaveValue('');
+  await expect(tutor.getByRole('button', { name: 'Go deeper', exact: true })).toBeVisible();
+  const saved = await readSession();
+  expect(saved.conversation[1]?.evidence_ids.length).toBeGreaterThan(0);
+  await tutor.getByText('Sources used', { exact: true }).click();
+  await expect(tutor.locator('details[open]')).toBeVisible();
+  await tutor.screenshot({ path: testInfo.outputPath('course-tutor-390.png') });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await tutor.screenshot({ path: testInfo.outputPath('course-tutor-1440.png') });
+
+  await page.reload();
+  await expect(conversation.locator(':scope > li')).toHaveCount(2);
+  await tutor.getByRole('button', { name: 'Go deeper', exact: true }).click();
+  await expect(input).toHaveValue('Why does that matter?');
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(conversation.locator(':scope > li')).toHaveCount(4);
+  const followed = await readSession();
+  expect(followed.conversation[3]?.evidence_ids).toEqual(saved.conversation[1]?.evidence_ids);
+  await input.fill('Who won the intergalactic tournament?');
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(conversation.locator(':scope > li')).toHaveCount(6);
+  await expect(conversation.locator(':scope > li').last()).toContainText(
+    "I don't know based on this lesson.",
+  );
+  await expect(tutor.getByRole('button', { name: 'Go deeper', exact: true })).toHaveCount(0);
+});
+
+test('course tutor preserves failed question drafts and reuses the request ID when retried', async ({
+  page,
+}) => {
+  const { tutor, readSession } = await openTutor(page);
+  const ids: string[] = [];
+  await page.route('**/api/course-enrollments/*/tutor/stream', async (route) => {
+    const body = CourseChatRequestSchema.parse(route.request().postDataJSON());
+    ids.push(body.id);
+    if (ids.length === 1) await route.abort('failed');
+    else await route.continue();
+  });
+  const input = tutor.getByLabel('Your question', { exact: true });
+  await tutor.getByRole('button', { name: 'Show a worked example', exact: true }).click();
+  await expect(input).toHaveValue('Walk me through an example from this lesson.');
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(page.locator('main > [role="alert"]')).toBeVisible();
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('Walk me through an example from this lesson.');
+  await expect(tutor.getByRole('button', { name: 'Explain simply', exact: true })).toBeDisabled();
+  expect((await readSession()).conversation).toEqual([]);
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(
+    tutor.getByRole('list', { name: 'Course tutor conversation' }).locator(':scope > li'),
+  ).toHaveCount(2);
+  expect(ids).toHaveLength(2);
+  expect(ids[0]).toBe(ids[1]);
+  expect((await readSession()).conversation).toHaveLength(2);
+});
+
+function uncertainTutorStream() {
+  return (
+    'event: token\ndata: {"text":"Interrupted answer"}\n\n' +
+    'event: error\ndata: ' +
+    JSON.stringify({
+      error: {
+        code: 'internal',
+        message: 'Tutor stream ended before completion; retry with a new request',
+        details: { reason: 'operation_uncertain' },
+      },
+    }) +
+    '\n\n'
+  );
+}
+
+test('course tutor checks saved state before a new explicit attempt after interruption', async ({ page }) => {
+  const { tutor, readSession } = await openTutor(page);
+  const before = await readSession();
+  const ids: string[] = [];
+  await page.route('**/api/course-enrollments/*/tutor/stream', async (route) => {
+    ids.push(CourseChatRequestSchema.parse(route.request().postDataJSON()).id);
+    if (ids.length === 1) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: uncertainTutorStream(),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  const input = tutor.getByLabel('Your question', { exact: true });
+  await tutor.getByRole('button', { name: 'Explain simply', exact: true }).click();
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(page.locator('main > [role="alert"]')).toContainText(
+    'The interrupted response was not saved.',
+  );
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('Explain this lesson in simpler terms.');
+  expect(await readSession()).toEqual(before);
+  expect(ids).toHaveLength(1);
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(
+    tutor.getByRole('list', { name: 'Course tutor conversation' }).locator(':scope > li'),
+  ).toHaveCount(2);
+  expect(ids).toHaveLength(2);
+  expect(ids[1]).not.toBe(ids[0]);
+  expect((await readSession()).conversation).toHaveLength(2);
+});
+
+test('course tutor retains the old request key if checking saved state fails', async ({ page }) => {
+  const { tutor } = await openTutor(page);
+  const enrollment = new URL(page.url()).searchParams.get('enrollment');
+  const ids: string[] = [];
+  let checked = 0;
+  await page.route(`**/api/course-enrollments/${enrollment}`, async (route) => {
+    checked += 1;
+    if (checked === 1) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { code: 'internal', message: 'Saved state unavailable' } }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.route('**/api/course-enrollments/*/tutor/stream', async (route) => {
+    ids.push(CourseChatRequestSchema.parse(route.request().postDataJSON()).id);
+    if (ids.length <= 2) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: uncertainTutorStream(),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+  await tutor.getByRole('button', { name: 'Explain simply', exact: true }).click();
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(page.locator('main > [role="alert"]')).toContainText(
+    'Could not check the saved conversation: Saved state unavailable',
+  );
+  await expect(tutor.getByRole('button', { name: 'Ask tutor', exact: true })).toBeEnabled();
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(page.locator('main > [role="alert"]')).toContainText(
+    'The interrupted response was not saved.',
+  );
+  await expect(tutor.getByRole('button', { name: 'Ask tutor', exact: true })).toBeEnabled();
+  expect(ids).toHaveLength(2);
+  expect(ids[1]).toBe(ids[0]);
+  expect(checked).toBe(2);
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(
+    tutor.getByRole('list', { name: 'Course tutor conversation' }).locator(':scope > li'),
+  ).toHaveCount(2);
+  expect(ids[2]).not.toBe(ids[0]);
+});
+
+test('course tutor restores an already saved answer without another generation attempt', async ({ page }) => {
+  const { tutor, readSession } = await openTutor(page);
+  let requests = 0;
+  await page.route('**/api/course-enrollments/*/tutor/stream', async (route) => {
+    requests += 1;
+    const saved = await route.fetch();
+    expect(saved.ok()).toBe(true);
+    expect(await saved.text()).toContain('event: done');
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: uncertainTutorStream(),
+    });
+  });
+  await tutor.getByRole('button', { name: 'Explain simply', exact: true }).click();
+  await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Your tutor answer was already saved.');
+  await expect(tutor.getByLabel('Your question', { exact: true })).toHaveValue('');
+  await expect(
+    tutor.getByRole('list', { name: 'Course tutor conversation' }).locator(':scope > li'),
+  ).toHaveCount(2);
+  await expect(page.locator('main > [role="alert"]')).toHaveCount(0);
+  expect((await readSession()).conversation).toHaveLength(2);
+  expect(requests).toBe(1);
+});
+
+test('course tutor stop preserves the question and saved progress', async ({ page }) => {
+  const { tutor, readSession } = await openTutor(page);
+  const before = await readSession();
+  let releaseRequest: () => void = () => {};
+  const released = new Promise<void>((resolve) => {
+    releaseRequest = resolve;
+  });
+  await page.route('**/api/course-enrollments/*/tutor/stream', async (route) => {
+    await released;
+    await route.abort('aborted');
+  });
+  try {
+    const input = tutor.getByLabel('Your question', { exact: true });
+    await tutor.getByRole('button', { name: 'Explain simply', exact: true }).click();
+    await tutor.getByRole('button', { name: 'Ask tutor', exact: true }).click();
+    await expect(input).toBeDisabled();
+    await expect(tutor.getByRole('button', { name: 'Explain simply', exact: true })).toBeDisabled();
+    await tutor.getByRole('button', { name: 'Stop response', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Tutor response cancelled');
+    await expect(input).toBeEnabled();
+    await expect(input).toHaveValue('Explain this lesson in simpler terms.');
+    expect(await readSession()).toEqual(before);
+  } finally {
+    releaseRequest();
+  }
+});
+
+test('course tutor suggestions respect the fresh independent checkpoint gate', async ({ page }) => {
+  const { tutor, readSession } = await openTutor(page);
+  await page.getByRole('button', { name: 'Independent checkpoint', exact: true }).click();
+  await checkAnswer(page, -1);
+  await expect(page.getByLabel('Your answer', { exact: true })).toHaveValue('');
+  await checkAnswer(page, -1);
+  await expect(page.getByLabel('Your answer', { exact: true })).toHaveValue('');
+  expect((await readSession()).remediation?.step).toBe('bridge');
+  await checkAnswer(page, 13);
+  expect((await readSession()).remediation?.step).toBe('checkpoint');
+  await expect(
+    tutor.getByText('Tutor questions resume after you finish the fresh checkpoint on your own.'),
+  ).toBeVisible();
+  await expect(tutor.getByRole('button', { name: 'Explain simply', exact: true })).toBeDisabled();
+  await expect(tutor.getByRole('button', { name: 'Show a worked example', exact: true })).toBeDisabled();
+  await expect(tutor.getByLabel('Your question', { exact: true })).toBeDisabled();
+  await expect(tutor.getByRole('button', { name: 'Ask tutor', exact: true })).toBeDisabled();
+});
 
 test('course narration auto-continue pauses at checkpoints and can be interrupted', async ({ page }) => {
   await routeLearningServiceToFixture(page);
