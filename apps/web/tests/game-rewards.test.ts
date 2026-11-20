@@ -6,10 +6,26 @@ const mocks = vi.hoisted(() => ({
   rows: new Map<string, { amount: number }>(),
   insert: vi.fn(),
   conflict: vi.fn(),
+  focusOwners: new Set<string>(),
+  focusUnavailable: false,
 }));
 vi.mock('@clerk/nextjs/server', () => ({ auth: async () => ({ userId: mocks.owner }) }));
 vi.mock('../src/lib/users', () => ({ getUserByClerkId: async (id: string) => ({ id }) }));
-vi.mock('../src/lib/db', () => ({ getDb: () => ({ insert: mocks.insert }) }));
+vi.mock('../src/lib/db', () => ({
+  getDb: () => ({
+    insert: mocks.insert,
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => {
+            if (mocks.focusUnavailable) throw new Error('private focus database outage');
+            return mocks.owner && mocks.focusOwners.has(mocks.owner) ? [{ id: 'active-focus' }] : [];
+          },
+        }),
+      }),
+    }),
+  }),
+}));
 
 const sorting = {
   game_id: 'SortingRace',
@@ -25,6 +41,8 @@ function request(body: unknown) {
 beforeEach(() => {
   mocks.owner = 'alice';
   mocks.rows.clear();
+  mocks.focusOwners.clear();
+  mocks.focusUnavailable = false;
   vi.clearAllMocks();
   mocks.insert.mockImplementation(() => ({
     values: (entry: { userId: string; reason: string; refId: string; amount: number }) => ({
@@ -44,6 +62,22 @@ beforeEach(() => {
 });
 
 describe('server verified game rewards', () => {
+  it('rejects reward claims during focus and resumes after completion', async () => {
+    mocks.focusOwners.add('alice');
+    const response = await POST(request(sorting));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { code: 'conflict' } });
+    expect(mocks.insert).not.toHaveBeenCalled();
+    mocks.focusOwners.clear();
+    expect((await POST(request(sorting))).status).toBe(201);
+  });
+  it('keeps rewards unavailable when focus state cannot be read', async () => {
+    mocks.focusUnavailable = true;
+    const response = await POST(request(sorting));
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(await response.json())).not.toContain('private');
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
   it('derives amount from replay and awards one effect under concurrent/repeated completion', async () => {
     const replies = await Promise.all(
       Array.from({ length: 12 }, () => POST(request({ ...sorting, score: 999999, amount: 999 }))),

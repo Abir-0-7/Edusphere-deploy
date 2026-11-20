@@ -16,6 +16,7 @@ export function formatFocusTime(total: number): string {
 
 interface FocusState {
   session: FocusSessionResponse | null;
+  gameVaultAccess: 'open' | 'locked' | 'checking' | 'unavailable';
   remaining: number;
   restoring: boolean;
   restoreFailed: boolean;
@@ -33,13 +34,20 @@ const FocusContext = createContext<FocusState | null>(null);
 export function FocusSessionProvider({ children }: { children: ReactNode }) {
   const { userId, isLoaded } = useAuth();
   return (
-    <FocusSessionState key={userId ?? 'signed-out'} enabled={isLoaded && !!userId}>
+    <FocusSessionState key={userId ?? 'signed-out'} accountId={isLoaded ? userId : null}>
       {children}
     </FocusSessionState>
   );
 }
 
-function FocusSessionState({ children, enabled }: { children: ReactNode; enabled: boolean }) {
+function FocusSessionState({
+  children,
+  accountId,
+}: {
+  children: ReactNode;
+  accountId: string | null | undefined;
+}) {
+  const enabled = !!accountId;
   const { getToken } = useAuth();
   const [session, setSession] = useState<FocusSessionResponse | null>(null);
   const [remaining, setRemaining] = useState(0);
@@ -52,6 +60,19 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
   const mounted = useRef(false);
   const pending = useRef(false);
   const completionFailed = useRef(false);
+  const updates = useRef<BroadcastChannel | null>(null);
+  // Ignore restores captured before a write; queue tab changes received during it.
+  const mutationVersion = useRef(0);
+  const refreshNeeded = useRef(false);
+
+  const refreshFromServer = useCallback(() => {
+    if (pending.current) {
+      refreshNeeded.current = true;
+      return;
+    }
+    setRestoring(true);
+    setRestoreAttempt((attempt) => attempt + 1);
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -60,10 +81,24 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
     };
   }, []);
 
+  // Recheck the server when another tab starts or ends focus for this account.
+  useEffect(() => {
+    if (!accountId || typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(`studyvault:focus:${accountId}`);
+    updates.current = channel;
+    channel.onmessage = refreshFromServer;
+    return () => {
+      updates.current = null;
+      channel.close();
+    };
+  }, [accountId, refreshFromServer]);
+
   const complete = useCallback(
     async (current: FocusSessionResponse) => {
       if (pending.current) return;
       pending.current = true;
+      mutationVersion.current += 1;
+      setRestoring(false);
       setBusy(true);
       setMessage(null);
       try {
@@ -85,22 +120,34 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
         );
         setSession(null);
         completionFailed.current = false;
+        updates.current?.postMessage('changed');
       } catch {
         if (!mounted.current) return;
         completionFailed.current = true;
         setMessage('Could not save the session. Choose End session to retry.');
       } finally {
         pending.current = false;
-        if (mounted.current) setBusy(false);
+        if (mounted.current) {
+          setBusy(false);
+          if (refreshNeeded.current) {
+            refreshNeeded.current = false;
+            refreshFromServer();
+          }
+        }
       }
     },
-    [getToken],
+    [getToken, refreshFromServer],
   );
 
   // Reloads and ordinary anchor navigation restore the server-owned session.
   useEffect(() => {
     if (!enabled) return;
+    if (pending.current) {
+      refreshNeeded.current = true;
+      return;
+    }
     let cancelled = false;
+    const requestVersion = mutationVersion.current;
     const requestSentAt = Date.now();
     setRestoring(true);
     setRestoreFailed(false);
@@ -108,8 +155,9 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
     void (async () => {
       try {
         const current = await getCurrentFocusSession(getToken);
-        if (cancelled) return;
+        if (cancelled || requestVersion !== mutationVersion.current) return;
         setSession(current);
+        completionFailed.current = false;
         setRemaining(current ? secondsLeft(current) : 0);
         sendFocusExtensionMessage(
           current
@@ -131,11 +179,11 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
               },
         );
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled || requestVersion !== mutationVersion.current) return;
         setRestoreFailed(true);
         setMessage(error instanceof Error ? error.message : 'Could not restore the focus session.');
       } finally {
-        if (!cancelled) setRestoring(false);
+        if (!cancelled && requestVersion === mutationVersion.current) setRestoring(false);
       }
     })();
     return () => {
@@ -158,6 +206,7 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
   const start = async (kind: string) => {
     if (pending.current || session || restoring || restoreFailed || !enabled) return;
     pending.current = true;
+    mutationVersion.current += 1;
     setBusy(true);
     setMessage(null);
     try {
@@ -174,12 +223,20 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
         expectedEndAt: current.expected_end_at,
         sentAt: Date.now(),
       });
+      updates.current?.postMessage('changed');
     } catch (error) {
+      refreshNeeded.current = true;
       if (mounted.current)
         setMessage(error instanceof Error ? error.message : 'Could not start a focus session.');
     } finally {
       pending.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        if (refreshNeeded.current) {
+          refreshNeeded.current = false;
+          refreshFromServer();
+        }
+      }
     }
   };
 
@@ -191,10 +248,16 @@ function FocusSessionState({ children, enabled }: { children: ReactNode; enabled
     if (!restoring && !pending.current) setRestoreAttempt((attempt) => attempt + 1);
   };
 
+  let gameVaultAccess: FocusState['gameVaultAccess'] = 'open';
+  if (session) gameVaultAccess = 'locked';
+  else if (restoring || !enabled || busy) gameVaultAccess = 'checking';
+  else if (restoreFailed) gameVaultAccess = 'unavailable';
+
   return (
     <FocusContext
       value={{
         session,
+        gameVaultAccess,
         remaining,
         restoring: restoring || !enabled,
         restoreFailed,

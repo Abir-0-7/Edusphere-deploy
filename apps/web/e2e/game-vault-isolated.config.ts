@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 // are unaffected. Signed-in storage coverage is a separate deployment gate.
 export default defineConfig({
   testDir: '.',
-  testMatch: 'game-vault-isolated.spec.ts',
+  testMatch: ['game-vault-isolated.spec.ts', 'game-focus-lock-isolated.spec.ts'],
   outputDir: '../test-results/game-vault',
   fullyParallel: false,
   timeout: 120_000,

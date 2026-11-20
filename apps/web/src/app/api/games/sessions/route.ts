@@ -13,6 +13,7 @@ import { errorBody } from '@/lib/errors';
 import { getDb } from '@/lib/db';
 import { gameStoreUnavailable, getGameAccount } from '@/lib/game-session-account';
 import { gameRequestBody, sessionResponse } from '@/lib/game-session-state';
+import { GameFocusActiveError, gameFocusLocked, hasActiveFocusSession } from '@/lib/game-focus-lock';
 
 function seed(): number {
   const bytes = new Uint32Array(1);
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
         .where(eq(users.id, user.id))
         .for('update');
       if (!owner) throw new Error('game account no longer exists');
+      if (await hasActiveFocusSession(tx, user.id)) throw new GameFocusActiveError();
       const [total] = await tx
         .select({ value: count() })
         .from(gameSessions)
@@ -92,7 +94,8 @@ export async function POST(request: Request) {
       if (!created) throw new Error('game save was not created');
       return created;
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof GameFocusActiveError) return gameFocusLocked();
     return gameStoreUnavailable('Game could not be saved; try again.');
   }
   if (row === null)

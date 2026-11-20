@@ -1100,6 +1100,7 @@
             "clerkSession": []
           }
         ],
+        "description": "Create a game session only when the owner has no running focus session; otherwise return HTTP 409.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3252,6 +3253,7 @@
             "clerkSession": []
           }
         ],
+        "description": "Apply a saved-game command only when the owner has no running focus session; otherwise return HTTP 409.",
         "requestBody": {
           "required": true,
           "content": {

@@ -2,6 +2,13 @@
 
 Playwright specs live in `e2e/` and run with `pnpm --filter @studyvault/web test:e2e`.
 
+The Game Vault suite runs with `test:e2e:games`. It includes nine focus-lock
+scenarios that render the production focus provider, timer, games layout, and
+player using authenticated HTTP fixtures: restoration loading/failure, active
+focus, deep links/reloads/Cyberverse, completion retry, expiry, mobile, cross-tab
+updates, and delayed-response races. Desktop/mobile captures are written to
+`apps/web/test-results/game-vault`. Hosted signed-in acceptance is separate.
+
 Academic tools run with `test:e2e:whiteboards`, `test:e2e:ocr`,
 `test:e2e:code-review` and `test:e2e:checklists` on the web package. Narration
 uses `pnpm --filter @studyvault/web exec playwright test --config

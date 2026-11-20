@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/.tmp-playwright/**',
       '**/public/ocr/**',
       '**/public/games/cyberverse/**',
+      // Vite build output; authored game code is linted in apps/game-engine/src.
+      '**/public/games/assets/**',
       // Pinned third-party source distributed solely for license attribution.
       '**/public/licenses/**',
     ],

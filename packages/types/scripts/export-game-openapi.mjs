@@ -49,6 +49,7 @@ const spec = {
       get: { security, responses: { 200: response(GameSessionListSchema), ...errors } },
       post: {
         security,
+        description: 'Create a game session only when the owner has no running focus session; otherwise return HTTP 409.',
         requestBody: body(GameCreateInputSchema),
         responses: { 201: response(GameSessionSchema), ...errors },
       },
@@ -58,6 +59,7 @@ const spec = {
       get: { security, responses: { 200: response(GameSessionSchema), ...errors } },
       post: {
         security,
+        description: 'Apply a saved-game command only when the owner has no running focus session; otherwise return HTTP 409.',
         requestBody: body(GameCommandInputSchema),
         responses: { 200: response(GameSessionSchema), ...errors },
       },

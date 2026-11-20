@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { GameVaultLink } from './game-vault-link';
 
 const sections = [
   {
@@ -44,12 +45,24 @@ export function WorkspaceNavigation({ mobile = false }: { mobile?: boolean }) {
             pathname === href ||
             pathname.startsWith(href + '/') ||
             (href === '/library' && pathname.startsWith('/document/'));
-          return (
-            <Link key={href} href={href} className="app-nav-link" aria-current={active ? 'page' : undefined}>
+          const content = (
+            <>
               <span className="app-nav-mark" aria-hidden="true">
                 {String(index + 1 + (label === 'Practice' ? 3 : label === 'Tools' ? 8 : 0)).padStart(2, '0')}
               </span>
               <span>{name}</span>
+            </>
+          );
+          if (href === '/games') {
+            return (
+              <GameVaultLink key={href} className="app-nav-link" current={active} lockedLabel>
+                {content}
+              </GameVaultLink>
+            );
+          }
+          return (
+            <Link key={href} href={href} className="app-nav-link" aria-current={active ? 'page' : undefined}>
+              {content}
             </Link>
           );
         }),

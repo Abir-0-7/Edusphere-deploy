@@ -62,6 +62,7 @@ vi.mock('../src/lib/db', () => ({
   },
 }));
 vi.mock('@studyvault/db', () => ({
+  focusSessions: { name: 'focus', id: 'id', userId: 'userId', status: 'status' },
   gameSessions: {
     name: 'sessions',
     id: 'id',
@@ -93,6 +94,7 @@ class MemoryDatabase {
   sessions: SavedSession[] = [];
   ledger: Row[] = [];
   users: Row[] = [{ id: 'alice' }, { id: 'bob' }];
+  focus: Row[] = [];
   writes: string[] = [];
   failLedger = false;
   failUpdate = false;
@@ -105,6 +107,7 @@ class MemoryDatabase {
     if (table.name === 'sessions') return this.sessions;
     if (table.name === 'ledger') return this.ledger;
     if (table.name === 'users') return this.users;
+    if (table.name === 'focus') return this.focus;
     throw new Error(`Unexpected table ${table.name}`);
   }
 
@@ -324,6 +327,49 @@ beforeEach(() => {
 });
 
 describe('owner scoped game session routes', () => {
+  it('locks creation and saved-game actions for the focusing owner without changing the save or rewards', async () => {
+    const session = await created();
+    expect((await command(session.id, 0, 'start')).status).toBe(200);
+    const before = structuredClone({
+      sessions: database.sessions,
+      ledger: database.ledger,
+      writes: database.writes,
+    });
+    database.focus.push({
+      id: 'alice-focus',
+      userId: 'alice',
+      status: 'running',
+      expectedEndAt: new Date(0),
+    });
+    const blocked = [
+      await createSession(request({ game_id: 'NQueens' })),
+      await createSession(request({ game_id: 'NQueens', practice: true })),
+      ...(await Promise.all(
+        ['start', 'pause', 'resume', 'abandon'].map((name) =>
+          command(session.id, 1, name as 'start' | 'pause' | 'resume' | 'abandon'),
+        ),
+      )),
+    ];
+    for (const response of blocked) {
+      expect(response.status).toBe(409);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(ErrorEnvelopeSchema.parse(await response.json()).error.code).toBe('conflict');
+    }
+    expect({ sessions: database.sessions, ledger: database.ledger, writes: database.writes }).toEqual(before);
+    database.focus[0]!.status = 'completed';
+    expect((await command(session.id, 1, 'pause')).status).toBe(200);
+    expect((await createSession(request({ game_id: 'NQueens' }))).status).toBe(201);
+  });
+
+  it('ignores another owner focusing and completed or abandoned focus sessions', async () => {
+    database.focus.push(
+      { id: 'bob-focus', userId: 'bob', status: 'running' },
+      { id: 'alice-completed', userId: 'alice', status: 'completed' },
+      { id: 'alice-abandoned', userId: 'alice', status: 'abandoned' },
+    );
+    const session = await created();
+    expect((await command(session.id, 0, 'start')).status).toBe(200);
+  });
   const operations = [
     ['list', () => listSessions()],
     ['create', () => createSession(request({ game_id: 'NQueens' }))],

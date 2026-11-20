@@ -53,6 +53,15 @@ beforeEach(() => {
 });
 
 describe('authenticated Cyberverse HTTP boundary', () => {
+  it('returns the same no-cache focus lock for unlock and progress writes', async () => {
+    mocks.unlock.mockResolvedValue({ error: 'focus_active' });
+    mocks.complete.mockResolvedValue({ error: 'focus_active' });
+    for (const response of [await unlock(request(input)), await progress(request({ ...input, evidence }))]) {
+      expect(response.status).toBe(409);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(ErrorEnvelopeSchema.parse(await response.json()).error.code).toBe('conflict');
+    }
+  });
   it('returns production state without cache or private identity fields', async () => {
     const reply = await context(new Request('https://study.test/api/game-vault/context?gameId=cyberverse'));
     expect(reply.status).toBe(200);

@@ -7,6 +7,7 @@ import { errorBody } from '@/lib/errors';
 import { getDb } from '@/lib/db';
 import { gameStoreUnavailable, getGameAccount } from '@/lib/game-session-account';
 import { gameRequestBody, sessionResponse, transitionSession } from '@/lib/game-session-state';
+import { GameFocusActiveError, gameFocusLocked, hasActiveFocusSession } from '@/lib/game-focus-lock';
 
 type Context = { params: Promise<{ id: string }> };
 const validId = z.string().uuid();
@@ -71,6 +72,7 @@ export async function POST(request: Request, context: Context) {
         .limit(1)
         .for('update');
       if (!row) return { kind: 'not_found' as const };
+      if (await hasActiveFocusSession(tx, user.id)) throw new GameFocusActiveError();
       if (row.revision !== parsed.data.revision) return { kind: 'conflict' as const };
       let next: ReturnType<typeof transitionSession>;
       try {
@@ -119,7 +121,8 @@ export async function POST(request: Request, context: Context) {
     if (reply.kind === 'invalid_action')
       return NextResponse.json(errorBody('invalid_input', reply.message), { status: 400 });
     return NextResponse.json(sessionResponse(reply.row));
-  } catch {
+  } catch (error) {
+    if (error instanceof GameFocusActiveError) return gameFocusLocked();
     // A failed write rolls back both the session and ledger, leaving replay safe.
     return NextResponse.json(
       errorBody('internal', 'game session is temporarily unavailable; reload before retrying'),

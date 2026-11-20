@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { errorBody } from '@/lib/errors';
+import { GAME_FOCUS_LOCK_MESSAGE } from '@/lib/game-focus-lock';
 import type { VaultError } from './server';
 
 export const VAULT_HEADERS = { 'Cache-Control': 'no-store' };
 
 export function vaultFailure(reason: VaultError) {
   const errors: Record<VaultError, { status: number; code: string; message: string }> = {
+    focus_active: { status: 409, code: 'conflict', message: GAME_FOCUS_LOCK_MESSAGE },
     not_found: { status: 404, code: 'not_found', message: 'StudyVault account not found.' },
     mission_not_found: { status: 404, code: 'not_found', message: 'Mission not found.' },
     mission_not_playable: {

@@ -43,6 +43,10 @@ describe.skipIf(!testDatabaseUrl)('Postgres game-session migration, locking and 
     secondClient = postgres(testDatabaseUrl!, options);
     await firstClient.unsafe(`
       CREATE TABLE users (id uuid PRIMARY KEY, clerk_id text NOT NULL UNIQUE);
+      CREATE TABLE focus_sessions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status text NOT NULL, expected_end_at timestamptz NOT NULL DEFAULT now()
+      );
       CREATE TABLE token_ledger (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -159,6 +163,26 @@ describe.skipIf(!testDatabaseUrl)('Postgres game-session migration, locking and 
       { count: number }[]
     >`SELECT count(*)::int AS count FROM token_ledger WHERE user_id = ${alice}`;
     expect(count?.count).toBe(1);
+  });
+
+  it('blocks active and expired-but-unsettled focus without mutating a save or rewards, then unlocks after completion', async () => {
+    const session = await create();
+    await firstClient!`INSERT INTO focus_sessions(user_id, status, expected_end_at) VALUES (${bob}, 'running', now() + interval '25 minutes')`;
+    expect((await send(session.id, 0)).status).toBe(200);
+    await firstClient!`INSERT INTO focus_sessions(user_id, status, expected_end_at) VALUES (${alice}, 'running', now() - interval '1 minute')`;
+    const blockedCreate = await createSession(request({ game_id: 'NQueens' }));
+    expect(blockedCreate.status).toBe(409);
+    expect(await blockedCreate.json()).toMatchObject({ error: { code: 'conflict' } });
+    expect((await send(session.id, 1, 0, 1)).status).toBe(409);
+    const [saved] = await firstClient!<
+      { revision: number; status: string }[]
+    >`SELECT revision, status FROM game_sessions WHERE id = ${session.id}`;
+    expect(saved).toEqual({ revision: 1, status: 'playing' });
+    const [ledger] = await firstClient!<{ count: number }[]>`SELECT count(*)::int AS count FROM token_ledger`;
+    expect(ledger?.count).toBe(0);
+    await firstClient!`UPDATE focus_sessions SET status='completed' WHERE user_id=${alice}`;
+    expect((await send(session.id, 1, 0, 1)).status).toBe(200);
+    await create();
   });
 
   it('rolls back a payout on failed session commit, resumes through a new connection, and cascades account deletion', async () => {

@@ -3,14 +3,20 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   root: fileURLToPath(new URL('./fixtures/game-vault', import.meta.url)),
+  cacheDir: fileURLToPath(new URL('../.tmp-playwright/game-vault/vite', import.meta.url)),
   publicDir: fileURLToPath(new URL('../public', import.meta.url)),
   server: { host: '127.0.0.1', port: 4317, strictPort: true },
   esbuild: { jsx: 'automatic' },
-  define: { 'process.env.NEXT_PUBLIC_AI_SERVICE_URL': JSON.stringify('http://localhost:8000') },
+  define: {
+    'process.env.NEXT_PUBLIC_AI_SERVICE_URL': JSON.stringify('http://localhost:8000'),
+    'process.env.NEXT_PUBLIC_STUDYVAULT_EXTENSION_ID': JSON.stringify(''),
+  },
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': fileURLToPath(new URL('../src', import.meta.url)),
       '@clerk/nextjs': fileURLToPath(new URL('./fixtures/game-vault/clerk.ts', import.meta.url)),
+      'next/link': fileURLToPath(new URL('./fixtures/map/link.tsx', import.meta.url)),
     },
   },
 });

@@ -6,6 +6,7 @@ import { tokenLedger } from '@studyvault/db';
 import { getDb } from '@/lib/db';
 import { getUserByClerkId } from '@/lib/users';
 import { errorBody } from '@/lib/errors';
+import { gameFocusLocked, hasActiveFocusSession } from '@/lib/game-focus-lock';
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
   const reason = `game:${input.data.game_id}:${new Date().toISOString().slice(0, 10)}`;
   const amount = Math.min(5, Math.max(1, Math.floor(completion.score / 200)));
   const db = getDb();
+  try {
+    if (await hasActiveFocusSession(db, user.id)) return gameFocusLocked();
+  } catch {
+    return NextResponse.json(errorBody('internal', 'Could not check your focus session. Try again.'), {
+      status: 503,
+    });
+  }
   // The existing (reason, ref_id) unique constraint resolves duplicate and
   // concurrent completions atomically. The server derives owner/day/amount.
   const [entry] = await db

@@ -29,6 +29,10 @@ describe.skipIf(!url)('Cyberverse atomic unlock and completion on Postgres', () 
     second = postgres(url!, options);
     await first.unsafe(`
       CREATE TABLE users (id uuid PRIMARY KEY, clerk_id text NOT NULL UNIQUE);
+      CREATE TABLE focus_sessions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status text NOT NULL, expected_end_at timestamptz NOT NULL DEFAULT now()
+      );
       CREATE TABLE token_ledger (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         amount integer NOT NULL, reason text NOT NULL, ref_id uuid,
@@ -62,6 +66,19 @@ describe.skipIf(!url)('Cyberverse atomic unlock and completion on Postgres', () 
       if (/^cyberverse_test_[a-f0-9]{32}$/.test(schema)) await admin.unsafe(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end({ timeout: 5 });
     }
+  });
+
+  it('locks spending and completion during focus and restores access when focus ends', async () => {
+    await first!`INSERT INTO focus_sessions(user_id,status) VALUES (${bob},'running')`;
+    expect((await service.unlockMission('cyber-alice', 'binary_city')).state?.tokens).toBe(0);
+    await first!`INSERT INTO focus_sessions(user_id,status,expected_end_at) VALUES (${alice},'running',now()-interval '1 minute')`;
+    expect(await service.unlockMission('cyber-alice', 'binary_city')).toEqual({ error: 'focus_active' });
+    expect(await restarted.completeMission('cyber-alice', 'binary_city', evidence)).toEqual({
+      error: 'focus_active',
+    });
+    expect((await service.contextFor('cyber-alice'))?.xp).toBe(0);
+    await first!`UPDATE focus_sessions SET status='completed' WHERE user_id=${alice}`;
+    expect((await restarted.completeMission('cyber-alice', 'binary_city', evidence)).state?.xp).toBe(100);
   });
 
   it('charges once under concurrent requests, preserves unlock on restart and awards XP only once', async () => {

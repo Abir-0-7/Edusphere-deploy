@@ -1,7 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { FocusSessionProvider } from '@/components/focus-session-provider';
 import { ActiveFocusTimer } from '@/components/focus-timer';
 
 /**
@@ -14,11 +13,9 @@ export default async function ProtectedLayout({ children }: { children: ReactNod
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
   return (
-    <FocusSessionProvider key={userId}>
-      <>
-        <ActiveFocusTimer />
-        {children}
-      </>
-    </FocusSessionProvider>
+    <>
+      <ActiveFocusTimer />
+      {children}
+    </>
   );
 }

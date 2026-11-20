@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { documents, flashcards, focusSessions, tokenLedger } from '@studyvault/db';
 import { getDb } from '@/lib/db';
 import { getUserByClerkId } from '@/lib/users';
+import { GameVaultLink } from '@/components/game-vault-link';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -12,26 +13,42 @@ export default async function DashboardPage() {
 
   const [clerkUser, user] = await Promise.all([currentUser(), getUserByClerkId(userId)]);
   const recentDocuments = user
-    ? await getDb().select({
-        id: documents.id,
-        filename: documents.filename,
-        status: documents.status,
-        pages: documents.pageCount,
-        updatedAt: documents.updatedAt,
-      }).from(documents)
+    ? await getDb()
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          status: documents.status,
+          pages: documents.pageCount,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
         .where(eq(documents.userId, user.id))
         .orderBy(desc(documents.updatedAt))
         .limit(4)
     : [];
   const [dueCards, focusTotals, tokenTotals] = user
     ? await Promise.all([
-        getDb().select({ value: sql<number>`count(*)::int` })
+        getDb()
+          .select({ value: sql<number>`count(*)::int` })
           .from(flashcards)
-          .where(and(eq(flashcards.userId, user.id), sql`${flashcards.dueDate} <= to_char(current_date, 'YYYY-MM-DD')`)),
-        getDb().select({ value: sql<number>`coalesce(sum(${focusSessions.actualSeconds}), 0)::int` })
+          .where(
+            and(
+              eq(flashcards.userId, user.id),
+              sql`${flashcards.dueDate} <= to_char(current_date, 'YYYY-MM-DD')`,
+            ),
+          ),
+        getDb()
+          .select({ value: sql<number>`coalesce(sum(${focusSessions.actualSeconds}), 0)::int` })
           .from(focusSessions)
-          .where(and(eq(focusSessions.userId, user.id), eq(focusSessions.status, 'completed'), sql`${focusSessions.startedAt} >= now() - interval '7 days'`)),
-        getDb().select({ value: sql<number>`coalesce(sum(${tokenLedger.amount}), 0)::int` })
+          .where(
+            and(
+              eq(focusSessions.userId, user.id),
+              eq(focusSessions.status, 'completed'),
+              sql`${focusSessions.startedAt} >= now() - interval '7 days'`,
+            ),
+          ),
+        getDb()
+          .select({ value: sql<number>`coalesce(sum(${tokenLedger.amount}), 0)::int` })
           .from(tokenLedger)
           .where(eq(tokenLedger.userId, user.id)),
       ])
@@ -48,9 +65,13 @@ export default async function DashboardPage() {
         <div>
           <p className="page-kicker">YOUR LEARNING DESK</p>
           <h1 className="dashboard-greeting">{greeting}</h1>
-          <p className="page-subtitle">Pick up a course, practice what you know, or make room for your next idea.</p>
+          <p className="page-subtitle">
+            Pick up a course, practice what you know, or make room for your next idea.
+          </p>
         </div>
-        <Link className="action-primary" href="/library">Add study material <span aria-hidden="true">+</span></Link>
+        <Link className="action-primary" href="/library">
+          Add study material <span aria-hidden="true">+</span>
+        </Link>
       </section>
 
       <section className="dashboard-metrics" aria-label="Study summary">
@@ -66,7 +87,10 @@ export default async function DashboardPage() {
         </article>
         <article className="dashboard-metric dashboard-metric-green">
           <span className="metric-label">FOCUS · 7 DAYS</span>
-          <strong className="metric-value">{focusMinutes}<span className="metric-unit"> min</span></strong>
+          <strong className="metric-value">
+            {focusMinutes}
+            <span className="metric-unit"> min</span>
+          </strong>
           <span className="metric-foot">completed focus sessions</span>
         </article>
         <Link href="/progress" className="dashboard-metric dashboard-metric-green dashboard-metric-link">
@@ -83,28 +107,45 @@ export default async function DashboardPage() {
               <p className="page-kicker">YOUR MATERIAL</p>
               <h2 className="section-heading">Recent courses</h2>
             </div>
-            <Link className="small-link" href="/library">Open library <span aria-hidden="true">→</span></Link>
+            <Link className="small-link" href="/library">
+              Open library <span aria-hidden="true">→</span>
+            </Link>
           </div>
 
           {recentDocuments.length === 0 ? (
             <div className="dashboard-empty">
-              <span className="empty-index" aria-hidden="true">01</span>
+              <span className="empty-index" aria-hidden="true">
+                01
+              </span>
               <div>
                 <h3>Your first mini-course starts with a PDF</h3>
-                <p>Upload lecture notes or a textbook chapter. EduSphere will structure it into lessons, summaries, and practice.</p>
-                <Link className="action-secondary" href="/library">Choose a PDF <span aria-hidden="true">→</span></Link>
+                <p>
+                  Upload lecture notes or a textbook chapter. EduSphere will structure it into lessons,
+                  summaries, and practice.
+                </p>
+                <Link className="action-secondary" href="/library">
+                  Choose a PDF <span aria-hidden="true">→</span>
+                </Link>
               </div>
             </div>
           ) : (
             <ul className="document-list">
               {recentDocuments.map((document, index) => (
                 <li key={document.id} className="document-list-item">
-                  <span className={`document-list-index document-index-${index % 3}`}>{String(index + 1).padStart(2, '0')}</span>
+                  <span className={`document-list-index document-index-${index % 3}`}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
                   <div className="document-list-main">
                     <h3>{document.filename}</h3>
-                    <p>{document.pages ? `${document.pages} pages` : 'PDF material'} <span aria-hidden="true">·</span> {document.status}</p>
+                    <p>
+                      {document.pages ? `${document.pages} pages` : 'PDF material'}{' '}
+                      <span aria-hidden="true">·</span> {document.status}
+                    </p>
                   </div>
-                  <Link href={`/tutor?documentId=${encodeURIComponent(document.id)}`} className="action-secondary">
+                  <Link
+                    href={`/tutor?documentId=${encodeURIComponent(document.id)}`}
+                    className="action-secondary"
+                  >
                     {document.status === 'parsed' ? 'Study' : 'Open'} <span aria-hidden="true">→</span>
                   </Link>
                 </li>
@@ -116,17 +157,41 @@ export default async function DashboardPage() {
         <aside className="dashboard-next">
           <p className="page-kicker">CHOOSE A NEXT STEP</p>
           <h2 className="section-heading">A little practice goes a long way.</h2>
-          <p className="section-caption">Short, useful sessions fit between classes, work, and the rest of your day.</p>
+          <p className="section-caption">
+            Short, useful sessions fit between classes, work, and the rest of your day.
+          </p>
           <div className="dashboard-shortcuts">
-            <Link href={recentDocuments[0] ? `/tutor?documentId=${encodeURIComponent(recentDocuments[0].id)}` : '/library'} className="shortcut-row">
-              <span className="shortcut-no">01</span><span><strong>Learn with your AI tutor</strong><small>Guided lessons, explanations, and viva practice</small></span><span aria-hidden="true">→</span>
+            <Link
+              href={
+                recentDocuments[0]
+                  ? `/tutor?documentId=${encodeURIComponent(recentDocuments[0].id)}`
+                  : '/library'
+              }
+              className="shortcut-row"
+            >
+              <span className="shortcut-no">01</span>
+              <span>
+                <strong>Learn with your AI tutor</strong>
+                <small>Guided lessons, explanations, and viva practice</small>
+              </span>
+              <span aria-hidden="true">→</span>
             </Link>
             <Link href="/review" className="shortcut-row">
-              <span className="shortcut-no">02</span><span><strong>Recall with flashcards</strong><small>Practice due cards with spaced repetition</small></span><span aria-hidden="true">→</span>
+              <span className="shortcut-no">02</span>
+              <span>
+                <strong>Recall with flashcards</strong>
+                <small>Practice due cards with spaced repetition</small>
+              </span>
+              <span aria-hidden="true">→</span>
             </Link>
-            <Link href="/games" className="shortcut-row">
-              <span className="shortcut-no">03</span><span><strong>Play a logic challenge</strong><small>Sorting, N-Queens, Hanoi, and more</small></span><span aria-hidden="true">→</span>
-            </Link>
+            <GameVaultLink className="shortcut-row">
+              <span className="shortcut-no">03</span>
+              <span>
+                <strong>Play a logic challenge</strong>
+                <small>Sorting, N-Queens, Hanoi, and more</small>
+              </span>
+              <span aria-hidden="true">→</span>
+            </GameVaultLink>
           </div>
         </aside>
       </section>

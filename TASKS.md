@@ -2,6 +2,13 @@
 
 **CURRENT PHASE: 8** (Completed Phase 8F integration into main; unfinished items and hosted acceptance gates remain open.)
 
+## Focus-session Game Vault lock and lint repair (2026-11-20)
+
+- [x] **8.G12 Lock Game Vault during focus.** Disable workspace and game navigation and guard the catalog, direct game pages, Cyberverse iframe and server gameplay mutations. Restore checks and failed completion saves keep games unavailable; successful completion unlocks them. Account-scoped tab notifications recheck server state and preserve pending updates; stale responses cannot restore an ended session. Check: uncached lint, full typecheck/test/build, 26 Game Vault and six focus Chromium scenarios, 114 focused API/client tests and nine disposable PostgreSQL checks pass. Decision: a running session stays locked until its completion saves, including expired timers awaiting retry.
+- [x] **8.H10 Generated game-bundle lint scope.** Exclude only generated `public/games/assets/**` Vite output from ESLint, alongside existing build output exclusions; continue linting authored `apps/game-engine/src` and web code. Check: uncached lint passes all seven packages; ESLint reports the generated bundle ignored while authored sources retain their rules. The game preview rebuild passes without editing the minified export.
+
+Evidence: `docs/game-vault-focus-lock.md`. Publishing these changes does not declare any outstanding hosted Phase 8 release gate complete.
+
 ## Academic tools and repair integration (2026-11-20)
 
 - [x] **8.E07-E08 Owned whiteboards, learning previews and exports.** Added Excalidraw projects, owner-scoped images, device recovery, reviewed selected-area tutor/cards/maps and whole/region PNG/SVG/PDF export. All 12 Chromium journeys and five PostgreSQL migration tests pass. Canonical additive migration: `0022_whiteboards`; migrations 0000–0021 are unchanged. Pointer offsets refresh after panel expansion and scrolling; manual save cancels its queued autosave.

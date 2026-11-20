@@ -1,6 +1,18 @@
+'use client';
+
 import { gameMenuEntries } from '@/lib/game-catalog';
+import { useFocusSession } from './focus-session-provider';
 
 export function GamesNavigation() {
+  const { gameVaultAccess } = useFocusSession();
+  if (gameVaultAccess !== 'open') {
+    return (
+      <span className="px-1 py-1 text-sm text-neutral-600">
+        {gameVaultAccess === 'locked' ? 'Games locked' : 'Games'}
+      </span>
+    );
+  }
+
   return (
     <details className="relative">
       <summary className="cursor-pointer rounded px-1 py-1 text-sm text-neutral-800 hover:underline">

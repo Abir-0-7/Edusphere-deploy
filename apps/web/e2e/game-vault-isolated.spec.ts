@@ -18,6 +18,7 @@ import {
 } from '../../game-engine/src/session';
 import { questionsFor } from '../../game-engine/src/content';
 import { readCyberverseMessage } from '../src/lib/cyberverse-client';
+import { focusApi } from './helpers/focus-api';
 
 function viewFor(snapshot: GameSnapshot): GameSession['view'] {
   const state = restoreGame(snapshot);
@@ -80,6 +81,7 @@ function gamePath(id: GameId): string {
 }
 
 async function fixtureServer(page: Page) {
+  await focusApi(page);
   const sessions = new Map<string, GameSession>();
   let active: GameSession | undefined;
   let counter = 0;

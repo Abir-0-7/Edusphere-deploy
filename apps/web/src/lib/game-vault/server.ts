@@ -2,6 +2,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { gameMissionProgress, tokenLedger, users } from '@studyvault/db';
 import { CyberverseMissionSchema, CyberverseStateSchema } from '@studyvault/types';
 import { getDb } from '@/lib/db';
+import { hasActiveFocusSession } from '@/lib/game-focus-lock';
 import {
   CYBERVERSE_BINARY_CITY_COST,
   CYBERVERSE_BINARY_CITY_XP,
@@ -12,6 +13,7 @@ import {
 type VaultDatabase = ReturnType<typeof getDb>;
 export type VaultState = ReturnType<typeof CyberverseStateSchema.parse>;
 export type VaultError =
+  | 'focus_active'
   | 'not_found'
   | 'mission_not_found'
   | 'mission_not_playable'
@@ -67,6 +69,7 @@ export function createGameVaultService(database: VaultDatabase) {
           .where(eq(users.clerkId, clerkId))
           .for('update');
         if (!owner) return { error: 'not_found' };
+        if (await hasActiveFocusSession(tx, owner.id)) return { error: 'focus_active' };
         const [existing] = await tx
           .select({ id: gameMissionProgress.id })
           .from(gameMissionProgress)
@@ -115,6 +118,7 @@ export function createGameVaultService(database: VaultDatabase) {
           .where(eq(users.clerkId, clerkId))
           .for('update');
         if (!owner) return { error: 'not_found' };
+        if (await hasActiveFocusSession(tx, owner.id)) return { error: 'focus_active' };
         const [row] = await tx
           .select()
           .from(gameMissionProgress)
