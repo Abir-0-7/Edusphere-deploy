@@ -2,6 +2,7 @@ import { ClerkProvider, Show, UserButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
+import './coast-theme.css';
 import { GamesNavigation } from '@/components/games-navigation';
 import { FocusSessionProvider } from '@/components/focus-session-provider';
 import { WorkspaceNavigation } from '@/components/workspace-navigation';

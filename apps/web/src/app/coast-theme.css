@@ -1,0 +1,356 @@
+/* EduSphere Coast: sea-glass surfaces, deep-water accents, and a calm editorial voice. */
+:root {
+  color-scheme: light;
+  --ink: #132d3c;
+  --muted: #55707a;
+  --line: #bfd8d9;
+  --paper: #f1f8f6;
+  --surface: #fbfffd;
+  --forest: #137b86;
+  --forest-dark: #0b626a;
+  --mint: #dcefed;
+  --orange: #a94d35;
+  --orange-wash: #fbefe8;
+  --focus: #0b7280;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 94% 0, rgb(101 215 209 / 12%), transparent 32rem),
+    var(--paper);
+}
+
+.app-sidebar {
+  border-right-color: #c6dddc;
+  background: linear-gradient(180deg, #f7fcfa, #edf6f4 78%, #e7f2ef);
+}
+
+.app-brand-mark {
+  border-radius: 11px;
+  background: linear-gradient(145deg, #138893, #126674);
+  box-shadow: 0 4px 10px rgb(19 123 134 / 18%);
+}
+
+.app-nav-link {
+  border-radius: 9px;
+  color: #355662;
+}
+
+.app-nav-link:hover {
+  background: #e2f1ef;
+  color: #0b626a;
+}
+
+.app-nav-link[aria-current='page'] {
+  background: #dcefed;
+  color: #0b626a;
+  box-shadow: inset 3px 0 #137b86;
+}
+
+.app-nav-mark {
+  border-color: #c6dddc;
+  color: #287886;
+}
+
+.app-topbar {
+  border-bottom-color: #c6dddc;
+  background: rgb(251 255 253 / 94%);
+}
+
+.app-topbar-context,
+.app-brand small {
+  color: #587783;
+}
+
+.app-upload-link,
+.page-kicker,
+.small-link,
+.welcome-path-link,
+.welcome-stats b {
+  color: #137b86;
+}
+
+.app-upload-link span {
+  background: #dcefed;
+}
+
+.app-signin-button,
+.action-primary {
+  border-color: #137b86;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #137b86, #178991);
+  box-shadow: 0 3px 0 #0b626a;
+  color: #f8ffff;
+}
+
+.app-signin-button:hover,
+.action-primary:hover {
+  background: #0b626a;
+}
+
+.app-page-content {
+  padding-top: clamp(24px, 3vw, 38px);
+}
+
+.surface,
+.welcome-path,
+.dashboard-metric,
+.dashboard-next {
+  border-color: #c8ddda;
+  border-radius: 14px;
+  background-color: #fbfffd;
+  box-shadow: 0 8px 24px rgb(19 81 91 / 6%);
+}
+
+.section-heading,
+.page-heading,
+.dashboard-greeting {
+  color: #163d49;
+}
+
+.page-subtitle,
+.section-caption,
+.muted-label,
+.metric-foot {
+  color: #55707a;
+}
+
+.action-secondary {
+  min-height: 39px;
+  border-color: #bfd8d9;
+  border-radius: 9px;
+  background: #fbfffd;
+  color: #234c58;
+}
+
+.action-secondary:hover {
+  border-color: #83babc;
+  background: #edf8f5;
+}
+
+/* Distinct coastal landing surface, using the existing responsive welcome flow. */
+.welcome-intro {
+  min-height: 340px;
+  border: 1px solid #0b6570;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 90% 3%, rgb(101 215 209 / 37%), transparent 39%),
+    linear-gradient(118deg, #0d4255, #0f7580 69%, #16858a);
+  padding: clamp(29px, 5.7vw, 68px);
+  box-shadow: 0 24px 56px rgb(11 74 85 / 17%);
+}
+
+.welcome-intro::before,
+.welcome-intro::after {
+  top: 50%;
+  right: clamp(14px, 8vw, 105px);
+  width: clamp(145px, 21vw, 245px);
+  height: clamp(145px, 21vw, 245px);
+  border: 1px solid rgb(206 247 237 / 26%);
+  border-radius: 50%;
+  background: transparent;
+  transform: translateY(-50%);
+}
+
+.welcome-intro::after {
+  right: clamp(33px, 10vw, 131px);
+  width: clamp(105px, 15vw, 175px);
+  height: clamp(105px, 15vw, 175px);
+  border-color: rgb(206 247 237 / 20%);
+}
+
+.welcome-intro h1 {
+  max-width: 620px;
+  color: #f8fffc;
+  font-size: clamp(39px, 5.2vw, 61px);
+  letter-spacing: -0.045em;
+}
+
+.welcome-intro .page-kicker {
+  color: #a9eee8;
+  letter-spacing: 1.7px;
+}
+
+.welcome-copy {
+  color: #d8f1ec;
+  font-size: 15px;
+}
+
+.welcome-intro .action-primary {
+  border-color: #9de9dc;
+  background: #9de9dc;
+  box-shadow: 0 3px 0 rgb(4 53 63 / 28%);
+  color: #123c46;
+}
+
+.welcome-intro .action-primary:hover {
+  background: #b7f1e8;
+}
+
+.welcome-text-link {
+  color: #f0fbf8;
+  text-decoration: underline;
+  text-decoration-color: rgb(240 251 248 / 50%);
+  text-underline-offset: 4px;
+}
+
+.welcome-stats {
+  color: #d1ebe6;
+}
+
+.welcome-stats b {
+  color: #a9eee8;
+}
+
+.welcome-paths {
+  margin-top: clamp(26px, 4vw, 42px);
+}
+
+.welcome-path {
+  min-height: 182px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #ffffff, #f0f8f5);
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.welcome-path:hover {
+  transform: translateY(-2px);
+  border-color: #8ec4c2;
+  box-shadow: 0 14px 30px rgb(19 81 91 / 11%);
+}
+
+.welcome-path-number,
+.welcome-path-green .welcome-path-number {
+  border-radius: 8px;
+  background: #dcefed;
+  color: #0b6974;
+}
+
+.welcome-path-link {
+  color: #0b6974;
+}
+
+.welcome-path-link:hover {
+  color: #074f5a;
+}
+
+/* One green-toned metric becomes a gentle sea-glass panel, not a separate palette. */
+.dashboard-metric-green {
+  border-color: #c1ded8;
+  background: #eaf6f2;
+}
+
+.dashboard-metric-green .metric-word,
+.dashboard-metric-green .metric-value,
+.dashboard-metric-green .metric-label {
+  color: #126d76;
+}
+
+.dashboard-metric-link:hover {
+  border-color: #8ebfba;
+  background: #e1f1ed;
+}
+
+.dashboard-next {
+  border-color: #c1ded8;
+  background: linear-gradient(145deg, #eaf6f2, #f7fcfa);
+}
+
+.dashboard-shortcuts {
+  border-color: #c6dddc;
+}
+
+.shortcut-row {
+  border-color: #c6dddc;
+}
+
+.shortcut-no,
+.shortcut-row > span:last-child {
+  color: #137b86;
+}
+
+/* Bring remaining Tailwind-built pages into the same palette without touching behavior. */
+.app-page-content button[class*='bg-blue-'],
+.app-page-content a[class*='bg-blue-'],
+.app-page-content button[class*='bg-emerald-'],
+.app-page-content a[class*='bg-emerald-'] {
+  border-color: #137b86;
+  background-color: #137b86 !important;
+}
+
+.app-page-content button[class*='bg-blue-']:hover,
+.app-page-content a[class*='bg-blue-']:hover,
+.app-page-content button[class*='bg-emerald-']:hover,
+.app-page-content a[class*='bg-emerald-']:hover {
+  background-color: #0b626a !important;
+}
+
+.app-page-content button[class*='text-blue-'],
+.app-page-content a[class*='text-blue-'],
+.app-page-content button[class*='text-emerald-'],
+.app-page-content a[class*='text-emerald-'] {
+  color: #137b86 !important;
+}
+
+.app-page-content [class*='border-emerald-'] {
+  border-color: #b8d9d5 !important;
+}
+
+.app-page-content [class*='bg-emerald-50'],
+.app-page-content [class*='bg-emerald-100'] {
+  background-color: #e6f4f1 !important;
+}
+
+.app-page-content [class*='text-emerald-900'],
+.app-page-content [class*='text-emerald-950'] {
+  color: #125d68 !important;
+}
+
+.app-page-content input:not([type='checkbox']):not([type='radio']),
+.app-page-content select,
+.app-page-content textarea {
+  border-color: #bfd8d9;
+  border-radius: 9px;
+}
+
+.app-mobile-nav {
+  border-bottom-color: #c6dddc;
+  background: rgb(251 255 253 / 97%);
+}
+
+.app-mobile-nav .app-nav-link[aria-current='page'] {
+  border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  .welcome-intro {
+    min-height: 310px;
+    border-radius: 19px;
+  }
+
+  .welcome-intro::before,
+  .welcome-intro::after {
+    right: -95px;
+    opacity: 0.7;
+  }
+
+  .welcome-intro h1 {
+    max-width: 12ch;
+  }
+
+  .welcome-path {
+    min-height: 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-path {
+    transition: none;
+  }
+}
