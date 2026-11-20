@@ -2,6 +2,14 @@
 
 Playwright specs live in `e2e/` and run with `pnpm --filter @studyvault/web test:e2e`.
 
+Academic tools run with `test:e2e:whiteboards`, `test:e2e:ocr`,
+`test:e2e:code-review` and `test:e2e:checklists` on the web package. Narration
+uses `pnpm --filter @studyvault/web exec playwright test --config
+e2e/listen-isolated.config.ts`; editable covers use
+`e2e/cover-docx-isolated.config.ts`. These isolated fixtures require no live
+provider or Clerk account. The OCR fixture also starts the local Python API;
+set `OCR_E2E_PYTHON` if its interpreter is outside `apps/ai-service/.venv`.
+
 `guard.spec.ts` covers anonymous route protection and runs without credentials.
 With the exact CI placeholder publishable key, its test-only request harness
 fetches document responses with `sec-fetch-dest: empty` so Clerk's development

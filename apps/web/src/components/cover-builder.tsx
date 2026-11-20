@@ -8,6 +8,7 @@ import {
   type CoverTemplateId,
 } from '@studyvault/types';
 import { COVER_PAPER, COVER_TEMPLATES } from '@/lib/cover-layout';
+import { COVER_PALETTES } from '@/lib/cover-decoration';
 import {
   createCoverPdf,
   coverPdfFilename,
@@ -36,6 +37,12 @@ import {
 } from '@/lib/cover-vault';
 
 const TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
+const SAMPLE_TITLES: Record<CoverTemplateId, string> = {
+  'university-assignment': 'Literature and Context',
+  'lab-report': 'Water Quality Lab',
+  'project-report': 'Campus Design Project',
+  'minimal-professional': 'Research Portfolio',
+};
 
 const initialDraft = AcademicCoverDraftSchema.parse({
   templateId: 'university-assignment',
@@ -44,6 +51,60 @@ const initialDraft = AcademicCoverDraftSchema.parse({
 });
 
 type SelectedLogo = { asset: CoverLogoAsset; src: string; name: string };
+
+const PREVIEW_FONTS = {
+  'times-roman': 'Times New Roman, serif',
+  courier: 'Courier New, monospace',
+  helvetica: 'Arial, sans-serif',
+};
+
+function CoverArtwork({ layout, logo }: { layout: CoverLayoutResult; logo?: SelectedLogo | null }) {
+  return (
+    <>
+      <g aria-hidden="true">
+        {layout.decorations.map((shape, index) =>
+          shape.kind === 'rect' ? (
+            <rect
+              key={index}
+              x={shape.x}
+              y={shape.y}
+              width={shape.width}
+              height={shape.height}
+              fill={shape.fill}
+            />
+          ) : (
+            <circle key={index} cx={shape.x} cy={shape.y} r={shape.radius} fill={shape.fill} />
+          ),
+        )}
+      </g>
+      {layout.logo && logo && (
+        <image
+          href={logo.src}
+          x={layout.logo.x}
+          y={layout.logo.y}
+          width={layout.logo.width}
+          height={layout.logo.height}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      )}
+      {layout.lines.map((line, index) => (
+        <text
+          key={`${line.field}-${index}`}
+          x={line.x}
+          y={line.y}
+          fontFamily={PREVIEW_FONTS[line.fontFamily]}
+          fontSize={line.fontSize}
+          fontWeight={line.bold ? 700 : 400}
+          fill={line.color}
+          textLength={line.width}
+          lengthAdjust="spacingAndGlyphs"
+        >
+          {line.text}
+        </text>
+      ))}
+    </>
+  );
+}
 
 function helpForError(error: unknown): string {
   if (error instanceof UnsupportedCoverTextError) return error.message;
@@ -74,7 +135,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
   const [presetName, setPresetName] = useState('');
   const [selectedPresetId, setSelectedPresetId] = useState('');
   const [preparing, setPreparing] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null);
 
   const template = COVER_TEMPLATES[draft.templateId];
   const paper = COVER_PAPER[draft.pageSize];
@@ -144,25 +205,38 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
       .finally(() => {
         if (current) setPreparing(false);
       });
-    void Promise.all(
-      TEMPLATE_IDS.map(async (templateId) => {
-        const templateLayout = await prepareCoverLayout(
-          { ...draft, templateId, content },
-          logo?.asset ? { width: logo.asset.width, height: logo.asset.height } : undefined,
-        );
-        return [templateId, templateLayout] as const;
-      }),
-    )
-      .then((entries) => {
-        if (current) setTemplateLayouts(Object.fromEntries(entries));
-      })
-      .catch(() => {
-        if (current) setTemplateLayouts({});
-      });
     return () => {
       current = false;
     };
   }, [draft, logo]);
+
+  useEffect(() => {
+    let current = true;
+    void Promise.allSettled(
+      TEMPLATE_IDS.map(async (templateId) => {
+        const templateLayout = await prepareCoverLayout({
+          templateId,
+          pageSize: 'a4',
+          content: {
+            institutionName: 'North Campus',
+            title: SAMPLE_TITLES[templateId],
+            courseName: 'Coursework',
+            students: [{ name: 'Alex Morgan' }],
+          },
+        });
+        return [templateId, templateLayout] as const;
+      }),
+    ).then((entries) => {
+      if (current) {
+        setTemplateLayouts(
+          Object.fromEntries(entries.flatMap((entry) => (entry.status === 'fulfilled' ? [entry.value] : []))),
+        );
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   const updateContent = <K extends keyof AcademicCoverContent>(key: K, value: AcademicCoverContent[K]) => {
     setDraft((current) => ({
@@ -356,7 +430,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
   const exportPdf = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setExportError('');
-    setExporting(true);
+    setExporting('pdf');
     try {
       const content: AcademicCoverContent = {
         ...draft.content,
@@ -392,7 +466,30 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
     } catch (error) {
       setExportError(helpForError(error));
     } finally {
-      setExporting(false);
+      setExporting(null);
+    }
+  };
+
+  const exportDocx = async () => {
+    setExportError('');
+    setExporting('docx');
+    try {
+      const { COVER_DOCX_MIME, coverDocxFilename, createCoverDocx } = await import('@/lib/cover-docx');
+      const content: AcademicCoverContent = {
+        ...draft.content,
+        students: draft.content.students.filter((student) => student.name.trim().length > 0),
+      };
+      const bytes = await createCoverDocx({ ...draft, content }, { logo: logo?.asset });
+      const url = URL.createObjectURL(new Blob([bytes], { type: COVER_DOCX_MIME }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = coverDocxFilename(content.title);
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setExportError(helpForError(error));
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -421,7 +518,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
                     role="radio"
                     aria-checked={draft.templateId === id}
                     aria-label={`Select ${COVER_TEMPLATES[id].label} template`}
-                    className={`rounded-lg border p-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 ${draft.templateId === id ? 'border-blue-700 ring-1 ring-blue-700' : 'border-neutral-300'}`}
+                    className={`rounded-xl border p-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 ${draft.templateId === id ? 'border-blue-700 bg-blue-50/60 ring-1 ring-blue-700' : 'border-neutral-200 hover:border-neutral-400'}`}
                     onClick={() => {
                       setDraft((current) => ({ ...current, templateId: id }));
                       setDraftDirty(true);
@@ -432,44 +529,17 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
                       <svg
                         aria-hidden="true"
                         viewBox={`0 0 ${thumbnail.width} ${thumbnail.height}`}
-                        className="mx-auto block h-24 w-auto border border-neutral-200 bg-white shadow-sm"
+                        className="mx-auto block h-28 w-auto overflow-hidden border border-neutral-200 bg-white shadow-sm"
                       >
-                        {thumbnail.logo && logo && (
-                          <image
-                            href={logo.src}
-                            x={thumbnail.logo.x}
-                            y={thumbnail.logo.y}
-                            width={thumbnail.logo.width}
-                            height={thumbnail.logo.height}
-                            preserveAspectRatio="xMidYMid meet"
-                          />
-                        )}
-                        {thumbnail.lines.map((line, index) => (
-                          <text
-                            key={`${id}-thumbnail-${line.field}-${index}`}
-                            x={line.x}
-                            y={line.y}
-                            fontFamily={
-                              line.fontFamily === 'times-roman'
-                                ? 'Times New Roman, serif'
-                                : line.fontFamily === 'courier'
-                                  ? 'Courier New, monospace'
-                                  : 'Arial, sans-serif'
-                            }
-                            fontSize={line.fontSize}
-                            fontWeight={line.bold ? 700 : 400}
-                            fill="#141f33"
-                            textLength={line.width}
-                            lengthAdjust="spacingAndGlyphs"
-                          >
-                            {line.text}
-                          </text>
-                        ))}
+                        <CoverArtwork layout={thumbnail} />
                       </svg>
                     ) : (
-                      <div className="mx-auto h-24 w-16 animate-pulse bg-neutral-100" />
+                      <div className="mx-auto h-28 w-20 bg-neutral-100" />
                     )}
-                    <span className="mt-2 block text-xs font-medium">{COVER_TEMPLATES[id].label}</span>
+                    <span className="mt-2 block text-xs font-semibold">{COVER_TEMPLATES[id].label}</span>
+                    <span className="mt-0.5 block text-xs text-neutral-600">
+                      {COVER_PALETTES[id].caption}
+                    </span>
                   </button>
                 );
               })}
@@ -844,18 +914,31 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
           )}
 
           <p role="note" className="rounded bg-amber-50 p-3 text-xs text-amber-950">
-            Bangla PDF export is not enabled. The current PDF fonts do not cover Bengali characters, and no
-            PDF renderer has passed Bengali shaping checks. Unsupported glyphs stop export rather than
-            producing a broken file.
+            Bangla export is unavailable. The PDF fonts lack Bengali glyphs and the editable Word templates
+            have yet to pass Bengali shaping checks.
           </p>
 
-          <button
-            type="submit"
-            disabled={exporting || preparing || !layout || layout.overflow}
-            className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {exporting ? 'Preparing PDF…' : 'Download PDF'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={Boolean(exporting) || preparing || !layout || layout.overflow}
+              className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === 'pdf' ? 'Preparing PDF…' : 'Download PDF'}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(exporting) || preparing || !layout || layout.overflow}
+              onClick={() => void exportDocx()}
+              className="rounded border border-blue-700 px-4 py-2 text-sm font-medium text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === 'docx' ? 'Preparing Word document…' : 'Download editable DOCX'}
+            </button>
+          </div>
+          <p className="text-xs text-neutral-500">
+            The Word document keeps text and logos editable. Check the page after editing because text can
+            reflow.
+          </p>
           {exportError && (
             <p role="alert" className="text-sm text-red-700">
               {exportError}
@@ -875,39 +958,9 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
                 style={previewStyle}
                 role="img"
                 aria-label={`${template.label} cover preview, ${draft.pageSize}`}
-                className="mx-auto block max-h-[70vh] w-full border border-neutral-200 bg-white shadow-md"
+                className="mx-auto block max-h-[70vh] w-full overflow-hidden border border-neutral-200 bg-white shadow-md"
               >
-                {layout.logo && logo && (
-                  <image
-                    href={logo.src}
-                    x={layout.logo.x}
-                    y={layout.logo.y}
-                    width={layout.logo.width}
-                    height={layout.logo.height}
-                    preserveAspectRatio="xMidYMid meet"
-                  />
-                )}
-                {layout.lines.map((line, index) => (
-                  <text
-                    key={`${line.field}-${index}`}
-                    x={line.x}
-                    y={line.y}
-                    fontFamily={
-                      line.fontFamily === 'times-roman'
-                        ? 'Times New Roman, serif'
-                        : line.fontFamily === 'courier'
-                          ? 'Courier New, monospace'
-                          : 'Arial, sans-serif'
-                    }
-                    fontSize={line.fontSize}
-                    fontWeight={line.bold ? 700 : 400}
-                    fill="#141f33"
-                    textLength={line.width}
-                    lengthAdjust="spacingAndGlyphs"
-                  >
-                    {line.text}
-                  </text>
-                ))}
+                <CoverArtwork layout={layout} logo={logo} />
               </svg>
             ) : (
               <div
@@ -923,8 +976,7 @@ export function CoverBuilder({ ownerId }: { ownerId: string | null }) {
               </p>
             )}
             <p className="mt-2 text-center text-xs text-neutral-500">
-              Preview uses the same text positions as the PDF. Standard PDF fonts support a limited character
-              set.
+              The PDF uses this layout and colors. Standard PDF fonts support a limited character set.
             </p>
           </div>
         </div>

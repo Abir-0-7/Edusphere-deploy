@@ -51,9 +51,10 @@ def test_stream_events_emits_audio_word_and_done(monkeypatch: pytest.MonkeyPatch
     import types
 
     class FakeCommunicate:
-        def __init__(self, text: str, voice: str) -> None:
+        def __init__(self, text: str, voice: str, *, boundary: str) -> None:
             self.text = text
             self.voice = voice
+            assert boundary == "WordBoundary"
 
         async def stream(self):
             yield {"type": "audio", "data": b"mp3"}
@@ -95,3 +96,96 @@ async def _collect_events() -> list[str]:
     from app.voice.tts import stream_events
 
     return [event async for event in stream_events("hello")]
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_provider_failure_uses_fallback_contract_without_source_or_partial_success(monkeypatch, streaming):
+    import asyncio
+    import sys
+    import types
+
+    import app.voice.tts as tts
+
+    class FailingCommunicate:
+        def __init__(self, text, voice, *, boundary):
+            assert boundary == "WordBoundary"
+
+        async def stream(self):
+            yield {"type": "audio", "data": b"partial"}
+            raise ConnectionError("private source text from provider")
+
+    monkeypatch.setattr(tts, "edge_available", lambda: True)
+    monkeypatch.setitem(sys.modules, "edge_tts", types.SimpleNamespace(Communicate=FailingCommunicate))
+    with pytest.raises(TtsUnavailable, match="^edge-tts synthesis failed$"):
+        asyncio.run(_collect_events() if streaming else tts.synthesize("private source text"))
+
+
+def test_whole_clip_requests_word_timings(monkeypatch):
+    import asyncio
+    import sys
+    import types
+
+    import app.voice.tts as tts
+
+    class FakeCommunicate:
+        def __init__(self, text, voice, *, boundary):
+            assert boundary == "WordBoundary"
+
+        async def stream(self):
+            yield {"type": "audio", "data": b"mp3"}
+            yield {"type": "WordBoundary", "offset": 5_000_000, "duration": 3_000_000, "text": "hello"}
+
+    monkeypatch.setattr(tts, "edge_available", lambda: True)
+    monkeypatch.setitem(sys.modules, "edge_tts", types.SimpleNamespace(Communicate=FakeCommunicate))
+    clip = asyncio.run(tts.synthesize("hello"))
+    assert clip.audio == b"mp3"
+    assert clip.words_json() == [{"text": "hello", "start_ms": 500, "end_ms": 800}]
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_provider_cancellation_propagates_without_activating_fallback(monkeypatch, streaming):
+    import asyncio
+    import sys
+    import types
+
+    import app.voice.tts as tts
+
+    class CancelledCommunicate:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def stream(self):
+            yield {"type": "audio", "data": b"partial"}
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(tts, "edge_available", lambda: True)
+    monkeypatch.setitem(sys.modules, "edge_tts", types.SimpleNamespace(Communicate=CancelledCommunicate))
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(_collect_events() if streaming else tts.synthesize("hello"))
+
+
+def test_http_provider_failure_is_terminal_and_does_not_expose_source(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    import app.main as main
+    import app.voice.tts as tts
+
+    async def unavailable(*args, **kwargs):
+        raise TtsUnavailable("private provider details")
+
+    async def interrupted(*args, **kwargs):
+        yield "event: audio\ndata: cGFydGlhbA==\n\n"
+        raise TtsUnavailable("private provider details")
+
+    monkeypatch.setattr(tts, "edge_available", lambda: True)
+    monkeypatch.setattr(tts, "synthesize", unavailable)
+    monkeypatch.setattr(tts, "stream_events", interrupted)
+    client = TestClient(main.app)
+    headers = {"Authorization": "Bearer speech-fallback-user"}
+    whole = client.post("/api/tts", headers=headers, json={"text": "hello"})
+    assert whole.status_code == 503
+    assert "browser speech" in whole.json()["error"]["message"]
+    streamed = client.post("/api/tts/stream", headers=headers, json={"text": "hello"})
+    assert streamed.status_code == 200
+    assert "event: audio" in streamed.text and "event: error" in streamed.text
+    assert "event: done" not in streamed.text and "private" not in streamed.text

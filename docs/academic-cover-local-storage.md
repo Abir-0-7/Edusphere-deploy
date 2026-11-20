@@ -2,6 +2,10 @@
 
 Updated 2026-11-19.
 
+The refreshed templates share decorative shapes and colors across preview, PDF
+and editable DOCX export. Reopening a saved draft uses the current template;
+previously saved PDF artifacts preserve their exact original bytes.
+
 Cover drafts, institution presets, and exported PDF copies are stored in the
 current browser's IndexedDB. Every key is the pair `(ownerId, recordId)`, and
 all reads, updates, listings, and deletions use both parts. This keeps browser

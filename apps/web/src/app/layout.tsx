@@ -1,8 +1,10 @@
-import { ClerkProvider, Show, SignInButton, UserButton } from '@clerk/nextjs';
+import { ClerkProvider, Show, UserButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import './globals.css';
 import { GamesNavigation } from '@/components/games-navigation';
+import { WorkspaceNavigation } from '@/components/workspace-navigation';
+import { AUTH_FALLBACK_URL, SIGN_IN_URL, SIGN_UP_URL } from '@/lib/auth-routes';
 import { QueryProvider } from './providers';
 
 export const metadata = {
@@ -10,57 +12,15 @@ export const metadata = {
   description: 'Your study workspace for courses, practice, and progress.',
 };
 
-const navSections = [
-  {
-    label: 'STUDY',
-    links: [
-      { href: '/dashboard', label: 'Overview', mark: '01' },
-      { href: '/library', label: 'My library', mark: '02' },
-      { href: '/tutor', label: 'AI tutor', mark: '03' },
-    ],
-  },
-  {
-    label: 'PRACTICE',
-    links: [
-      { href: '/review', label: 'Flashcards', mark: '04' },
-      { href: '/courses', label: 'Guided courses', mark: '05' },
-      { href: '/learning-profile', label: 'Learning profile', mark: '06' },
-      { href: '/progress', label: 'Focus & progress', mark: '07' },
-      { href: '/games', label: 'Game vault', mark: '08' },
-    ],
-  },
-  {
-    label: 'TOOLS',
-    links: [
-      { href: '/tools', label: 'Academic toolkit', mark: '09' },
-      { href: '/account', label: 'Account', mark: '10' },
-    ],
-  },
-];
-
-function Navigation({ mobile = false }: { mobile?: boolean }) {
-  return (
-    <nav aria-label="Primary navigation" className={mobile ? 'app-mobile-nav' : 'app-side-nav'}>
-      {navSections.flatMap((section) => [
-        <p key={`${section.label}-label`} className="app-nav-section">
-          {section.label}
-        </p>,
-        ...section.links.map((link) => (
-          <Link key={link.href} href={link.href} className="app-nav-link">
-            <span className="app-nav-mark" aria-hidden="true">
-              {link.mark}
-            </span>
-            <span>{link.label}</span>
-          </Link>
-        )),
-      ])}
-    </nav>
-  );
-}
-
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <ClerkProvider dynamic>
+    <ClerkProvider
+      dynamic
+      signInUrl={SIGN_IN_URL}
+      signUpUrl={SIGN_UP_URL}
+      signInFallbackRedirectUrl={AUTH_FALLBACK_URL}
+      signUpFallbackRedirectUrl={AUTH_FALLBACK_URL}
+    >
       <html lang="en">
         <body>
           <QueryProvider>
@@ -80,7 +40,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     </span>
                   </Link>
                   <div className="app-workspace-label">YOUR WORKSPACE</div>
-                  <Navigation />
+                  <WorkspaceNavigation />
                   <div className="app-sidebar-bottom">
                     <div className="app-sidebar-note">
                       <span className="app-status-dot" aria-hidden="true" />
@@ -121,16 +81,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       </span>
                     </Show>
                     <Show when="signed-out">
-                      <SignInButton mode="modal">
-                        <button type="button" className="app-signin-button">
-                          Sign in
-                        </button>
-                      </SignInButton>
+                      <Link href={SIGN_IN_URL} className="app-signin-button">
+                        Sign in
+                      </Link>
                     </Show>
                   </div>
                 </header>
                 <Show when="signed-in">
-                  <Navigation mobile />
+                  <WorkspaceNavigation mobile />
                 </Show>
                 <div id="main-content" tabIndex={-1} className="app-page-content">
                   {children}

@@ -7,6 +7,7 @@ import {
   type CoverPageSize,
   type CoverTemplateId,
 } from '@studyvault/types';
+import { COVER_PALETTES, coverDecorations, type CoverDecoration } from './cover-decoration';
 
 export const COVER_PAPER = {
   a4: { width: 595.28, height: 841.89 },
@@ -98,15 +99,17 @@ type CoverLine = {
   fontFamily: CoverFontFamily;
   fontSize: number;
   bold: boolean;
+  color: string;
 };
 type CoverBox = { x: number; y: number; width: number; height: number };
-type CoverLayout = {
+type CoverContentLayout = {
   width: number;
   height: number;
   lines: CoverLine[];
   overflow: boolean;
   logo?: CoverBox;
 };
+type CoverLayout = CoverContentLayout & { decorations: CoverDecoration[] };
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
@@ -159,6 +162,7 @@ export function layoutCover(
     throw new Error('The template does not support this cover draft.');
   }
   const { width, height } = COVER_PAPER[draft.pageSize];
+  const palette = COVER_PALETTES[design.id];
   const { top, right, bottom, left } = design.margins;
   const availableWidth = width - right - left;
   const content = draft.content;
@@ -191,7 +195,7 @@ export function layoutCover(
     };
   }
 
-  function arrange(shrink: number): CoverLayout {
+  function arrange(shrink: number): CoverContentLayout {
     const lines: CoverLine[] = [];
     let cursor = logo ? top + logo.height + 12 : top;
     for (const rule of design.fields) {
@@ -225,6 +229,7 @@ export function layoutCover(
           fontFamily,
           fontSize,
           bold,
+          color: field === 'title' || field === 'institutionName' ? palette.heading : palette.ink,
         });
         cursor += advance;
       }
@@ -237,5 +242,9 @@ export function layoutCover(
   for (let shrink = 1; result.overflow && shrink <= maxShrink; shrink++) {
     result = arrange(shrink);
   }
-  return result;
+  const title = result.lines.find((line) => line.field === 'title');
+  return {
+    ...result,
+    decorations: coverDecorations(design.id, width, height, title && title.y - title.fontSize),
+  };
 }

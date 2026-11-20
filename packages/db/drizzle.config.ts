@@ -8,6 +8,7 @@ export default defineConfig({
     './src/source-schema.ts',
     './src/outline-schema.ts',
     './src/generation-schema.ts',
+    './src/whiteboard-schema.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

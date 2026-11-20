@@ -10,6 +10,7 @@ Both paths are scoped by the internal users.id resolved from the Clerk subject;
 no other user's data can be reached.
 """
 
+import base64
 import json
 import logging
 from typing import Any
@@ -19,6 +20,11 @@ logger = logging.getLogger("studyvault.privacy")
 # Tables owned by a user, in dependency order (children first is not needed
 # thanks to ON DELETE CASCADE, but ordering keeps the export readable).
 _OWNED_TABLES = [
+    ("whiteboards", ["id", "title", "revision", "scene", "created_at", "updated_at"]),
+    (
+        "whiteboard_assets",
+        ["id", "board_id", "file_id", "mime_type", "size_bytes", "sha256", "data", "created_at"],
+    ),
     (
         "course_outlines",
         [
@@ -322,7 +328,11 @@ class PrivacyStore:
             with self._conn.cursor() as cur:
                 cur.execute(f"SELECT {cols} FROM {table} WHERE user_id = %s", (user_id,))
                 rows = cur.fetchall()
-            data["tables"][table] = [dict(zip(columns, row, strict=True)) for row in rows]
+            records = [dict(zip(columns, row, strict=True)) for row in rows]
+            if table == "whiteboard_assets":
+                for record in records:
+                    record["data"] = {"encoding": "base64", "value": base64.b64encode(record["data"]).decode("ascii")}
+            data["tables"][table] = records
         with self._conn.cursor() as cur:
             cur.execute(
                 "SELECT id, user_id, opponent_user_id, state - 'cards', created_at, updated_at, expires_at "

@@ -249,6 +249,11 @@ class InMemoryDocumentStore:
             doc = self._docs.get(document_id)
             return doc is not None and doc.user_id == user_id
 
+    def list_chapters_for_user(self, document_id: str, user_id: str) -> list[ChapterRecord] | None:
+        with self._lock:
+            doc = self._docs.get(document_id)
+            return list(doc.chapters) if doc is not None and doc.user_id == user_id else None
+
     def list_library_documents(self, user_id: str, *, limit: int, offset: int) -> tuple[list[dict[str, str]], int]:
         with self._lock:
             rows = [doc for doc in self._docs.values() if doc.user_id == user_id]
@@ -281,8 +286,10 @@ class InMemoryDocumentStore:
 
     # --- Summaries (task 2.5) — same surface as PgDocumentStore --------------
     def get_summary(self, chapter_id: str, level: str, user_id: str | None = None) -> dict[str, object] | None:
-        key = (chapter_id, level)
-        return self._summaries.get(key)
+        with self._lock:
+            if user_id is not None and self.get_chapter_for_user(chapter_id, user_id) is None:
+                return None
+            return self._summaries.get((chapter_id, level))
 
     def upsert_summary(
         self, *, chapter_id: str, user_id: str, level: str, content: str, model: str | None

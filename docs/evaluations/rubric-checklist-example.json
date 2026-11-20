@@ -1,0 +1,12 @@
+{
+  "purpose": "Pre-implementation workflow evaluation, created before E12a coding",
+  "reviewer": "manual demonstration, not a learner grade",
+  "title": "Queue experiment draft",
+  "draft": "The queue serves the first item first. This experiment suggests that arrivals were handled in order.",
+  "criteria": [
+    { "label": "State the conclusion", "status": "supported", "evidence": "The queue serves the first item first.", "note": "A conclusion is present; its factual correctness still needs the underlying experiment." },
+    { "label": "Use measured evidence", "status": "needs-work", "evidence": "", "note": "Add the observed arrival and service order with measurements." },
+    { "label": "Discuss a limitation", "status": "needs-work", "evidence": "", "note": "Explain what this small experiment cannot establish." }
+  ],
+  "next_action": "Revise the evidence and limitations, then recheck the saved checklist."
+}

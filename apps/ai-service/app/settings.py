@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # Bounded account/import/deck storage. These caps protect both durable and
     # development stores from unbounded rows or worker batches.
     max_documents_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_DOCUMENTS_PER_USER")
+    max_whiteboards_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_WHITEBOARDS_PER_USER")
     max_source_versions_per_user: int = Field(100, ge=1, le=100000, alias="AI_SERVICE_MAX_SOURCE_VERSIONS_PER_USER")
     course_outlines_enabled: bool = Field(False, alias="AI_SERVICE_COURSE_OUTLINES_ENABLED")
     course_generation_enabled: bool = Field(False, alias="AI_SERVICE_COURSE_GENERATION_ENABLED")

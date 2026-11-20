@@ -2,6 +2,17 @@
 
 **CURRENT PHASE: 8** (Completed Phase 8F integration into main; unfinished items and hosted acceptance gates remain open.)
 
+## Academic tools and repair integration (2026-11-20)
+
+- [x] **8.E07-E08 Owned whiteboards, learning previews and exports.** Added Excalidraw projects, owner-scoped images, device recovery, reviewed selected-area tutor/cards/maps and whole/region PNG/SVG/PDF export. All 12 Chromium journeys and five PostgreSQL migration tests pass. Canonical additive migration: `0022_whiteboards`; migrations 0000–0021 are unchanged. Pointer offsets refresh after panel expansion and scrolling; manual save cancels its queued autosave.
+- [x] **8.E09 Editable OCR.** English/Bangla, crop/rotate/cancel/retry and corrected lesson-note handoff pass all five real-browser journeys using pinned local OCR assets.
+- [x] **8.E10 Qualified code review.** Bounded static estimates include assumptions, steps and explicit lesson-note handoff; no learner code executes. Three Chromium journeys and typed API tests pass.
+- [x] **8.E11 Editable DOCX covers.** Four templates on A4/Letter, colors and proportional logos; all eight covers plus an edited-title document rendered and inspected. PDF exports and unsupported-glyph gates remain covered.
+- [x] **8.E12/E12a Rubric checklist.** Evaluated all three helper candidates; implemented the user-selected checklist with exact evidence, saved revisions, account isolation, conflict recovery, JSON export and chosen-lesson handoff. Other helper implementations remain deferred.
+- [x] **Repair branch integration.** Included uncommitted auth/navigation, upload cancellation, narration and cover repairs from `codex/edusphere-study-repairs`; preserved the latest main course/source integration. Focus timer, narration, cover and code-review browser suites pass. Full lint/typecheck/unit tests/build and Python checks pass locally; hosted OAuth/provider behavior remains a staging gate.
+
+Details and current validation evidence: `docs/academic-tools-e08-e12-acceptance.md`. A Git push does not apply migration 0022 or deploy the AI service.
+
 ## Combined completed-work publication (2026-11-19)
 
 The user requested one main-branch publication of completed work. The deployment
@@ -13,7 +24,7 @@ below. It does not declare unfinished phase items or hosted release gates comple
 - [x] **8.E04-E05 Bibliography.** Private revisioned records, owned-library source links, pinned CSL styles and locale, deterministic citations and safe BibTeX/RIS/CSL-JSON import/export, including DOI/ISBN fields and metadata provenance. Validation: schema/golden/client/browser/API and disposable database checks. Canonical deployment migrations are 0016/0017.
 - [x] **8.E06 Whiteboard evaluation and snapshot contracts.** Ported the completed renderer evaluation, app-owned snapshot validation and legacy fixtures. No unfinished replacement renderer, server board store or E07 migration is included; the existing board integration is preserved.
 - [x] **8.F01 Source evidence bridge.** Immutable owner-scoped extracted-text versions, source locators/resolution and pinned course evidence with bounded materialization, privacy and cascade checks. Current deployed course/lab contracts are preserved. Canonical deployment migration is 0018.
-- [ ] **Remaining E/F work and hosted release.** E07 replacement whiteboard is not included. Completed F02-F07 are integrated below; their optional features remain disabled until configured. Human content/accessibility acceptance, full pgvector/live-provider validation and hosted rollout remain separate release checks.
+- [ ] **Hosted release.** E07-E12 are now included in the academic integration above. Completed F02-F07 remain as integrated below; their optional features remain disabled until configured. Human content/accessibility acceptance, full pgvector/live-provider validation and hosted rollout remain separate release checks.
 
 ## User-requested course publication repair (2026-11-19)
 

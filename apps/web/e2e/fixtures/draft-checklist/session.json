@@ -1,0 +1,135 @@
+{
+  "id": "c5a8609e-9773-443e-b8bb-bc9d12b39174",
+  "release_id": "6a3baf29-d2b6-5b90-8352-077a24055c87",
+  "document_id": "c7df683b-f29c-452d-9eac-65248cc9f35a",
+  "course_slug": "python-foundations",
+  "course_title": "Python Foundations",
+  "revision": 0,
+  "status": "active",
+  "completed_lesson_ids": [],
+  "lessons": [
+    {
+      "id": "py-values",
+      "title": "Trace values and expressions",
+      "completed": false,
+      "objective_ids": [
+        "py-values-objective"
+      ],
+      "demonstrated_objective_ids": []
+    },
+    {
+      "id": "py-branches",
+      "title": "Choose the first true branch",
+      "completed": false,
+      "objective_ids": [
+        "py-branches-objective"
+      ],
+      "demonstrated_objective_ids": []
+    },
+    {
+      "id": "py-loops",
+      "title": "Trace a list accumulator",
+      "completed": false,
+      "objective_ids": [
+        "py-loops-objective"
+      ],
+      "demonstrated_objective_ids": []
+    },
+    {
+      "id": "py-functions",
+      "title": "Use parameters and return values",
+      "completed": false,
+      "objective_ids": [
+        "py-functions-objective"
+      ],
+      "demonstrated_objective_ids": []
+    },
+    {
+      "id": "py-records",
+      "title": "Filter and aggregate records",
+      "completed": false,
+      "objective_ids": [
+        "py-records-objective"
+      ],
+      "demonstrated_objective_ids": []
+    }
+  ],
+  "lesson": {
+    "id": "py-values",
+    "title": "Trace values and expressions",
+    "objective_ids": [
+      "py-values-objective"
+    ],
+    "blocks": [
+      {
+        "id": "py-values-explain",
+        "type": "explanation",
+        "content": "A name identifies a value. Assignment evaluates the expression on the right before binding the name on the left. Multiplication takes precedence over addition, while parentheses change the grouping. Quoted digits are text rather than an automatically converted integer.",
+        "language": null,
+        "evidence_ids": [
+          "py-values-evidence"
+        ]
+      },
+      {
+        "id": "py-values-example",
+        "type": "code",
+        "content": "boxes = 4\nitems_per_box = 3\nloose_items = 2\ntotal_items = boxes * items_per_box + loose_items\n# total_items is 14",
+        "language": "python",
+        "evidence_ids": [
+          "py-values-evidence"
+        ]
+      }
+    ],
+    "practice": [
+      {
+        "id": "py-values-practice",
+        "kind": "number",
+        "mode": "practice",
+        "prompt": "What is the value of 5 + 3 * 2?",
+        "choices": [],
+        "objective_ids": [
+          "py-values-objective"
+        ],
+        "evidence_ids": [
+          "py-values-evidence"
+        ]
+      }
+    ],
+    "checkpoint": {
+      "id": "py-values-checkpoint-1",
+      "kind": "number",
+      "mode": "checkpoint",
+      "prompt": "What is the value of 2 * (7 + 1) - 3?",
+      "choices": [],
+      "objective_ids": [
+        "py-values-objective"
+      ],
+      "evidence_ids": [
+        "py-values-evidence"
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "id": "py-values-evidence",
+      "source_id": "py-values-source",
+      "locator": "lesson/py-values/explanation",
+      "quote": "A name identifies a value. Assignment evaluates the expression on the right before binding the name on the left. Multiplication takes precedence over addition, while parentheses change the grouping. Quoted digits are text rather than an automatically converted integer.",
+      "document_id": "c7df683b-f29c-452d-9eac-65248cc9f35a",
+      "chapter_id": "37aede27-155d-5d48-a5df-1c780d720c74",
+      "chunk_id": "86aa044c-9e25-5ef2-8a76-0968a25e7d4c"
+    }
+  ],
+  "last_action": null,
+  "notes": [],
+  "bookmarks": [],
+  "conversation": [],
+  "adaptation": null,
+  "remediation": null,
+  "assignment_drafts": {},
+  "assignment_status": {},
+  "assignment_sections": {},
+  "assignment_evidence_ids": {},
+  "lab_progress": {},
+  "lab_transcripts": {}
+}

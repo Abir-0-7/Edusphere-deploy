@@ -155,6 +155,13 @@
       "when": 1795124444078,
       "tag": "0021_generation_lesson_edits",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795130546323,
+      "tag": "0022_whiteboards",
+      "breakpoints": true
     }
   ]
 }

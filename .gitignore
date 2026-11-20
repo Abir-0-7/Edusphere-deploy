@@ -24,3 +24,6 @@ test-results/
 playwright-report/
 *.log
 ci-logs.zip
+.tmp/
+output/
+.pnpm-store/

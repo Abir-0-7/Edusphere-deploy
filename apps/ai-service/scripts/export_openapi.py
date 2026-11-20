@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any
 
 CORE_PATHS = (
+    "/api/whiteboards",
+    "/api/whiteboards/{board_id}",
+    "/api/whiteboards/{board_id}/assets",
+    "/api/whiteboards/{board_id}/assets/{asset_id}",
+    "/api/whiteboards/{board_id}/assets/{asset_id}/content",
+    "/api/whiteboards/{board_id}/learning-preview",
     "/api/course-generations/preview",
     "/api/course-generations",
     "/api/course-generations/{generation_id}",
@@ -128,7 +134,7 @@ def core_openapi(spec: dict[str, Any]) -> dict[str, Any]:
             "description": (
                 "Generated from FastAPI response/request models with python -m scripts.export_openapi. "
                 "Scope: learner profiles, optional diagnostics, learning JSON, summary/TTS streams, "
-                "focus, progress, plans, bibliography records, course generation and source refresh. "
+                "focus, progress, plans, bibliography records, whiteboards, course generation and source refresh. "
                 "Named/data SSE event payloads are documented in x-event-schemas. "
                 "Health and privacy export remain in the runtime /openapi.json. "
                 "Requests are authenticated with a Clerk bearer token."

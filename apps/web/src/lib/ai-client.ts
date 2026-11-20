@@ -19,12 +19,15 @@ import {
   ConceptGraphRegenerateRequestSchema,
   ConceptGraphSaveRequestSchema,
   MindMapResponseSchema,
+  JobResponseSchema,
+  JobCancelResponseSchema,
+  ParsePdfResponseSchema,
   ReviewRequestSchema,
   ReviewResultSchema,
-  type ParsePdfResponse,
   type ReviewResult,
 } from '@studyvault/types';
 import { z } from 'zod';
+import { isAllowedLearningRoute } from './learning-service-proxy';
 
 /**
  * Browser-side ai-service client. The caller passes a `getToken` (from Clerk's
@@ -34,40 +37,51 @@ export type GetToken = () => Promise<string | null>;
 
 /** HTTP errors retain status so the deck viewer can safely decide on offline fallback. */
 export class AiHttpError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
     super(message);
     this.name = 'AiHttpError';
   }
 }
 
+const aiServiceOrigin = () =>
+  (process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+
 export async function authFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
-  const token = await getToken();
-  const base = process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000';
+  const method = (init.method ?? 'GET').toUpperCase();
+  const useBridge = isAllowedLearningRoute(method, path.split('?', 1)[0] ?? '');
+  const headers = new Headers(init.headers);
+  headers.set('authorization', `Bearer ${(await getToken()) ?? ''}`);
+  if (method !== 'GET' && !headers.has('Idempotency-Key'))
+    headers.set('Idempotency-Key', crypto.randomUUID());
   try {
-    return await fetch(`${base}${path}`, {
+    return await fetch(`${useBridge ? '/api/learning-service' : aiServiceOrigin()}${path}`, {
       ...init,
-      headers: { ...(init.headers ?? {}), authorization: `Bearer ${token ?? ''}` },
+      cache: 'no-store',
+      // Use the caller's scoped token even if the browser is switching accounts.
+      credentials: useBridge ? 'same-origin' : 'omit',
+      headers,
     });
-  } catch {
-    const origin = typeof window === 'undefined' ? 'this deployment' : window.location.origin;
-    throw new TypeError(
-      `Cannot reach the AI service from ${origin}. Check the Render service URL and CORS origin settings.`,
-    );
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    throw new TypeError('The study service could not be reached. Try again in a moment.', { cause: error });
   }
+}
+
+export async function wakeUploadService(signal: AbortSignal) {
+  // Opening the library can begin the free host's startup while the user picks a file.
+  await fetch(`${aiServiceOrigin()}/health`, {
+    mode: 'no-cors',
+    cache: 'no-store',
+    signal,
+  });
 }
 
 /** Same-origin bridge for guided courses and learner-profile APIs. */
 export async function learningFetch(getToken: GetToken, path: string, init: RequestInit = {}) {
-  const token = await getToken();
-  try {
-    return await fetch(`/api/learning-service${path}`, {
-      ...init,
-      cache: 'no-store',
-      headers: { ...(init.headers ?? {}), authorization: `Bearer ${token ?? ''}` },
-    });
-  } catch {
-    throw new Error('Cannot reach the learning service. Check your connection and try again.');
-  }
+  return authFetch(getToken, path, init);
 }
 
 export async function readResponse<T>(
@@ -117,19 +131,27 @@ export async function getTokenBalance(getToken: GetToken) {
 export async function uploadPdf(
   getToken: GetToken,
   file: File,
+  signal?: AbortSignal,
 ): Promise<{ jobId: string; documentId: string }> {
   const fd = new FormData();
   fd.append('file', file);
-  const res = await authFetch(getToken, '/api/parse-pdf', { method: 'POST', body: fd });
-  if (!res.ok) throw new Error(`upload failed: ${res.status}`);
-  const data = (await res.json()) as ParsePdfResponse;
+  const res = await authFetch(getToken, '/api/parse-pdf', { method: 'POST', body: fd, signal });
+  if (res.status === 413) throw new AiHttpError(413, 'This PDF exceeds the upload size limit.');
+  if ([502, 503, 504].includes(res.status)) {
+    throw new AiHttpError(res.status, 'The upload service is temporarily unavailable. Try again shortly.');
+  }
+  const data = await readResponse(res, ParsePdfResponseSchema, 'upload');
   return { jobId: data.job_id, documentId: data.document_id };
 }
 
-export async function getJob(getToken: GetToken, jobId: string): Promise<JobStatus> {
-  const res = await authFetch(getToken, `/api/jobs/${jobId}`);
-  if (!res.ok) throw new Error(`job status failed: ${res.status}`);
-  return res.json();
+export async function getJob(getToken: GetToken, jobId: string, signal?: AbortSignal): Promise<JobStatus> {
+  const res = await authFetch(getToken, `/api/jobs/${encodeURIComponent(jobId)}`, { signal });
+  return readResponse(res, JobResponseSchema, 'job status');
+}
+
+export async function cancelJob(getToken: GetToken, jobId: string): Promise<void> {
+  const res = await authFetch(getToken, `/api/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' });
+  await readResponse(res, JobCancelResponseSchema, 'cancel job');
 }
 
 export async function getChapters(getToken: GetToken, documentId: string): Promise<Chapter[]> {
@@ -177,11 +199,13 @@ export async function getConceptGraphNodeActions(
   );
   const actions = await readResponse(res, ConceptGraphNodeActionsSchema, 'concept graph learning actions');
   if (
-    actions.node_id !== nodeId || actions.graph_revision !== revision
-    || (actions.source && actions.source.document_id !== documentId)
-    || (actions.deck && actions.deck.document_id !== documentId)
-    || (actions.board && (actions.board.document_id !== documentId || actions.board.node_id !== nodeId))
-  ) throw new Error('Concept graph action does not match this source and revision.');
+    actions.node_id !== nodeId ||
+    actions.graph_revision !== revision ||
+    (actions.source && actions.source.document_id !== documentId) ||
+    (actions.deck && actions.deck.document_id !== documentId) ||
+    (actions.board && (actions.board.document_id !== documentId || actions.board.node_id !== nodeId))
+  )
+    throw new Error('Concept graph action does not match this source and revision.');
   return actions;
 }
 
@@ -191,11 +215,15 @@ export async function regenerateConceptGraph(
   expectedRevision: number,
 ) {
   const body = ConceptGraphRegenerateRequestSchema.parse({ expected_revision: expectedRevision });
-  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/concept-graph/regenerate`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const res = await authFetch(
+    getToken,
+    `/api/documents/${encodeURIComponent(documentId)}/concept-graph/regenerate`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
   return readResponse(res, ConceptGraphRecordSchema, 'regenerate concept graph');
 }
 
@@ -217,9 +245,16 @@ export async function generateFlashcards(getToken: GetToken, documentId: string)
   return (await readResponse(res, FlashcardGenerationResponseSchema, 'flashcard generation')).job_id;
 }
 
-export async function listFlashcards(getToken: GetToken, documentId: string, deckId?: string): Promise<Flashcard[]> {
+export async function listFlashcards(
+  getToken: GetToken,
+  documentId: string,
+  deckId?: string,
+): Promise<Flashcard[]> {
   const params = deckId ? `?deck_id=${encodeURIComponent(deckId)}` : '';
-  const res = await authFetch(getToken, `/api/documents/${encodeURIComponent(documentId)}/flashcards${params}`);
+  const res = await authFetch(
+    getToken,
+    `/api/documents/${encodeURIComponent(documentId)}/flashcards${params}`,
+  );
   return readResponse(res, FlashcardListResponseSchema, 'flashcards');
 }
 
@@ -235,25 +270,33 @@ export async function editFlashcard(
 ): Promise<Flashcard> {
   const body = FlashcardEditRequestSchema.parse(input);
   const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}`, {
-    method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
   });
   return readResponse(res, FlashcardResponseSchema, 'edit flashcard');
 }
 
 export async function retireFlashcard(getToken: GetToken, cardId: string): Promise<Flashcard> {
-  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/retire`, { method: 'POST' });
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/retire`, {
+    method: 'POST',
+  });
   return readResponse(res, FlashcardResponseSchema, 'retire flashcard');
 }
 
 export async function deleteFlashcard(getToken: GetToken, cardId: string): Promise<void> {
-  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+  const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}`, {
+    method: 'DELETE',
+  });
   await readResponse(res, FlashcardDeleteResponseSchema, 'delete flashcard');
 }
 
 export async function reportFlashcard(getToken: GetToken, cardId: string, reason: string): Promise<void> {
   const body = FlashcardReportRequestSchema.parse({ reason });
   const res = await authFetch(getToken, `/api/flashcards/${encodeURIComponent(cardId)}/report`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
   });
   await readResponse(res, FlashcardReportResponseSchema, 'report flashcard');
 }
@@ -269,7 +312,10 @@ export async function submitReview(
   grade: number,
   reviewId?: string,
 ): Promise<ReviewResult> {
-  const body = ReviewRequestSchema.parse({ grade, ...(reviewId === undefined ? {} : { review_id: reviewId }) });
+  const body = ReviewRequestSchema.parse({
+    grade,
+    ...(reviewId === undefined ? {} : { review_id: reviewId }),
+  });
   const res = await authFetch(getToken, `/api/flashcards/${cardId}/review`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -295,7 +341,7 @@ export function pollJob(
       try {
         const job = await getJob(getToken, jobId);
         onUpdate(job);
-        if (job.status === 'done' || job.status === 'failed') return;
+        if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return;
         lastError = null;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('job status request failed');

@@ -2,8 +2,11 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { TtsPlayer } from '@/components/tts-player';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { authFetch } from '@/lib/ai-client';
 import type { Chapter } from '@/lib/ai-types';
+import { readEventStream } from '@/lib/event-stream';
 
 /** Summary levels, in the order the "Explain It" slider walks them (task 2.6). */
 export const LEVELS = ['eli5', 'standard', 'deep_dive'] as const;
@@ -15,10 +18,6 @@ const LABEL: Record<SummaryLevel, string> = {
   deep_dive: 'Deep dive',
 };
 
-function baseUrl() {
-  return process.env.NEXT_PUBLIC_AI_SERVICE_URL ?? 'http://localhost:8000';
-}
-
 export async function requestSummary(
   chapterId: string,
   level: SummaryLevel,
@@ -26,62 +25,42 @@ export async function requestSummary(
   signal: AbortSignal,
   onToken: (token: string) => void,
 ): Promise<string> {
-  const headers = { authorization: `Bearer ${token ?? ''}`, 'content-type': 'application/json' };
-  const saved = await fetch(`${baseUrl()}/api/chapters/${chapterId}/summary?level=${level}`, {
-    headers,
+  const getToken = async () => token;
+  const path = '/api/chapters/' + chapterId + '/summary';
+  const saved = await authFetch(getToken, path + '?level=' + level, {
     signal,
-  }).catch((error: unknown) => {
-    if (signal.aborted) throw error;
-    return null;
   });
 
   if (signal.aborted) throw new DOMException('Summary request aborted', 'AbortError');
-  if (saved?.ok) {
+  if (saved.ok) {
     const data = (await saved.json()) as { content?: unknown };
     if (typeof data.content === 'string') return data.content;
+    throw new Error('Invalid saved summary');
   }
+  if (saved.status !== 404) throw new Error('Could not load the saved summary');
 
-  const response = await fetch(`${baseUrl()}/api/chapters/${chapterId}/summary`, {
+  const response = await authFetch(getToken, path, {
     method: 'POST',
-    headers,
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ level }),
     signal,
   });
   if (!response.ok || !response.body) throw new Error('Summary generation failed');
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let content = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-    const events = buffer.split('\n\n');
-    buffer = events.pop() ?? '';
-    for (const event of events) {
-      const line = event.split('\n').find((entry) => entry.startsWith('data: '));
-      if (!line) continue;
-      const payload = JSON.parse(line.slice(6)) as { token?: string; error?: string };
-      if (payload.error) throw new Error('Summary generation failed');
-      if (payload.token) {
-        content += payload.token;
-        onToken(payload.token);
-      }
-    }
-    if (done) break;
-  }
-  if (buffer.trim()) {
-    const line = buffer.split('\n').find((entry) => entry.startsWith('data: '));
-    if (line) {
-      const payload = JSON.parse(line.slice(6)) as { token?: string; error?: string };
-      if (payload.error) throw new Error('Summary generation failed');
-      if (payload.token) {
-        content += payload.token;
-        onToken(payload.token);
-      }
+  for await (const frame of readEventStream(response)) {
+    signal.throwIfAborted();
+    const payload = JSON.parse(frame.data) as { token?: unknown; error?: unknown; done?: unknown };
+    if (typeof payload.token === 'string') {
+      content += payload.token;
+      onToken(payload.token);
+    } else if (payload.done === true) {
+      return content;
+    } else {
+      throw new Error('Summary generation failed');
     }
   }
-  return content;
+  throw new Error('Summary stream ended before completion');
 }
 
 /**
@@ -94,6 +73,8 @@ export function SummaryPanel({ chapter }: { chapter: Chapter }) {
   const [level, setLevel] = useState<SummaryLevel>('standard');
   const [text, setText] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [error, setError] = useState(false);
+  const narration = useRef<HTMLDivElement>(null);
   const requestId = useRef(0);
   const activeController = useRef<AbortController | null>(null);
 
@@ -106,6 +87,7 @@ export function SummaryPanel({ chapter }: { chapter: Chapter }) {
       const isCurrent = () => requestId.current === currentRequest && !controller.signal.aborted;
       setLevel(next);
       setText('');
+      setError(false);
       setStreaming(true);
       try {
         const token = await getToken();
@@ -115,7 +97,10 @@ export function SummaryPanel({ chapter }: { chapter: Chapter }) {
         });
         if (isCurrent()) setText(result);
       } catch {
-        if (isCurrent()) setText('Could not generate a summary. Try again.');
+        if (isCurrent()) {
+          setText('');
+          setError(true);
+        }
       } finally {
         if (isCurrent()) {
           setStreaming(false);
@@ -152,13 +137,28 @@ export function SummaryPanel({ chapter }: { chapter: Chapter }) {
           />
         </div>
       </div>
-      {text ? (
-        <MarkdownRenderer markdown={text} className="mt-3 text-sm text-neutral-800" />
-      ) : (
+      <div ref={narration}>
+        {text && <MarkdownRenderer markdown={text} className="mt-3 text-sm text-neutral-800" />}
+      </div>
+      {!text && !error && (
         <p className="mt-3 whitespace-pre-wrap text-sm text-neutral-800">
           {streaming ? 'Generating…' : 'No summary yet.'}
         </p>
       )}
+      {error && (
+        <div className="mt-3 text-sm">
+          <p role="alert">Could not load the chapter summary.</p>
+          <button type="button" className="mt-1 underline" onClick={() => void load(level)}>
+            Try again
+          </button>
+        </div>
+      )}
+      <TtsPlayer
+        sourceKey={chapter.id + ':' + level}
+        getText={() => narration.current?.innerText ?? ''}
+        disabled={streaming || !text.trim()}
+        label="Listen to summary"
+      />
     </div>
   );
 }

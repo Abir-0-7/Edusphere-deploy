@@ -56,6 +56,16 @@ jobs:
       - run: pnpm --filter @studyvault/web test:e2e:maps
       - run: pnpm --filter @studyvault/web test:e2e:cover-builder
       - run: pnpm --filter @studyvault/web test:e2e:bibliography
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r apps/ai-service/requirements-dev.txt
+      - run: pnpm --filter @studyvault/web test:e2e:whiteboards
+      - run: pnpm --filter @studyvault/web test:e2e:ocr
+      - run: pnpm --filter @studyvault/web test:e2e:code-review
+      - run: pnpm --filter @studyvault/web test:e2e:checklists
+      - run: pnpm --filter @studyvault/web exec playwright test --config e2e/cover-docx-isolated.config.ts
+      - run: pnpm --filter @studyvault/web exec playwright test --config e2e/listen-isolated.config.ts
+      - run: pnpm --filter @studyvault/web exec playwright test --config e2e/focus-timer-isolated.config.ts
       - run: pnpm audit --prod
       - run: pnpm lint
       - run: pnpm typecheck
@@ -99,7 +109,7 @@ jobs:
       - name: Academic tools and source-backed course PostgreSQL checks
         run: >-
           pytest -q tests/test_bibliography.py tests/test_source_versions_pg.py
-          tests/test_phase8ef_migrations_pg.py tests/test_github_import_pg.py
+          tests/test_phase8ef_migrations_pg.py tests/test_whiteboards_pg.py tests/test_github_import_pg.py
           tests/test_course_outlines_pg.py tests/test_course_generation_pg.py
           tests/test_source_refresh_pg.py tests/test_full_course_progress.py
           tests/test_course_upgrades.py tests/test_local_text_source_pg.py

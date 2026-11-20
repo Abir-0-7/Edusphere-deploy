@@ -87,28 +87,55 @@ describe('learning service proxy route', () => {
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed-clerk-token');
   });
 
-  it('forwards explicit upgrade acceptance without changing its identity or body', async () => {
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        new Response('{"replayed":false}', { status: 200, headers: { 'content-type': 'application/json' } }),
-      );
-    vi.stubGlobal('fetch', fetchMock);
-    const id = '01234567-89ab-cdef-0123-456789abcdef';
-    const body = JSON.stringify({ id: 'stable-acceptance', expected_revision: 3, accept_upgrade: true });
-    const response = await POST(
-      new Request(`https://edusphere.example/api/learning-service/api/course-enrollments/${id}/upgrade`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'Idempotency-Key': 'stable-acceptance' },
-        body,
+  it('rejects cross-origin study writes and preserves approved audio event streams', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('data: {"done":true}\n\n', {
+        headers: { 'content-type': 'text/event-stream', 'x-accel-buffering': 'no' },
       }),
-      { params: Promise.resolve({ path: ['api', 'course-enrollments', id, 'upgrade'] }) },
     );
-    expect(response.status).toBe(200);
-    const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(String(url)).toBe(`https://studyvault-ai.example/api/course-enrollments/${id}/upgrade`);
-    expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe(body);
-    expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('stable-acceptance');
-    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer signed-clerk-token');
+    vi.stubGlobal('fetch', fetchMock);
+    const url = 'https://edusphere.example/api/learning-service/api/tts/stream';
+    const context = { params: Promise.resolve({ path: ['api', 'tts', 'stream'] }) };
+    const rejected = await POST(
+      new Request(url, { method: 'POST', headers: { origin: 'https://other.example' } }),
+      context,
+    );
+    expect(rejected.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const accepted = await POST(
+      new Request(url, {
+        method: 'POST',
+        headers: { origin: 'https://edusphere.example', 'content-type': 'application/json' },
+        body: '{"text":"example"}',
+      }),
+      context,
+    );
+    expect(accepted.headers.get('content-type')).toBe('text/event-stream');
+    expect(accepted.headers.get('x-accel-buffering')).toBe('no');
+    expect(await accepted.text()).toBe('data: {"done":true}\n\n');
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(init?.redirect).toBe('error');
+    expect(new Headers(init?.headers).has('x-internal-token')).toBe(false);
+  });
+
+  it('returns a retryable error when the host responds with a startup page', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response('<html>Starting</html>', {
+            status: 503,
+            headers: { 'content-type': 'text/html' },
+          }),
+      ),
+    );
+    const response = await GET(
+      new Request('https://edusphere.example/api/learning-service/api/flashcards/review-queue'),
+      {
+        params: Promise.resolve({ path: ['api', 'flashcards', 'review-queue'] }),
+      },
+    );
+    expect(response.status).toBe(502);
+    expect((await response.json()).error.message).toContain('temporarily unavailable');
   });
 });

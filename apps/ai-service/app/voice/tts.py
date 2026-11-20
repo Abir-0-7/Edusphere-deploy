@@ -78,11 +78,14 @@ async def synthesize(text: str, *, voice: str | None = None) -> Clip:
         raise TtsUnavailable("edge-tts is not installed")
     import edge_tts
 
-    communicate = edge_tts.Communicate(text[:MAX_CHARS], voice or DEFAULT_VOICE)
     audio = bytearray()
     words: list[Word] = []
-    async for chunk in communicate.stream():
-        _voiced_chunks(chunk, audio, words)
+    try:
+        communicate = edge_tts.Communicate(text[:MAX_CHARS], voice or DEFAULT_VOICE, boundary="WordBoundary")
+        async for chunk in communicate.stream():
+            _voiced_chunks(chunk, audio, words)
+    except Exception as exc:  # noqa: BLE001 - provider failures activate the browser speech fallback
+        raise TtsUnavailable("edge-tts synthesis failed") from exc
     if not audio:
         raise TtsUnavailable("edge-tts returned no audio")
     return Clip(audio=bytes(audio), words=words)
@@ -96,17 +99,20 @@ async def stream_events(text: str, *, voice: str | None = None) -> AsyncIterator
         raise TtsUnavailable("edge-tts is not installed")
     import edge_tts
 
-    communicate = edge_tts.Communicate(text[:MAX_CHARS], voice or DEFAULT_VOICE)
     yielded_audio = False
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio" and chunk["data"]:
-            yielded_audio = True
-            data = base64.b64encode(chunk["data"]).decode("ascii")
-            yield f"event: audio\ndata: {data}\n\n"
-        elif chunk["type"] == "WordBoundary":
-            start = ticks_to_ms(int(chunk["offset"]))
-            word = Word(text=chunk["text"], start_ms=start, end_ms=start + ticks_to_ms(int(chunk["duration"])))
-            yield f"event: word\ndata: {json.dumps(word.__dict__, ensure_ascii=True)}\n\n"
+    try:
+        communicate = edge_tts.Communicate(text[:MAX_CHARS], voice or DEFAULT_VOICE, boundary="WordBoundary")
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio" and chunk["data"]:
+                yielded_audio = True
+                data = base64.b64encode(chunk["data"]).decode("ascii")
+                yield f"event: audio\ndata: {data}\n\n"
+            elif chunk["type"] == "WordBoundary":
+                start = ticks_to_ms(int(chunk["offset"]))
+                word = Word(text=chunk["text"], start_ms=start, end_ms=start + ticks_to_ms(int(chunk["duration"])))
+                yield f"event: word\ndata: {json.dumps(word.__dict__, ensure_ascii=True)}\n\n"
+    except Exception as exc:  # noqa: BLE001 - terminal failure is emitted by the API stream wrapper
+        raise TtsUnavailable("edge-tts synthesis failed") from exc
     if not yielded_audio:
         raise TtsUnavailable("edge-tts returned no audio")
     yield "event: done\ndata: {}\n\n"

@@ -37,6 +37,7 @@ button { cursor: pointer; }
 .app-nav-section { margin: 19px 0 4px; padding: 0 10px; color: #818c85; font-size: 13px; font-weight: 700; letter-spacing: 1.1px; }
 .app-nav-link { display: flex; min-height: 38px; align-items: center; gap: 11px; border-radius: 5px; padding: 7px 10px; color: #47554d; font-size: 14px; transition: background-color 120ms ease, color 120ms ease; }
 .app-nav-link:hover { background: #eaf1eb; color: var(--forest-dark); }
+.app-nav-link[aria-current='page'] { background: var(--mint); color: var(--forest-dark); font-weight: 700; box-shadow: inset 3px 0 var(--forest); }
 .app-nav-mark { display: grid; width: 23px; height: 23px; place-items: center; border: 1px solid #dce5de; border-radius: 4px; color: #62786b; font-size: 12px; font-weight: 700; }
 .app-sidebar-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: auto; border-top: 1px solid var(--line); padding: 15px 6px 0; }
 .app-sidebar-note { display: flex; align-items: center; gap: 7px; color: #69766e; font-size: 14px; }
@@ -215,4 +216,17 @@ button { cursor: pointer; }
   .library-document-main { min-width: calc(100% - 44px); }
   .library-document-status { margin-left: 39px; }
   .library-document-row .action-secondary { margin-left: auto; min-height: 32px; padding: 0 8px; font-size: 14px; }
+}
+
+/* Route-based sign-in and sign-up keep the workspace visual language. */
+.auth-page { display: grid; width: min(100%, 1040px); min-height: min(640px, 75vh); grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: stretch; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.auth-story { display: flex; flex-direction: column; justify-content: center; background: var(--mint); padding: clamp(24px, 5vw, 56px); }
+.auth-story h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(35px, 5vw, 52px); line-height: 1.08; }
+.auth-story p:last-child { margin: 15px 0 0; max-width: 350px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.auth-form { display: grid; min-width: 0; place-items: center; padding: 20px 12px; }
+.auth-form > * { max-width: 100%; }
+@media (max-width: 760px) {
+  .auth-page { grid-template-columns: minmax(0, 1fr); min-height: auto; }
+  .auth-story { padding: 24px; }
+  .auth-form { padding: 24px 12px; }
 }

@@ -10,11 +10,16 @@
     "test": "vitest run --passWithNoTests && node --test scripts/prepare-ocr-assets.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:games": "playwright test --config e2e/game-vault-isolated.config.ts",
-    "test:e2e:flashcard-studio": "playwright test --config e2e/flashcard-studio-isolated.config.ts",
-    "test:e2e:offline-decks": "playwright test --config e2e/offline-deck-isolated.config.ts",
-    "test:e2e:maps": "playwright test --config e2e/map-isolated.config.ts",
+    "test:e2e:flashcard-studio": "node ./node_modules/@playwright/test/cli.js test --config e2e/flashcard-studio-isolated.config.ts",
+    "test:e2e:offline-decks": "node ./node_modules/@playwright/test/cli.js test --config e2e/offline-deck-isolated.config.ts",
+    "test:e2e:maps": "node ./node_modules/@playwright/test/cli.js test --config e2e/map-isolated.config.ts",
     "test:e2e:cover-builder": "playwright test --config e2e/cover-builder-isolated.config.ts",
-    "test:e2e:bibliography": "playwright test --config e2e/bibliography-isolated.config.ts"
+    "test:e2e:bibliography": "playwright test --config e2e/bibliography-isolated.config.ts",
+    "test:e2e:tracks": "node ./node_modules/@playwright/test/cli.js test --config e2e/track-plan-isolated.config.ts",
+    "test:e2e:whiteboards": "playwright test --config e2e/whiteboard-isolated.config.ts",
+    "test:e2e:ocr": "playwright test --config e2e/ocr-isolated.config.ts",
+    "test:e2e:code-review": "playwright test --config e2e/code-review-isolated.config.ts",
+    "test:e2e:checklists": "playwright test --config e2e/draft-checklist-isolated.config.ts"
   },
   "dependencies": {
     "@citation-js/core": "0.9.0",
@@ -48,7 +53,8 @@
     "tesseract.js": "^7.0.0",
     "tldraw": "^5.6.0",
     "zod": "^4.6.7",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "@excalidraw/excalidraw": "0.18.1"
   },
   "devDependencies": {
     "@clerk/testing": "^2.3.0",

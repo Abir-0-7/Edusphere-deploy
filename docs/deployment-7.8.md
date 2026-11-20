@@ -182,6 +182,19 @@ beta until the feedback destination is selected and published.
 
 ## Current platform documentation
 
+### Integrated study transport repairs (2026-11-20)
+
+The same-origin learning-service bridge now covers chapter summaries, audio
+streams, flashcards and job status through an explicit route allowlist. Large
+PDF uploads and whiteboard snapshots/images go directly to the configured AI
+origin to avoid the web host's request-size limit; its CORS configuration must
+allow the exact web origin. Opening the library starts a cancellable health
+request to wake the API. The upload flow follows parsing into chapter creation
+and opens usable chapters while embedding/indexing continues independently.
+
+Migration `0022_whiteboards` must be applied before enabling the new board API
+in a deployment. This source integration does not apply production migrations.
+
 - [Vercel monorepos](https://vercel.com/docs/monorepos)
 - [Vercel environment variables](https://vercel.com/docs/environment-variables)
 - [Render FastAPI deployment](https://render.com/docs/deploy-fastapi)

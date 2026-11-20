@@ -225,6 +225,20 @@ class PgDocumentStore:
             ).fetchone()
         return bool(row[0]) if row else False
 
+    def list_chapters_for_user(self, document_id: str, user_id: str) -> list[ChapterRecord] | None:
+        # The left join keeps the distinction between an owned document without
+        # chapters yet and a document the caller cannot access. An independent
+        # connection cannot observe the worker's incomplete publication transaction.
+        with self._connect_for_atomic() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT c.id, c.document_id, c.user_id, c.title, c.ordinal, c.start_page, c.end_page "
+                "FROM documents d LEFT JOIN chapters c ON c.document_id=d.id AND c.user_id=d.user_id "
+                "WHERE d.id=%s AND d.user_id=%s ORDER BY c.ordinal",
+                (document_id, user_id),
+            )
+            rows = cur.fetchall()
+            return [_chapter(row) for row in rows if row[0] is not None] if rows else None
+
     def list_library_documents(self, user_id: str, *, limit: int, offset: int) -> tuple[list[dict[str, str]], int]:
         with self._connect_for_atomic() as conn:
             rows = conn.execute(
@@ -274,18 +288,19 @@ class PgDocumentStore:
                     raise NotFound("document not found")
                 cur.execute("DELETE FROM chunks WHERE document_id=%s", (document_id,))
                 cur.execute("DELETE FROM chapters WHERE document_id=%s", (document_id,))
-                for c in chapters:
-                    cur.execute(
-                        "INSERT INTO chapters (id, document_id, user_id, title, ordinal, start_page, end_page)"
-                        " VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                        (c.id, c.document_id, c.user_id, c.title, c.ordinal, c.start_page, c.end_page),
-                    )
-                for ch in chunks:
-                    cur.execute(
-                        "INSERT INTO chunks (id, document_id, user_id, chapter_id, content, page, ordinal)"
-                        " VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                        (ch.id, ch.document_id, ch.user_id, ch.chapter_id, ch.content, ch.page, ch.ordinal),
-                    )
+                cur.executemany(
+                    "INSERT INTO chapters (id, document_id, user_id, title, ordinal, start_page, end_page)"
+                    " VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        (c.id, c.document_id, c.user_id, c.title, c.ordinal, c.start_page, c.end_page)
+                        for c in chapters
+                    ),
+                )
+                cur.executemany(
+                    "INSERT INTO chunks (id, document_id, user_id, chapter_id, content, page, ordinal)"
+                    " VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    ((c.id, c.document_id, c.user_id, c.chapter_id, c.content, c.page, c.ordinal) for c in chunks),
+                )
 
     def _chapters_for(self, document_id: str) -> list[ChapterRecord]:
         with self._conn.cursor() as cur:

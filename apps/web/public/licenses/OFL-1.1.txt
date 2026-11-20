@@ -1,0 +1,56 @@
+Copyright (c) <dates>, <Copyright Holder> (<URL|email>),
+with Reserved Font Name <Reserved Font Name>.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+https://openfontlicense.org
+
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+
+PREAMBLE
+
+The goals of the Open Font License are to stimulate worldwide development of
+collaborative font projects and to provide a free and open framework in which
+fonts may be shared and improved in partnership with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The fonts,
+including any derivative works, can be bundled, embedded, redistributed
+and/or sold with any software provided that any reserved names are not used by
+derivative works. The fonts and derivatives cannot be released under any other
+type of license. This requirement does not apply to documents created using
+the fonts or their derivatives.
+
+DEFINITIONS
+
+"Font Software" refers to the set of files released by the Copyright Holder(s)
+under this license and clearly marked as such. "Reserved Font Name" refers to
+any names specified as such after the copyright statement(s). "Original
+Version" refers to the collection of Font Software components as distributed by
+the Copyright Holder(s). "Modified Version" refers to any derivative made by
+adding to, deleting, or substituting components of the Original Version.
+
+PERMISSION & CONDITIONS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the Font Software, to use, study, copy, merge, embed, modify, redistribute,
+and sell modified and unmodified copies, subject to these conditions:
+
+1) Neither the Font Software nor any individual component may be sold by itself.
+2) Bundled copies must include the copyright notice and this license.
+3) Modified Versions may not use Reserved Font Names without permission.
+4) Author names may not promote a Modified Version without permission.
+5) Font Software must remain entirely under this license. This does not apply
+   to documents created using the Font Software.
+
+TERMINATION
+
+This license becomes null and void if the conditions above are not met.
+
+DISCLAIMER
+
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM THE USE OF THE FONT SOFTWARE.

@@ -68,6 +68,37 @@ def test_export_queries_guilds_by_owner_or_membership() -> None:
     assert data["tables"]["study_guild_members"] == []
 
 
+def test_whiteboard_export_scopes_both_tables_and_preserves_image_bytes() -> None:
+    import base64
+
+    from app.privacy import PrivacyStore
+
+    cursor = MagicMock()
+    cursor.__enter__.return_value = cursor
+    connection = MagicMock()
+    connection.cursor.return_value = cursor
+    cursor.fetchone.return_value = ("user-id", "clerk-id", "person@example.test", "2026-01-01")
+    image = b"\x89PNG\x00\xff"
+
+    def rows():
+        if "FROM whiteboard_assets WHERE" in cursor.execute.call_args.args[0]:
+            return [("asset", "board", "file", "image/png", len(image), "hash", memoryview(image), "2026-01-01")]
+        return []
+
+    cursor.fetchall.side_effect = rows
+    store = PrivacyStore.__new__(PrivacyStore)
+    store._conn = connection
+    data = store.export_user_data("user-id")
+    for table in ("whiteboards", "whiteboard_assets"):
+        query = next(call for call in cursor.execute.call_args_list if f"FROM {table} WHERE" in call.args[0])
+        assert "WHERE user_id = %s" in query.args[0]
+        assert query.args[1] == ("user-id",)
+    exported = data["tables"]["whiteboard_assets"][0]["data"]
+    assert exported["encoding"] == "base64"
+    assert base64.b64decode(exported["value"]) == image
+    assert _jsonable(data)
+
+
 @_pytest.mark.skipif(not URL, reason="STUDYVAULT_TEST_DATABASE_URL not set")
 def test_export_is_json_serialisable_and_scoped(privacy) -> None:
     import uuid

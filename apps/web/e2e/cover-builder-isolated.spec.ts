@@ -6,6 +6,101 @@ import { PDFDocument } from 'pdf-lib';
 const ratioPng =
   'iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAAFElEQVR4nGP4z8DwHxmD0P//SHwAEx0P8XBy1ZAAAAAASUVORK5CYII=';
 
+for (const [label, key, paper] of [
+  ['University assignment', 'university', 'a4'],
+  ['Lab report', 'lab', 'letter'],
+  ['Project report', 'project', 'a4'],
+  ['Minimal professional', 'minimal', 'letter'],
+] as const) {
+  test(`downloads an editable ${label} cover`, async ({ page }, testInfo) => {
+    await page.goto('/');
+    const builder = page
+      .locator('main')
+      .filter({ has: page.getByRole('heading', { name: 'Academic cover page' }) });
+    await builder.getByRole('radio', { name: `Select ${label} template` }).click();
+    await builder.getByLabel('Paper size').selectOption(paper);
+    await builder
+      .locator('input[maxlength="400"]')
+      .fill('Research Methods for Water Quality and Reliable Sampling');
+    await builder.getByLabel('Institution', { exact: true }).fill('Lake & River University');
+    await builder.getByLabel('Course code').fill('ENV 201');
+    await builder.getByRole('button', { name: 'Add student' }).click();
+    await builder.getByLabel('Student 1 name').fill('Rosa Pérez');
+    await builder.getByLabel('Student 1 ID').fill('S-120');
+    await builder.locator('#cover-logo').setInputFiles({
+      name: 'logo.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(ratioPng, 'base64'),
+    });
+    const save = page.waitForEvent('download');
+    await builder.getByRole('button', { name: 'Download editable DOCX' }).click();
+    const download = await save;
+    expect(download.suggestedFilename()).toBe(
+      'research-methods-for-water-quality-and-reliable-sampling.docx',
+    );
+    const path = testInfo.outputPath(`${key}.docx`);
+    await download.saveAs(path);
+    const bytes = await readFile(path);
+    expect(bytes.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 3, 4]));
+    expect(bytes.includes(Buffer.from('word/document.xml'))).toBe(true);
+    expect(bytes.includes(Buffer.from('<w:t xml:space="preserve">Lake &amp; River University</w:t>'))).toBe(
+      true,
+    );
+    expect(bytes.includes(Buffer.from('Rosa Pérez · ID: S-120'))).toBe(true);
+    expect(bytes.includes(Buffer.from('Institution logo'))).toBe(true);
+    await expect(builder.getByRole('heading', { name: 'Saved PDF copies' })).toHaveCount(0);
+  });
+}
+
+test('blocks both academic export formats for unverified Bangla shaping', async ({ page }) => {
+  await page.goto('/');
+  const builder = page
+    .locator('main')
+    .filter({ has: page.getByRole('heading', { name: 'Academic cover page' }) });
+  await builder.locator('input[maxlength="400"]').fill('শিক্ষা প্রতিবেদন');
+  await expect(builder.getByRole('note')).toContainText('Bangla export is unavailable');
+  await expect(builder.getByRole('button', { name: 'Download editable DOCX' })).toBeDisabled();
+  await expect(builder.getByRole('button', { name: 'Download PDF' })).toBeDisabled();
+});
+
+test('uses a distinct design for each template and keeps choices visible during editing', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  const builder = page
+    .locator('main')
+    .filter({ has: page.getByRole('heading', { name: 'Academic cover page' }) });
+  const designs = [
+    ['University assignment', '#13294b'],
+    ['Lab report', '#0f7784'],
+    ['Project report', '#7542b3'],
+    ['Minimal professional', '#a74932'],
+  ];
+
+  const title = builder.locator('input[maxlength="400"]');
+  await title.clear();
+  for (const [name, color] of designs) {
+    const choice = builder.getByRole('radio', { name: `Select ${name} template` });
+    await expect(choice.locator(`svg rect[fill="${color}"]`).first()).toBeVisible();
+  }
+
+  await title.fill('Study methods');
+  await builder.getByLabel('Institution', { exact: true }).fill('North Campus University');
+  await builder.getByLabel('Course name').fill('Research and analysis');
+  for (const [name, color] of designs) {
+    await builder.getByRole('radio', { name: `Select ${name} template` }).click();
+    const preview = builder.getByRole('img', { name: `${name} cover preview, a4` });
+    await expect(preview.locator(`rect[fill="${color}"]`).first()).toBeVisible();
+    await expect(preview).toContainText('Study methods');
+    const downloadPromise = page.waitForEvent('download');
+    await builder.getByRole('button', { name: 'Download PDF' }).click();
+    const download = await downloadPromise;
+    const output = testInfo.outputPath(`${name}.pdf`);
+    await download.saveAs(output);
+    expect((await PDFDocument.load(await readFile(output))).getPageCount()).toBe(1);
+  }
+});
+
 test('previews template layouts and exports a matched A4 PDF with wrapping, accents, and a proportional logo', async ({
   page,
 }, testInfo) => {
@@ -117,7 +212,7 @@ test('saves and restores an account-scoped draft and a versioned institution pre
   await reloaded.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(reloaded.locator('input[maxlength="400"]')).toHaveValue('Water quality report');
   await expect(reloaded.getByLabel('Course code')).toHaveValue('ENV 201');
-  await expect(reloaded.getByRole('note')).toContainText('Bangla PDF export is not enabled');
+  await expect(reloaded.getByRole('note')).toContainText('Bangla export is unavailable');
 });
 
 test('downloads the verified PDF even if the browser cannot retain an artifact copy', async ({ page }) => {

@@ -20,9 +20,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from app.ai.code_review import CodeReview
 from app.ai.outline import Outline
 from app.ai.structure import build_outline
 from app.ai.summaries import LEVELS, stream_summary
+from app.ai.tool_contracts import CodeReviewRequest
 from app.auth import TokenVerifier, verifier_from_settings
 from app.bibliography.router import bibliography_router
 from app.bibliography.store import MemoryBibliographyStore, PgBibliographyStore
@@ -107,6 +109,8 @@ from app.source_versions.store import MemorySourceVersionStore, PgSourceVersionS
 from app.study.readiness import ReadinessInputs, breakdown
 from app.study.store import FOCUS_KINDS, InMemoryStudyStore, PgStudyStore
 from app.study.tokens import settle
+from app.whiteboards.router import whiteboard_router
+from app.whiteboards.store import MemoryWhiteboardStore, PgWhiteboardStore
 
 logger = logging.getLogger("studyvault")
 
@@ -527,6 +531,13 @@ app.include_router(
     )
 )
 
+whiteboard_store = (
+    MemoryWhiteboardStore(max_boards_per_user=settings.max_whiteboards_per_user)
+    if memory_mode
+    else PgWhiteboardStore(settings.database_url, max_boards_per_user=settings.max_whiteboards_per_user)
+)
+app.include_router(whiteboard_router(current_user_id, whiteboard_store, llm_router))
+
 
 # --- Routes -----------------------------------------------------------------
 
@@ -572,7 +583,8 @@ async def parse_pdf_endpoint(
     if file.filename is None:
         raise InvalidInput("filename is required")
     data = await read_bounded(file, max_mb=settings.max_upload_mb)
-    validate_pdf(
+    await asyncio.to_thread(
+        validate_pdf,
         data,
         file.filename,
         file.content_type,
@@ -635,7 +647,13 @@ async def stream_chapter_summary(
     async def generate() -> AsyncIterator[str]:
         pieces: list[str] = []
         try:
-            for token in stream_summary(llm_router, level, chapter, doc.chunks):
+            # The first token performs synchronous provider IO.
+            tokens = iter(stream_summary(llm_router, level, chapter, doc.chunks))
+            first = await asyncio.to_thread(next, tokens, None)
+            if first is not None:
+                pieces.append(first)
+                yield event({"token": first})
+            for token in tokens:
                 pieces.append(token)
                 yield event({"token": token})
         except Exception as exc:  # noqa: BLE001 - the stream must close cleanly
@@ -659,7 +677,7 @@ async def stream_chapter_summary(
 
 
 @app.get("/api/chapters/{chapter_id}/summary")
-async def get_chapter_summary(
+def get_chapter_summary(
     chapter_id: str,
     level: str,
     user_id: Annotated[str, Depends(current_user_id)],
@@ -667,9 +685,6 @@ async def get_chapter_summary(
     """Saved summary for a level, so reload never re-calls the LLM (task 2.5)."""
     if level not in LEVELS:
         raise InvalidInput("level must be one of: standard, eli5, deep_dive")
-    found = documents.get_chapter_for_user(chapter_id, user_id)
-    if found is None:
-        raise NotFound("chapter not found")
     row = documents.get_summary(chapter_id, level, user_id)
     if row is None:
         raise NotFound("summary not generated yet")
@@ -677,13 +692,13 @@ async def get_chapter_summary(
 
 
 @app.get("/api/documents/{document_id}/chapters")
-async def list_chapters(document_id: str, user_id: Annotated[str, Depends(current_user_id)]) -> list[dict[str, Any]]:
-    doc = documents.get_for_user(document_id, user_id)
-    if doc is None:
+def list_chapters(document_id: str, user_id: Annotated[str, Depends(current_user_id)]) -> list[dict[str, Any]]:
+    chapters = documents.list_chapters_for_user(document_id, user_id)
+    if chapters is None:
         raise NotFound("document not found")
     return [
         {"id": c.id, "title": c.title, "ordinal": c.ordinal, "start_page": c.start_page, "end_page": c.end_page}
-        for c in doc.chapters
+        for c in chapters
     ]
 
 
@@ -1190,7 +1205,7 @@ async def text_to_speech(body: dict[str, Any], user_id: Annotated[str, Depends(c
     try:
         clip = await synthesize(text[:8000], voice=(body or {}).get("voice") or None)
     except TtsUnavailable as exc:
-        raise InvalidInput("server-side TTS unavailable; use browser speech") from exc
+        raise ApiError("server-side TTS unavailable; use browser speech", status_code=503) from exc
     return {
         "audio_b64": b64encode(clip.audio).decode("ascii"),
         "content_type": clip.content_type,
@@ -1209,14 +1224,14 @@ async def text_to_speech_stream(
     from app.voice.tts import TtsUnavailable, edge_available, stream_events
 
     if not edge_available():
-        raise InvalidInput("server-side TTS unavailable; use browser speech")
+        raise ApiError("server-side TTS unavailable; use browser speech", status_code=503)
 
     async def events():
         try:
             async for event in stream_events(text[:8000], voice=(body or {}).get("voice") or None):
                 yield event
         except TtsUnavailable:
-            logger.exception("tts_stream_failed", extra={"user_id": user_id})
+            logger.warning("tts_stream_failed", extra={"user_id": user_id})
             yield 'event: error\ndata: {"message":"speech synthesis failed"}\n\n'
 
     return StreamingResponse(
@@ -1261,15 +1276,14 @@ async def mindmap(document_id: str, user_id: Annotated[str, Depends(current_user
     return as_json(mm)
 
 
-@app.post("/api/code-review")
-async def code_review(body: dict[str, Any], user_id: Annotated[str, Depends(current_user_id)]) -> dict[str, Any]:
-    from app.ai.code_review import MAX_CODE_CHARS, as_json, review_code
+@app.post("/api/code-review", response_model=CodeReview, responses=LEARNING_ERRORS)
+async def code_review(body: CodeReviewRequest, user_id: Annotated[str, Depends(current_user_id)]) -> dict[str, Any]:
+    from app.ai.code_review import as_json, review_code
 
-    code = str((body or {}).get("code", ""))
-    language = str((body or {}).get("language", "unknown")).strip() or "unknown"
-    if not code.strip():
-        raise InvalidInput("code is required")
-    review = await asyncio.to_thread(review_code, llm_router, code=code[:MAX_CODE_CHARS], language=language)
+    with response_scope("code-review", schema_version="code-review-v2", language=body.language):
+        review = await asyncio.to_thread(
+            review_code, llm_router, code=body.code, language=body.language, context=body.context,
+        )
     return as_json(review)
 
 

@@ -34,6 +34,26 @@ test('home page renders for anonymous visitors', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Make your notes work harder.' })).toBeVisible();
 });
 
+test('sign-in entry points and OAuth landing routes stay on the app origin', async ({ page }) => {
+  await page.goto('/');
+  const origin = new URL(page.url()).origin;
+  await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/sign-in');
+  await page.getByRole('link', { name: 'Start studying' }).click();
+  await expect(page).toHaveURL(origin + '/sign-in');
+  await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
+
+  const callbackCases: ReadonlyArray<readonly [string, string]> = [
+    ['/sign-in/sso-callback', 'Pick up where you left off.'],
+    ['/sign-up/sso-callback', 'Build your study space.'],
+  ];
+  for (const [path, heading] of callbackCases) {
+    const response = await page.goto(path);
+    expect(response?.status()).toBe(200);
+    expect(new URL(page.url()).origin).toBe(origin);
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+  }
+});
+
 test('page scripts receive a nonce authorized by the response CSP', async ({ page }) => {
   const response = await page.goto('/');
   const csp = response?.headers()['content-security-policy'] ?? '';

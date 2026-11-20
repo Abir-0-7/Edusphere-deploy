@@ -41,6 +41,21 @@ function contentStreamText(document: PDFDocument, pageIndex = 0): string {
 }
 
 describe('cover PDF export', () => {
+  it.each([
+    ['university-assignment', [19, 41, 75]],
+    ['lab-report', [15, 119, 132]],
+    ['project-report', [117, 66, 179]],
+    ['minimal-professional', [167, 73, 50]],
+  ] as const)('paints the %s design behind the content', async (templateId, color) => {
+    const draft = { templateId, pageSize: 'a4', content: { title: 'Study methods' } };
+    const pdf = await PDFDocument.load(await createCoverPdf(draft));
+    const artwork = contentStreamText(pdf).split('BT')[0] ?? '';
+    const filledColors = Array.from(artwork.matchAll(/^([\d.]+) ([\d.]+) ([\d.]+) rg$/gmu), (match) =>
+      match.slice(1).map((channel) => Math.round(Number(channel) * 255)),
+    );
+    expect(filledColors).toContainEqual(color);
+  });
+
   it.each(['a4', 'letter'] as const)(
     'uses the selected %s page size and a single positioned text stream',
     async (pageSize) => {

@@ -66,13 +66,14 @@ describe('same-origin learning service proxy routes', () => {
     expect(url).toBe('/api/learning-service/api/courses');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer clerk-session-token');
     expect(init?.cache).toBe('no-store');
+    expect(init?.credentials).toBe('same-origin');
   });
 
   it('allows bounded source authoring and explicit course upgrades through the deployment proxy', () => {
     const id = '01234567-89ab-cdef-0123-456789abcdef';
     const allowed = [
       ['GET', '/api/source-versions'],
-      ['POST', '/api/source-versions/github/import'],
+      ['POST', '/api/source-versions/import-github'],
       ['POST', '/api/source-versions/import-text'],
       ['GET', '/api/course-outlines'],
       ['POST', '/api/course-outlines'],

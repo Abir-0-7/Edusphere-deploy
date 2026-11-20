@@ -24,6 +24,7 @@ import { cacheFlashcardDeck } from '@/lib/offline-reviews';
 import type { Chapter, ChatReply, Flashcard, JobStatus } from '@/lib/ai-types';
 import type { ConceptGraphNodeActions } from '@studyvault/types';
 import { readGraphHandoff } from '@/lib/concept-graph-actions';
+import { pollUploadJobs } from '../../library/library-polling';
 
 /**
  * Document page (tasks 2.3, 2.5, 2.6, 2.10): upload a PDF, poll its job,
@@ -57,6 +58,7 @@ export default function DocumentPage() {
   const stopPoll = useRef<(() => void) | null>(null);
   const selectedDeckRef = useRef<string | null>(null);
   const deckLoadRef = useRef(0);
+  const chapterLoadRef = useRef(0);
   const identityRef = useRef({ ownerId: userId ?? null, documentId });
   identityRef.current = { ownerId: userId ?? null, documentId };
 
@@ -69,6 +71,7 @@ export default function DocumentPage() {
     setSelectedDeckId(null);
     selectedDeckRef.current = null;
     deckLoadRef.current += 1;
+    chapterLoadRef.current += 1;
     setViewerOpen(false);
     setMapSource(null);
     setMapPracticeIds(null);
@@ -78,23 +81,24 @@ export default function DocumentPage() {
   }, [documentId, userId]);
 
   const loadChapters = useCallback(async () => {
-    if (!documentId) return;
+    if (!userId || !documentId || documentId === 'new') return;
     const request = ++deckLoadRef.current;
-    const ownerAtRequest = userId ?? '';
-    const isCurrentIdentity = () => (
-      identityRef.current.ownerId === ownerAtRequest && identityRef.current.documentId === documentId
-    );
+    const chapterRequest = ++chapterLoadRef.current;
+    const ownerAtRequest = userId;
+    const isCurrentIdentity = () =>
+      identityRef.current.ownerId === ownerAtRequest && identityRef.current.documentId === documentId;
     const isCurrentRequest = () => request === deckLoadRef.current && isCurrentIdentity();
     setErr(null);
-    try {
-      const list = await getChapters(getToken, documentId);
-      if (!isCurrentIdentity()) return;
-      setChapters(list);
-      setSelectedChapter((prev) => prev ?? list[0] ?? null);
-    } catch (e) {
-      if (!isCurrentIdentity()) return;
-      setErr(e instanceof Error ? e.message : 'Chapters could not be loaded.');
-    }
+    void getChapters(getToken, documentId)
+      .then((list) => {
+        if (!isCurrentIdentity() || chapterRequest !== chapterLoadRef.current) return;
+        setChapters(list);
+        setSelectedChapter((prev) => prev ?? list[0] ?? null);
+      })
+      .catch((e: unknown) => {
+        if (!isCurrentIdentity() || chapterRequest !== chapterLoadRef.current) return;
+        setErr(e instanceof Error ? e.message : 'Chapters could not be loaded.');
+      });
     if (!isCurrentRequest()) return;
     const deckAtRequest = selectedDeckRef.current;
     try {
@@ -122,123 +126,164 @@ export default function DocumentPage() {
     }
   }, [documentId, getToken, userId]);
 
-  const selectDeck = useCallback(async (deckId: string | null) => {
-    const request = ++deckLoadRef.current;
-    const ownerAtRequest = userId ?? '';
-    const isCurrentRequest = () => (
-      request === deckLoadRef.current
-      && identityRef.current.ownerId === ownerAtRequest
-      && identityRef.current.documentId === documentId
-    );
-    selectedDeckRef.current = deckId;
-    setSelectedDeckId(deckId);
-    setMapPracticeIds(null);
-    setCards([]);
-    setCardsSource(null);
-    setCardsCachedAt(null);
-    try {
+  const selectDeck = useCallback(
+    async (deckId: string | null) => {
+      const request = ++deckLoadRef.current;
+      const ownerAtRequest = userId ?? '';
+      const isCurrentRequest = () =>
+        request === deckLoadRef.current &&
+        identityRef.current.ownerId === ownerAtRequest &&
+        identityRef.current.documentId === documentId;
+      selectedDeckRef.current = deckId;
+      setSelectedDeckId(deckId);
+      setMapPracticeIds(null);
+      setCards([]);
+      setCardsSource(null);
+      setCardsCachedAt(null);
+      try {
+        const loaded = await loadFlashcardDeck(
+          getToken,
+          ownerAtRequest,
+          documentId,
+          deckId,
+          isCurrentRequest,
+        );
+        if (!isCurrentRequest()) return;
+        setCards(loaded.cards);
+        setCardsSource(loaded.source);
+        setCardsCachedAt(loaded.cachedAt);
+        if (loaded.deckId !== deckId) {
+          selectedDeckRef.current = loaded.deckId;
+          setSelectedDeckId(loaded.deckId);
+        }
+        setErr(null);
+        return true;
+      } catch (e) {
+        if (!isCurrentRequest()) return;
+        setCards([]);
+        setCardsSource(null);
+        setCardsCachedAt(null);
+        setErr(e instanceof Error ? e.message : 'failed to load selected deck');
+        return false;
+      }
+    },
+    [documentId, getToken, userId],
+  );
+
+  const refreshCards = useCallback(
+    async (deckId: string) => {
+      const request = ++deckLoadRef.current;
+      const ownerAtRequest = userId ?? '';
+      const isCurrentRequest = () =>
+        request === deckLoadRef.current &&
+        identityRef.current.ownerId === ownerAtRequest &&
+        identityRef.current.documentId === documentId;
+      selectedDeckRef.current = deckId;
+      setSelectedDeckId(deckId);
       const loaded = await loadFlashcardDeck(getToken, ownerAtRequest, documentId, deckId, isCurrentRequest);
       if (!isCurrentRequest()) return;
       setCards(loaded.cards);
       setCardsSource(loaded.source);
       setCardsCachedAt(loaded.cachedAt);
-      if (loaded.deckId !== deckId) {
-        selectedDeckRef.current = loaded.deckId;
-        setSelectedDeckId(loaded.deckId);
+    },
+    [documentId, getToken, userId],
+  );
+
+  const updateSavedCard = useCallback(
+    (cardId: string, updated: Flashcard | null) => {
+      const next =
+        updated === null || updated.status === 'retired'
+          ? cards.filter((card) => card.id !== cardId)
+          : cards.map((card) => (card.id === cardId ? updated : card));
+      setCards(next);
+      if (userId) {
+        void cacheFlashcardDeck(userId, documentId, selectedDeckRef.current, next).catch((error: unknown) => {
+          console.warn(
+            'Offline deck cache update skipped:',
+            error instanceof Error ? error.name : 'UnknownError',
+          );
+        });
       }
-      setErr(null);
-      return true;
-    } catch (e) {
-      if (!isCurrentRequest()) return;
-      setCards([]);
-      setCardsSource(null);
-      setCardsCachedAt(null);
-      setErr(e instanceof Error ? e.message : 'failed to load selected deck');
-      return false;
-    }
-  }, [documentId, getToken, userId]);
-
-  const refreshCards = useCallback(async (deckId: string) => {
-    const request = ++deckLoadRef.current;
-    const ownerAtRequest = userId ?? '';
-    const isCurrentRequest = () => (
-      request === deckLoadRef.current
-      && identityRef.current.ownerId === ownerAtRequest
-      && identityRef.current.documentId === documentId
-    );
-    selectedDeckRef.current = deckId;
-    setSelectedDeckId(deckId);
-    const loaded = await loadFlashcardDeck(getToken, ownerAtRequest, documentId, deckId, isCurrentRequest);
-    if (!isCurrentRequest()) return;
-    setCards(loaded.cards);
-    setCardsSource(loaded.source);
-    setCardsCachedAt(loaded.cachedAt);
-  }, [documentId, getToken, userId]);
-
-  const updateSavedCard = useCallback((cardId: string, updated: Flashcard | null) => {
-    const next = updated === null || updated.status === 'retired'
-      ? cards.filter((card) => card.id !== cardId)
-      : cards.map((card) => card.id === cardId ? updated : card);
-    setCards(next);
-    if (userId) {
-      void cacheFlashcardDeck(userId, documentId, selectedDeckRef.current, next).catch((error: unknown) => {
-        console.warn('Offline deck cache update skipped:', error instanceof Error ? error.name : 'UnknownError');
-      });
-    }
-  }, [cards, documentId, userId]);
+    },
+    [cards, documentId, userId],
+  );
 
   useEffect(() => {
-    void loadChapters();
-    if (pendingJobId) {
-      stopPoll.current = pollJob(getToken, pendingJobId, (j) => {
-        setJob(j);
-        if (j.status === 'done') void loadChapters();
-      }, 1500, 180_000, (error) => setErr(error.message));
+    if (userId && pendingJobId) {
+      stopPoll.current = pollUploadJobs(
+        getToken,
+        pendingJobId,
+        setJob,
+        () => void loadChapters(),
+        (error) => setErr(error.message),
+      );
+    } else {
+      void loadChapters();
     }
     return () => stopPoll.current?.();
-  }, [getToken, loadChapters, pendingJobId]);
+  }, [getToken, loadChapters, pendingJobId, userId]);
 
   useEffect(() => {
     let active = true;
-    if (!graphNodeId || !userId) return () => { active = false; };
-    const handoff = readGraphHandoff(new URLSearchParams({
-      graph_node: graphNodeId,
-      graph_revision: graphRevision ?? '',
-      graph_action: graphAction ?? '',
-    }));
+    if (!graphNodeId || !userId)
+      return () => {
+        active = false;
+      };
+    const handoff = readGraphHandoff(
+      new URLSearchParams({
+        graph_node: graphNodeId,
+        graph_revision: graphRevision ?? '',
+        graph_action: graphAction ?? '',
+      }),
+    );
     if (!handoff) {
       setMapHandoffStatus('This concept graph link is invalid.');
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
     setMapHandoffStatus('Resolving the saved concept and its source…');
-    void getConceptGraphNodeActions(getToken, documentId, handoff.nodeId, handoff.revision).then(async (resolved) => {
-      if (!active) return;
-      if (resolved.source) setMapSource(resolved.source);
-      if (handoff.action === 'source') {
-        setMapHandoffStatus(resolved.source ? 'Opened the selected concept’s current supporting source.' : 'This concept has no verified supporting source.');
-        return;
-      }
-      if (!resolved.deck) {
-        setMapHandoffStatus('No approved deck currently matches this concept.');
-        return;
-      }
-      const loaded = await selectDeck(resolved.deck.deck_id);
-      if (!active) return;
-      if (!loaded) {
-        setMapHandoffStatus('The approved deck could not be opened. Reconnect and retry this saved graph action.');
-        return;
-      }
-      if (handoff.action === 'practice') {
-        setMapPracticeIds(resolved.deck.card_ids);
-        setViewerOpen(true);
-        setMapHandoffStatus('Opened casual practice for cards grounded in this concept. Scheduled reviews are unchanged.');
-      } else {
-        setMapHandoffStatus('Opened the approved deck linked to this concept.');
-      }
-    }).catch((caught: unknown) => {
-      if (active) setMapHandoffStatus(caught instanceof Error ? caught.message : 'This graph action is unavailable.');
-    });
-    return () => { active = false; };
+    void getConceptGraphNodeActions(getToken, documentId, handoff.nodeId, handoff.revision)
+      .then(async (resolved) => {
+        if (!active) return;
+        if (resolved.source) setMapSource(resolved.source);
+        if (handoff.action === 'source') {
+          setMapHandoffStatus(
+            resolved.source
+              ? 'Opened the selected concept’s current supporting source.'
+              : 'This concept has no verified supporting source.',
+          );
+          return;
+        }
+        if (!resolved.deck) {
+          setMapHandoffStatus('No approved deck currently matches this concept.');
+          return;
+        }
+        const loaded = await selectDeck(resolved.deck.deck_id);
+        if (!active) return;
+        if (!loaded) {
+          setMapHandoffStatus(
+            'The approved deck could not be opened. Reconnect and retry this saved graph action.',
+          );
+          return;
+        }
+        if (handoff.action === 'practice') {
+          setMapPracticeIds(resolved.deck.card_ids);
+          setViewerOpen(true);
+          setMapHandoffStatus(
+            'Opened casual practice for cards grounded in this concept. Scheduled reviews are unchanged.',
+          );
+        } else {
+          setMapHandoffStatus('Opened the approved deck linked to this concept.');
+        }
+      })
+      .catch((caught: unknown) => {
+        if (active)
+          setMapHandoffStatus(caught instanceof Error ? caught.message : 'This graph action is unavailable.');
+      });
+    return () => {
+      active = false;
+    };
   }, [documentId, getToken, graphAction, graphNodeId, graphRevision, selectDeck, userId]);
 
   useEffect(() => {
@@ -282,10 +327,17 @@ export default function DocumentPage() {
     try {
       stopPoll.current?.();
       const jobId = await generateFlashcards(getToken, documentId);
-      stopPoll.current = pollJob(getToken, jobId, (j) => {
-        setJob(j);
-        if (j.status === 'done') void loadChapters();
-      }, 1500, 180_000, (error) => setErr(error.message));
+      stopPoll.current = pollJob(
+        getToken,
+        jobId,
+        (j) => {
+          setJob(j);
+          if (j.status === 'done') void loadChapters();
+        },
+        1500,
+        180_000,
+        (error) => setErr(error.message),
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'flashcard generation failed');
     } finally {
@@ -299,16 +351,27 @@ export default function DocumentPage() {
     <main className="mx-auto max-w-3xl p-6">
       <h1 className="text-2xl font-bold">Document</h1>
       <p className="mt-1 break-all font-mono text-xs text-neutral-500">{documentId}</p>
-      {mapHandoffStatus && <p role="status" className="mt-3 rounded border border-blue-200 bg-blue-50 p-3 text-sm">{mapHandoffStatus}</p>}
+      {mapHandoffStatus && (
+        <p role="status" className="mt-3 rounded border border-blue-200 bg-blue-50 p-3 text-sm">
+          {mapHandoffStatus}
+        </p>
+      )}
       {mapSource && (
-        <section className="mt-3 rounded border border-blue-200 p-3 text-sm" aria-label="Linked concept source">
-          <h2 className="font-semibold">Selected concept’s source{mapSource.page === null ? '' : ` · page ${mapSource.page}`}</h2>
+        <section
+          className="mt-3 rounded border border-blue-200 p-3 text-sm"
+          aria-label="Linked concept source"
+        >
+          <h2 className="font-semibold">
+            Selected concept’s source{mapSource.page === null ? '' : ` · page ${mapSource.page}`}
+          </h2>
           <blockquote className="mt-2 border-s-2 border-blue-400 ps-3">{mapSource.quote}</blockquote>
         </section>
       )}
 
       <section className="mt-6 rounded border p-4">
-        <label htmlFor="pdf-upload" className="mb-2 block text-sm font-medium">Upload a PDF</label>
+        <label htmlFor="pdf-upload" className="mb-2 block text-sm font-medium">
+          Upload a PDF
+        </label>
         <input
           id="pdf-upload"
           type="file"
@@ -353,13 +416,17 @@ export default function DocumentPage() {
             </li>
           ))}
         </ul>
-        {selectedChapter && <SummaryPanel chapter={selectedChapter} />}
+        {selectedChapter && (
+          <SummaryPanel key={[userId, documentId, selectedChapter.id].join(':')} chapter={selectedChapter} />
+        )}
       </section>
 
       <section className="mt-6">
         <h2 className="text-lg font-semibold">Listen</h2>
         <TtsPlayer
-          documentId={documentId}
+          sourceKey={`${documentId}:${selectedChapter?.id ?? 'none'}:${chat?.answer ?? ''}`}
+          label="Read this answer aloud"
+          disabled={!chat?.answer}
           getText={() => chat?.answer ?? selectedChapter?.title ?? 'No chapter selected yet'}
         />
       </section>
@@ -371,7 +438,9 @@ export default function DocumentPage() {
 
       <section className="mt-6" aria-labelledby="flashcard-studio-heading">
         <div className="flex items-center justify-between">
-          <h2 id="flashcard-studio-heading" className="text-lg font-semibold">Flashcard Studio</h2>
+          <h2 id="flashcard-studio-heading" className="text-lg font-semibold">
+            Flashcard Studio
+          </h2>
           <div className="flex gap-3 text-sm">
             <button
               onClick={onGenerateCards}
@@ -436,10 +505,16 @@ export default function DocumentPage() {
                   <p className="mt-1 text-xs text-neutral-600">Tags: {card.tags.join(', ')}</p>
                 )}
                 {card.needs_review && (
-                  <p className="mt-1 text-xs font-medium text-amber-700">Review this schedule after changing card content.</p>
+                  <p className="mt-1 text-xs font-medium text-amber-700">
+                    Review this schedule after changing card content.
+                  </p>
                 )}
                 <p className="mt-1 text-xs text-neutral-600">due {card.due_date}</p>
-                <FlashcardEditor card={card} getToken={getToken} onChanged={(updated) => updateSavedCard(card.id, updated)} />
+                <FlashcardEditor
+                  card={card}
+                  getToken={getToken}
+                  onChanged={(updated) => updateSavedCard(card.id, updated)}
+                />
               </li>
             ))}
           </ul>
@@ -449,7 +524,9 @@ export default function DocumentPage() {
       <section className="mt-6">
         <h2 className="text-lg font-semibold">Ask about this document</h2>
         <div className="mt-2 flex gap-2">
-          <label htmlFor="document-question" className="sr-only">Ask a question grounded in this PDF</label>
+          <label htmlFor="document-question" className="sr-only">
+            Ask a question grounded in this PDF
+          </label>
           <input
             id="document-question"
             value={question}

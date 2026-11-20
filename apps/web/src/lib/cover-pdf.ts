@@ -146,6 +146,11 @@ async function getMeasure(): Promise<CoverMeasure> {
 
 export type CoverLayoutResult = ReturnType<typeof layoutCover>;
 
+function pdfColor(hex: string) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return rgb((value >> 16) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255);
+}
+
 /** Resolve preview layout with exact StandardFont metrics shared by PDF export. */
 export async function prepareCoverLayout(
   input: unknown,
@@ -177,6 +182,20 @@ export async function createCoverPdf(
   if (layout.overflow) throw new CoverLayoutOverflowError();
 
   const page = document.addPage([layout.width, layout.height]);
+  for (const shape of layout.decorations) {
+    const color = pdfColor(shape.fill);
+    if (shape.kind === 'rect') {
+      page.drawRectangle({
+        x: shape.x,
+        y: layout.height - shape.y - shape.height,
+        width: shape.width,
+        height: shape.height,
+        color,
+      });
+    } else {
+      page.drawCircle({ x: shape.x, y: layout.height - shape.y, size: shape.radius, color });
+    }
+  }
   if (logo && layout.logo) {
     let image: PDFImage;
     try {
@@ -205,7 +224,7 @@ export async function createCoverPdf(
         y: layout.height - line.y,
         size: line.fontSize,
         font,
-        color: rgb(0.08, 0.12, 0.2),
+        color: pdfColor(line.color),
       });
     } catch (cause) {
       throw new UnsupportedCoverTextError(cause);

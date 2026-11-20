@@ -225,6 +225,7 @@ def test_storage_limits_have_bounded_defaults_and_can_be_tuned() -> None:
         AI_SERVICE_JOB_STORE="memory",
     )
     assert settings.max_documents_per_user == 100
+    assert settings.max_whiteboards_per_user == 100
     assert settings.max_chunks_per_document == 5000
     assert settings.max_flashcards_per_deck == 2000
     assert settings.max_embedding_batch == 500
@@ -235,12 +236,14 @@ def test_storage_limits_have_bounded_defaults_and_can_be_tuned() -> None:
         AI_SERVICE_JWT_JWKS_URL="http://localhost/test-jwks",
         AI_SERVICE_JOB_STORE="memory",
         AI_SERVICE_MAX_DOCUMENTS_PER_USER=25,
+        AI_SERVICE_MAX_WHITEBOARDS_PER_USER=10,
         AI_SERVICE_MAX_CHUNKS_PER_DOCUMENT=250,
         AI_SERVICE_MAX_FLASHCARDS_PER_DECK=400,
         AI_SERVICE_MAX_EMBEDDING_BATCH=200,
         AI_SERVICE_MAX_PAGE_SIZE=50,
     )
     assert configured.max_documents_per_user == 25
+    assert configured.max_whiteboards_per_user == 10
     assert configured.max_chunks_per_document == 250
     assert configured.max_flashcards_per_deck == 400
     assert configured.max_embedding_batch == 200
@@ -250,6 +253,7 @@ def test_storage_limits_have_bounded_defaults_and_can_be_tuned() -> None:
 def test_storage_limits_reject_invalid_values_and_incompatible_batches() -> None:
     for name in (
         "AI_SERVICE_MAX_DOCUMENTS_PER_USER",
+        "AI_SERVICE_MAX_WHITEBOARDS_PER_USER",
         "AI_SERVICE_MAX_CHUNKS_PER_DOCUMENT",
         "AI_SERVICE_MAX_FLASHCARDS_PER_DECK",
         "AI_SERVICE_MAX_EMBEDDING_BATCH",

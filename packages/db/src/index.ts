@@ -6,3 +6,4 @@ export * from './source-schema';
 export * from './sm2';
 export * from './outline-schema';
 export * from './generation-schema';
+export * from './whiteboard-schema';
