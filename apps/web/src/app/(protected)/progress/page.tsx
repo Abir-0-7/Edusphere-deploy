@@ -43,15 +43,22 @@ export default function ProgressPage() {
         fetch(`${baseUrl()}/api/readiness`, { headers }),
       ]);
       if (!dashboardResponse.ok || !readinessResponse.ok) {
-        throw new Error(`Study service returned ${!dashboardResponse.ok ? dashboardResponse.status : readinessResponse.status}.`);
+        throw new Error(
+          `Study service returned ${!dashboardResponse.ok ? dashboardResponse.status : readinessResponse.status}.`,
+        );
       }
-      const [dashboardData, readinessData] = await Promise.all([dashboardResponse.json(), readinessResponse.json()]);
+      const [dashboardData, readinessData] = await Promise.all([
+        dashboardResponse.json(),
+        readinessResponse.json(),
+      ]);
       setData(dashboardData as Dashboard);
       setReadiness(readinessData as Readiness);
     } catch (error) {
-      setErr(error instanceof Error && error.message.startsWith('Study service')
-        ? error.message
-        : 'Your study service is unavailable right now. Try again in a moment.');
+      setErr(
+        error instanceof Error && error.message.startsWith('Study service')
+          ? error.message
+          : 'Your study service is unavailable right now. Try again in a moment.',
+      );
     } finally {
       setLoading(false);
     }
@@ -79,23 +86,35 @@ export default function ProgressPage() {
   };
 
   return (
-    <main className="workspace-page space-y-6">
+    <main className="coast-progress-page workspace-page space-y-6">
       <header className="page-heading-row">
         <div>
           <p className="page-kicker">BUILD YOUR MOMENTUM</p>
           <h1 className="page-heading">Focus & progress</h1>
-          <p className="page-subtitle">Make time for deep work, see what is sticking, and plan your next study session.</p>
+          <p className="page-subtitle">
+            Make time for deep work, see what is sticking, and plan your next study session.
+          </p>
         </div>
-        <Link href="/library" className="action-secondary">Open my library <span aria-hidden="true">→</span></Link>
+        <Link href="/library" className="action-secondary">
+          Open my library <span aria-hidden="true">→</span>
+        </Link>
       </header>
 
       {err && (
-        <div className="surface flex flex-wrap items-center justify-between gap-4 border-[#eed9ca] bg-[#fff9f4] p-4" role="alert">
+        <div
+          className="surface flex flex-wrap items-center justify-between gap-4 border-[#eed9ca] bg-[#fff9f4] p-4"
+          role="alert"
+        >
           <div>
             <h2 className="text-sm font-semibold text-[#853c22]">Progress could not be loaded</h2>
             <p className="mt-1 text-sm text-[#795a48]">{err}</p>
           </div>
-          <button type="button" onClick={() => void load()} disabled={loading} className="action-secondary disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="action-secondary disabled:opacity-50"
+          >
             {loading ? 'Trying again…' : 'Try again'}
           </button>
         </div>
@@ -105,10 +124,14 @@ export default function ProgressPage() {
         <section className="surface overflow-hidden" aria-labelledby="focus-heading">
           <div className="border-b border-[var(--line)] bg-[#f1f6f1] px-5 py-4">
             <p className="page-kicker">ONE SESSION AT A TIME</p>
-            <h2 id="focus-heading" className="section-heading">Settle into focus</h2>
+            <h2 id="focus-heading" className="section-heading">
+              Settle into focus
+            </h2>
             <p className="section-caption">Choose a duration. Completed sessions earn study tokens.</p>
           </div>
-          <div className="p-1"><FocusTimer /></div>
+          <div className="p-1">
+            <FocusTimer />
+          </div>
         </section>
 
         <section className="surface p-5" aria-busy={loading}>
@@ -117,7 +140,9 @@ export default function ProgressPage() {
               <p className="page-kicker">HOW YOU ARE DOING</p>
               <h2 className="section-heading">Readiness</h2>
             </div>
-            <span className="font-serif text-3xl text-[var(--forest)]">{readiness ? `${readiness.score}/100` : '—'}</span>
+            <span className="font-serif text-3xl text-[var(--forest)]">
+              {readiness ? `${readiness.score}/100` : '—'}
+            </span>
           </div>
           {readiness && (
             <>
@@ -139,7 +164,13 @@ export default function ProgressPage() {
               </dl>
             </>
           )}
-          {!readiness && <p className="mt-5 text-sm leading-6 text-[var(--muted)]" role="status">{loading ? 'Loading your readiness…' : 'Your readiness is unavailable until the study service reconnects.'}</p>}
+          {!readiness && (
+            <p className="mt-5 text-sm leading-6 text-[var(--muted)]" role="status">
+              {loading
+                ? 'Loading your readiness…'
+                : 'Your readiness is unavailable until the study service reconnects.'}
+            </p>
+          )}
         </section>
       </div>
 
@@ -161,11 +192,24 @@ export default function ProgressPage() {
             </dl>
             <FocusBars perDay={data.focus_seconds_per_day} />
             {data.focus_minutes_7d === 0 && data.reviews_7d === 0 && (
-              <p className="mt-4 text-sm leading-6 text-[var(--muted)]">A fresh start. Begin a focus session or <Link href="/library" className="font-semibold text-[var(--forest)] underline underline-offset-4">add your first PDF</Link> to build your study history.</p>
+              <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                A fresh start. Begin a focus session or{' '}
+                <Link
+                  href="/library"
+                  className="font-semibold text-[var(--forest)] underline underline-offset-4"
+                >
+                  add your first PDF
+                </Link>{' '}
+                to build your study history.
+              </p>
             )}
           </>
         ) : (
-          <p className="mt-5 text-sm text-[var(--muted)]" role="status">{loading ? 'Loading your study activity…' : 'Activity is unavailable. Use Try again above to reconnect.'}</p>
+          <p className="mt-5 text-sm text-[var(--muted)]" role="status">
+            {loading
+              ? 'Loading your study activity…'
+              : 'Activity is unavailable. Use Try again above to reconnect.'}
+          </p>
         )}
       </section>
 
@@ -175,14 +219,23 @@ export default function ProgressPage() {
             <p className="page-kicker">YOUR NEXT CHAPTER</p>
             <h2 className="section-heading">Next week advice</h2>
           </div>
-          <button type="button" onClick={() => void fetchAdvice()} disabled={loadingAdvice} className="action-secondary disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => void fetchAdvice()}
+            disabled={loadingAdvice}
+            className="action-secondary disabled:opacity-50"
+          >
             {loadingAdvice ? 'Thinking…' : advice ? 'Refresh advice' : 'Generate advice'}
           </button>
         </div>
         <p className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-[#52635a]">
           {advice ?? 'Turn your last seven days of activity into a short, personal plan for the week ahead.'}
         </p>
-        {adviceError && <p className="mt-3 text-sm text-[#853c22]" role="alert">{adviceError}</p>}
+        {adviceError && (
+          <p className="mt-3 text-sm text-[#853c22]" role="alert">
+            {adviceError}
+          </p>
+        )}
       </section>
     </main>
   );
@@ -219,7 +272,11 @@ function FocusBars({ perDay }: { perDay: Record<string, number> }) {
     <div className="mt-5 flex h-32 items-end gap-3" role="img" aria-label="Focus minutes per day">
       {days.map((day) => (
         <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
-          <div className="w-full rounded-t bg-[#72a38a]" style={{ height: `${Math.max(2, (day.seconds / max) * 96)}px` }} title={`${Math.round(day.seconds / 60)} min`} />
+          <div
+            className="w-full rounded-t bg-[#72a38a]"
+            style={{ height: `${Math.max(2, (day.seconds / max) * 96)}px` }}
+            title={`${Math.round(day.seconds / 60)} min`}
+          />
           <span className="text-[10px] text-[var(--muted)]">{day.date.slice(5)}</span>
         </div>
       ))}

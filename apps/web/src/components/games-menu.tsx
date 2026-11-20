@@ -189,8 +189,8 @@ function GamePreview({ gameId }: { gameId: string }) {
 
 export function GamesMenu() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10">
-      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#103f37] via-[#155d4c] to-[#1a765b] px-6 py-7 text-white shadow-[0_24px_60px_-34px_rgba(13,71,55,0.8)] sm:px-9 sm:py-9">
+    <main className="coast-game-vault mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10">
+      <section className="coast-game-hero relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#103f37] via-[#155d4c] to-[#1a765b] px-6 py-7 text-white shadow-[0_24px_60px_-34px_rgba(13,71,55,0.8)] sm:px-9 sm:py-9">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-12 -top-24 -z-10 h-72 w-72 rounded-full border border-white/10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.16),transparent_68%)]"

@@ -48,7 +48,7 @@ export function ExamPlanPanel({ documentId }: { documentId: string }) {
   };
 
   return (
-    <section className="mt-6">
+    <section className="document-exam-panel mt-6">
       <h2 className="text-lg font-semibold">Exam planner</h2>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="text-sm">
@@ -69,7 +69,11 @@ export function ExamPlanPanel({ documentId }: { documentId: string }) {
           {busy ? 'Planning…' : 'Build plan'}
         </button>
       </div>
-      {err && <p role="alert" className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {err}
+        </p>
+      )}
       {plan && (
         <ol className="mt-3 space-y-1">
           {plan.days.map((d) => (

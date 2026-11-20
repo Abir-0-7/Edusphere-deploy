@@ -55,7 +55,7 @@ export default function AccountPage() {
   };
 
   return (
-    <main className="mx-auto max-w-2xl space-y-8 p-6">
+    <main className="coast-account-page mx-auto max-w-3xl space-y-8 p-6">
       <div>
         <h1 className="text-2xl font-bold">Your data and account</h1>
         <p className="mt-2 text-neutral-700">

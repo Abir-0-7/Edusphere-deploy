@@ -7,26 +7,29 @@ import { SIGN_IN_URL, SIGN_UP_URL } from '@/lib/auth-routes';
 const paths = [
   {
     number: '01',
-    title: 'Learn from your material',
-    detail: 'Turn a lecture PDF into short lessons, grounded explanations, and a viva you can answer.',
+    mark: '▤',
+    title: 'Read by chapter',
+    detail: 'Open a summary alongside the source.',
     href: '/library',
     action: 'Open my library',
     tone: 'green',
   },
   {
     number: '02',
-    title: 'Practice until it sticks',
-    detail: 'Review due flashcards, build a focus streak, and see the study time you have put in.',
-    href: '/review',
-    action: 'Review flashcards',
+    mark: '✧',
+    title: 'Ask with evidence',
+    detail: 'Jump from an answer to the page it cites.',
+    href: '/tutor',
+    action: 'Open your tutor',
     tone: 'orange',
   },
   {
     number: '03',
-    title: 'Take a short reset',
-    detail: 'Play a quick logic or sorting challenge in the Game Vault between study sessions.',
-    href: '/games',
-    action: 'Visit Game Vault',
+    mark: '↻',
+    title: 'Review on schedule',
+    detail: 'Spend your time on cards that are due.',
+    href: '/review',
+    action: 'Review flashcards',
     tone: 'blue',
   },
 ];
@@ -35,49 +38,69 @@ export default function Home() {
   return (
     <main className="welcome-page">
       <section className="welcome-intro">
-        <p className="page-kicker">YOUR MATERIAL. YOUR STUDY PLAN.</p>
-        <h1>
-          Make your notes
-          <br />
-          work harder.
-        </h1>
-        <p className="welcome-copy">
-          EduSphere turns your course material into guided study, active recall, and small wins you can track.
-        </p>
-        <div className="welcome-actions">
-          <Show when="signed-in">
-            <Link className="action-primary" href="/library">
-              Upload a study PDF <span aria-hidden="true">→</span>
-            </Link>
-            <Link className="welcome-text-link" href="/dashboard">
-              Go to my workspace
-            </Link>
-          </Show>
-          <Show when="signed-out">
-            <Link href={SIGN_IN_URL} className="action-primary">
-              Start studying <span aria-hidden="true">&#8594;</span>
-            </Link>
-            <Link href={SIGN_UP_URL} className="welcome-text-link">
-              Create an account
-            </Link>
-          </Show>
+        <div className="welcome-hero-copy">
+          <p className="page-kicker">YOUR PERSONAL STUDY WORKSPACE</p>
+          <h1>
+            Turn a PDF into
+            <br />a study plan.
+          </h1>
+          <p className="welcome-copy">
+            Find the chapters that matter, ask questions with page citations, and review flashcards when
+            they’re due.
+          </p>
+          <div className="welcome-actions">
+            <Show when="signed-in">
+              <Link className="action-primary" href="/library">
+                Get started <span aria-hidden="true">↗</span>
+              </Link>
+              <Link className="welcome-text-link" href="/dashboard">
+                Explore my workspace
+              </Link>
+            </Show>
+            <Show when="signed-out">
+              <Link href={SIGN_UP_URL} className="action-primary">
+                Get started <span aria-hidden="true">↗</span>
+              </Link>
+              <Link href={SIGN_IN_URL} className="welcome-text-link">
+                Sign in
+              </Link>
+            </Show>
+          </div>
         </div>
-        <div className="welcome-stats" aria-label="Study workflow">
-          <span>
-            <b>01</b> Add material
+        <div
+          className="coast-study-art"
+          role="group"
+          aria-label="A source document, cited answer, and recall card"
+        >
+          <div className="coast-orbit coast-orbit-outer" aria-hidden="true" />
+          <div className="coast-orbit coast-orbit-inner" aria-hidden="true" />
+          <article className="coast-source-sheet">
+            <span className="coast-art-label">SOURCE · PDF</span>
+            <strong>Cell Biology</strong>
+            <i aria-hidden="true" />
+            <i aria-hidden="true" />
+            <i aria-hidden="true" />
+            <span className="coast-art-page">Chapter 4 · p. 18</span>
+          </article>
+          <article className="coast-answer-card">
+            <span className="coast-art-label">CITED ANSWER</span>
+            <strong>How does ATP synthase work?</strong>
+            <span className="coast-citation">Cell Biology · p. 18</span>
+          </article>
+          <article className="coast-recall-card">
+            <span className="coast-art-label">FLASHCARD</span>
+            <strong>What drives ATP production?</strong>
+          </article>
+          <span className="coast-art-spark coast-art-spark-one" aria-hidden="true">
+            ✳
           </span>
-          <span aria-hidden="true">/</span>
-          <span>
-            <b>02</b> Learn a lesson
-          </span>
-          <span aria-hidden="true">/</span>
-          <span>
-            <b>03</b> Remember more
+          <span className="coast-art-spark coast-art-spark-two" aria-hidden="true">
+            ✦
           </span>
         </div>
       </section>
 
-      <section className="welcome-paths" aria-labelledby="welcome-paths-title">
+      <section className="welcome-paths" id="study-loop" aria-labelledby="welcome-paths-title">
         <div className="welcome-paths-head">
           <div>
             <p className="page-kicker">A STUDY LOOP THAT MOVES</p>
@@ -91,8 +114,10 @@ export default function Home() {
         </div>
         <div className="welcome-path-grid">
           {paths.map((path) => (
-            <article key={path.number} className={`welcome-path welcome-path-${path.tone}`}>
-              <span className="welcome-path-number">{path.number}</span>
+            <article key={path.number} className={'welcome-path welcome-path-' + path.tone}>
+              <span className="welcome-path-number" aria-hidden="true">
+                {path.mark}
+              </span>
               <h3>{path.title}</h3>
               <p>{path.detail}</p>
               <Show when="signed-in">
@@ -102,7 +127,7 @@ export default function Home() {
               </Show>
               <Show when="signed-out">
                 <Link href={SIGN_IN_URL} className="welcome-path-link">
-                  Explore after sign in <span aria-hidden="true">&#8594;</span>
+                  Explore after sign in <span aria-hidden="true">→</span>
                 </Link>
               </Show>
             </article>

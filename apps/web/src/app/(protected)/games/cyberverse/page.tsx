@@ -2,7 +2,7 @@ import { CyberversePlayer } from '@/components/cyberverse-player';
 
 export default function CyberversePage() {
   return (
-    <main className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6">
+    <main className="coast-cyberverse-page mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-6">
       <a href="/games" className="text-sm font-semibold text-blue-800 underline">
         All games
       </a>

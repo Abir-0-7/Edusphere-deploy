@@ -348,9 +348,16 @@ export default function DocumentPage() {
   const status = job?.status;
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <main className="coast-document-page mx-auto max-w-5xl p-6">
       <h1 className="text-2xl font-bold">Document</h1>
       <p className="mt-1 break-all font-mono text-xs text-neutral-500">{documentId}</p>
+      <nav className="document-jump-nav" aria-label="Document study tools">
+        <a href="#document-chapters">Read</a>
+        <a href="#document-chat">Ask AI</a>
+        <a href="#document-cards">Flashcards</a>
+        <a href="#document-listen">Listen</a>
+        <a href="#document-map">Map &amp; viva</a>
+      </nav>
       {mapHandoffStatus && (
         <p role="status" className="mt-3 rounded border border-blue-200 bg-blue-50 p-3 text-sm">
           {mapHandoffStatus}
@@ -368,7 +375,7 @@ export default function DocumentPage() {
         </section>
       )}
 
-      <section className="mt-6 rounded border p-4">
+      <section className="document-upload-panel mt-6 rounded border p-4">
         <label htmlFor="pdf-upload" className="mb-2 block text-sm font-medium">
           Upload a PDF
         </label>
@@ -388,7 +395,7 @@ export default function DocumentPage() {
         )}
       </section>
 
-      <section className="mt-6">
+      <section id="document-chapters" className="document-chapter-panel mt-6">
         <h2 className="text-lg font-semibold">Chapters</h2>
         {chapters.length === 0 && (
           <p className="mt-2 text-sm text-neutral-500">No chapters yet — upload a PDF.</p>
@@ -421,7 +428,7 @@ export default function DocumentPage() {
         )}
       </section>
 
-      <section className="mt-6">
+      <section id="document-listen" className="document-listen-panel mt-6">
         <h2 className="text-lg font-semibold">Listen</h2>
         <TtsPlayer
           sourceKey={`${documentId}:${selectedChapter?.id ?? 'none'}:${chat?.answer ?? ''}`}
@@ -431,12 +438,16 @@ export default function DocumentPage() {
         />
       </section>
 
-      <section className="mt-6 space-y-6">
+      <section id="document-map" className="document-tools-panel mt-6 space-y-6">
         <MindMapPanel key={`${userId}:${documentId}`} documentId={documentId} />
         <VivaPanel documentId={documentId} />
       </section>
 
-      <section className="mt-6" aria-labelledby="flashcard-studio-heading">
+      <section
+        id="document-cards"
+        className="document-cards-panel mt-6"
+        aria-labelledby="flashcard-studio-heading"
+      >
         <div className="flex items-center justify-between">
           <h2 id="flashcard-studio-heading" className="text-lg font-semibold">
             Flashcard Studio
@@ -521,7 +532,7 @@ export default function DocumentPage() {
         )}
       </section>
 
-      <section className="mt-6">
+      <section id="document-chat" className="document-chat-panel mt-6">
         <h2 className="text-lg font-semibold">Ask about this document</h2>
         <div className="mt-2 flex gap-2">
           <label htmlFor="document-question" className="sr-only">

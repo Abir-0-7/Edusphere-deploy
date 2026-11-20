@@ -11,7 +11,7 @@ import { DraftChecklistWorkspace } from '@/components/draft-checklist-workspace'
 export default function ToolsPage() {
   const { isLoaded, userId, getToken } = useAuth();
   return (
-    <main className="workspace-page tools-page space-y-6">
+    <main className="coast-tools-page workspace-page tools-page space-y-6">
       <h1 className="text-2xl font-bold">Tools</h1>
       {isLoaded && userId ? (
         <WhiteboardWorkspace key={userId} ownerId={userId} getToken={getToken} />

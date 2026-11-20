@@ -57,7 +57,7 @@ export function CourseCatalog() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-10">
+    <main className="coast-course-catalog mx-auto max-w-6xl px-5 py-10">
       <div className="mb-8 max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-widest text-emerald-800">Guided learning</p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-950">Learn one idea at a time</h1>
@@ -91,7 +91,7 @@ export function CourseCatalog() {
             return (
               <article
                 key={course.release_id}
-                className="flex min-h-64 flex-col rounded-2xl border bg-white p-6 shadow-sm"
+                className="coast-course-card flex min-h-64 flex-col rounded-2xl border bg-white p-6 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-4">
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase text-emerald-900">

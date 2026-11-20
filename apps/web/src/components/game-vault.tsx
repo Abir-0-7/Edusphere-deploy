@@ -585,7 +585,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
   return (
     <div
       ref={player}
-      className="mx-auto max-w-5xl space-y-6 px-4 py-6 text-slate-950 sm:px-6 sm:py-8 fullscreen:max-w-none fullscreen:overflow-auto"
+      className="coast-game-session mx-auto max-w-5xl space-y-6 px-4 py-6 text-slate-950 sm:px-6 sm:py-8 fullscreen:max-w-none fullscreen:overflow-auto"
       aria-busy={busy}
     >
       <a
@@ -594,7 +594,7 @@ function AccountGameVault({ game }: { game: VaultGame }) {
       >
         All games
       </a>
-      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#103f37] via-[#155d4c] to-[#1a765b] p-5 text-white shadow-[0_24px_60px_-34px_rgba(13,71,55,0.8)] sm:p-7">
+      <section className="coast-game-hero relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#103f37] via-[#155d4c] to-[#1a765b] p-5 text-white shadow-[0_24px_60px_-34px_rgba(13,71,55,0.8)] sm:p-7">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border border-white/10"

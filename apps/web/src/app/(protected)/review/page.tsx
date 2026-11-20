@@ -10,8 +10,19 @@ import { pendingCount, queueReview, syncReviews } from '@/lib/offline-reviews';
 export default function ReviewPage() {
   const { isLoaded, session } = useSession();
   const getToken = useCallback(() => session?.getToken() ?? Promise.resolve(null), [session]);
-  if (!isLoaded || !session) return <p role="status" className="p-6">Loading your review account.</p>;
-  return <AccountReviewPage key={`${session.user.id}:${session.id}`} ownerId={session.user.id} getToken={getToken} />;
+  if (!isLoaded || !session)
+    return (
+      <p role="status" className="p-6">
+        Loading your review account.
+      </p>
+    );
+  return (
+    <AccountReviewPage
+      key={`${session.user.id}:${session.id}`}
+      ownerId={session.user.id}
+      getToken={getToken}
+    />
+  );
 }
 
 function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: GetToken }) {
@@ -27,7 +38,9 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
 
   useEffect(() => {
     active.current = true;
-    return () => { active.current = false; };
+    return () => {
+      active.current = false;
+    };
   }, []);
 
   const accountToken = useCallback(async () => {
@@ -38,10 +51,14 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
   }, [getToken]);
 
   const flush = useCallback(async () => {
-    const result = await syncReviews(ownerId, async (row) => {
-      await submitReview(accountToken, row.cardId, row.grade, row.uuid);
-      return true;
-    }, () => active.current);
+    const result = await syncReviews(
+      ownerId,
+      async (row) => {
+        await submitReview(accountToken, row.cardId, row.grade, row.uuid);
+        return true;
+      },
+      () => active.current,
+    );
     const count = await pendingCount(ownerId);
     if (!active.current) return result;
     setPending(count);
@@ -51,7 +68,10 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
 
   useEffect(() => {
     const sync = () => {
-      void flush().catch(() => { if (active.current) setSyncError('Offline reviews could not be synced. We will try again when you reconnect.'); });
+      void flush().catch(() => {
+        if (active.current)
+          setSyncError('Offline reviews could not be synced. We will try again when you reconnect.');
+      });
     };
     sync();
     window.addEventListener('online', sync);
@@ -68,7 +88,8 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
       setIndex(0);
       setRevealed(false);
     } catch (error) {
-      if (active.current) setErr(error instanceof Error ? error.message : 'Your review queue could not be loaded.');
+      if (active.current)
+        setErr(error instanceof Error ? error.message : 'Your review queue could not be loaded.');
     } finally {
       if (active.current) setLoading(false);
     }
@@ -91,7 +112,8 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
       setIndex((current) => current + 1);
       await flush();
     } catch {
-      if (active.current) setSyncError('This review could not be saved offline. Refresh your queue after reconnecting.');
+      if (active.current)
+        setSyncError('This review could not be saved offline. Refresh your queue after reconnecting.');
     } finally {
       grading.current = false;
     }
@@ -102,25 +124,50 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
   const progress = cards.length ? Math.round((index / cards.length) * 100) : 0;
 
   return (
-    <main className="workspace-page space-y-6" aria-busy={loading}>
+    <main className="coast-review-page workspace-page space-y-6" aria-busy={loading}>
       <header className="page-heading-row">
         <div>
           <p className="page-kicker">REMEMBER WHAT YOU LEARN</p>
           <h1 className="page-heading">Flashcard review</h1>
           <p className="page-subtitle">A little active recall today makes your next lesson easier.</p>
         </div>
-        <Link href="/library" className="action-secondary">Open my library <span aria-hidden="true">→</span></Link>
+        <Link href="/library" className="action-secondary">
+          Open my library <span aria-hidden="true">→</span>
+        </Link>
       </header>
 
       <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3" role="status" aria-live="polite">
+        <div
+          className="mb-4 flex flex-wrap items-center justify-between gap-3"
+          role="status"
+          aria-live="polite"
+        >
           <p className="text-sm text-[var(--muted)]">
-            {loading ? 'Loading your review queue…' : err ? 'Review queue unavailable' : `${remaining} ${remaining === 1 ? 'card' : 'cards'} left today`}
+            {loading
+              ? 'Loading your review queue…'
+              : err
+                ? 'Review queue unavailable'
+                : `${remaining} ${remaining === 1 ? 'card' : 'cards'} left today`}
           </p>
-          {pending > 0 && <span className="rounded border border-[#e8d8b6] bg-[#fff9ed] px-3 py-1 text-xs text-[#75551f]">{pending} queued offline</span>}
-          {!loading && !err && cards.length > 0 && <span className="text-xs font-medium text-[var(--forest)]">{Math.min(index, cards.length)} of {cards.length} reviewed</span>}
+          {pending > 0 && (
+            <span className="rounded border border-[#e8d8b6] bg-[#fff9ed] px-3 py-1 text-xs text-[#75551f]">
+              {pending} queued offline
+            </span>
+          )}
+          {!loading && !err && cards.length > 0 && (
+            <span className="text-xs font-medium text-[var(--forest)]">
+              {Math.min(index, cards.length)} of {cards.length} reviewed
+            </span>
+          )}
         </div>
-        {syncError && <p className="mb-4 rounded border border-[#e8d8b6] bg-[#fff9ed] p-3 text-sm text-[#75551f]" role="status">{syncError}</p>}
+        {syncError && (
+          <p
+            className="mb-4 rounded border border-[#e8d8b6] bg-[#fff9ed] p-3 text-sm text-[#75551f]"
+            role="status"
+          >
+            {syncError}
+          </p>
+        )}
 
         {loading && (
           <div className="surface animate-pulse p-7 sm:p-10" aria-label="Loading review queue">
@@ -137,36 +184,65 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
             <h2 className="section-heading">Your flashcards could not be loaded</h2>
             <p className="mt-3 break-words text-sm leading-6 text-[var(--muted)]">{err}</p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" onClick={() => void load()} className="action-primary">Try loading again</button>
-              <Link href="/library" className="action-secondary">Return to library</Link>
+              <button type="button" onClick={() => void load()} className="action-primary">
+                Try loading again
+              </button>
+              <Link href="/library" className="action-secondary">
+                Return to library
+              </Link>
             </div>
           </section>
         )}
 
         {!loading && !err && !card && (
           <section className="surface p-7 text-center sm:p-10">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--mint)] font-serif text-2xl text-[var(--forest)]" aria-hidden="true">✓</span>
+            <span
+              className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--mint)] font-serif text-2xl text-[var(--forest)]"
+              aria-hidden="true"
+            >
+              ✓
+            </span>
             <p className="page-kicker mt-5">A LITTLE ROOM TO BREATHE</p>
-            <h2 className="font-serif text-2xl">{cards.length ? 'Your review session is complete' : 'Nothing is due right now'}</h2>
+            <h2 className="font-serif text-2xl">
+              {cards.length ? 'Your review session is complete' : 'Nothing is due right now'}
+            </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--muted)]">
-              {cards.length ? 'Good work making time for recall. Keep learning, or take a short break before your next session.' : 'Add a PDF and generate flashcards from its document tools. Your due cards will appear here when they are ready for review.'}
+              {cards.length
+                ? 'Good work making time for recall. Keep learning, or take a short break before your next session.'
+                : 'Add a PDF and generate flashcards from its document tools. Your due cards will appear here when they are ready for review.'}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/library" className="action-primary">Back to my library <span aria-hidden="true">→</span></Link>
-              <button type="button" onClick={() => void load()} className="action-secondary">Refresh queue</button>
+              <Link href="/library" className="action-primary">
+                Back to my library <span aria-hidden="true">→</span>
+              </Link>
+              <button type="button" onClick={() => void load()} className="action-secondary">
+                Refresh queue
+              </button>
             </div>
           </section>
         )}
 
         {!loading && !err && card && (
-          <section className="surface overflow-hidden">
-            <div className="h-1 bg-[#e2ebe4]" role="progressbar" aria-label="Cards reviewed this session" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-              <div className="h-full bg-[var(--forest)] transition-[width]" style={{ width: `${progress}%` }} />
+          <section className="coast-review-frame surface overflow-hidden">
+            <div
+              className="h-1 bg-[#e2ebe4]"
+              role="progressbar"
+              aria-label="Cards reviewed this session"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+            >
+              <div
+                className="h-full bg-[var(--forest)] transition-[width]"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-            <div className="p-6 sm:p-9">
+            <div className="coast-review-card p-6 sm:p-9">
               <div className="flex items-center justify-between">
                 <p className="page-kicker mb-0">RECALL BEFORE YOU REVEAL</p>
-                <span className="rounded bg-[#f2f6f2] px-2 py-1 text-xs text-[var(--muted)]">Card {index + 1}</span>
+                <span className="rounded bg-[#f2f6f2] px-2 py-1 text-xs text-[var(--muted)]">
+                  Card {index + 1}
+                </span>
               </div>
               <h2 className="mt-7 whitespace-pre-wrap font-serif text-2xl leading-relaxed">{card.front}</h2>
               {revealed ? (
@@ -184,7 +260,12 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
                         { label: 'Good', value: 4, cls: 'border-[#b7d7c4] bg-[#eef8f1] text-[#255e3b]' },
                         { label: 'Easy', value: 5, cls: 'border-[#14543f] bg-[#176b50] text-white' },
                       ].map((button) => (
-                        <button key={button.value} type="button" onClick={() => void grade(button.value)} className={`min-h-11 rounded border px-3 py-2 text-sm font-semibold ${button.cls} hover:opacity-80`}>
+                        <button
+                          key={button.value}
+                          type="button"
+                          onClick={() => void grade(button.value)}
+                          className={`min-h-11 rounded border px-3 py-2 text-sm font-semibold ${button.cls} hover:opacity-80`}
+                        >
                           {button.label}
                         </button>
                       ))}
@@ -193,8 +274,12 @@ function AccountReviewPage({ ownerId, getToken }: { ownerId: string; getToken: G
                 </>
               ) : (
                 <div className="mt-10 border-t border-[var(--line)] pt-5">
-                  <p className="mb-4 text-sm text-[var(--muted)]">Take a moment to form your answer, then check what you remembered.</p>
-                  <button type="button" onClick={() => setRevealed(true)} className="action-primary">Show answer</button>
+                  <p className="mb-4 text-sm text-[var(--muted)]">
+                    Take a moment to form your answer, then check what you remembered.
+                  </p>
+                  <button type="button" onClick={() => setRevealed(true)} className="action-primary">
+                    Show answer
+                  </button>
                 </div>
               )}
             </div>

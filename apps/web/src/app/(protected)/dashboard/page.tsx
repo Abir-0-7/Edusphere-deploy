@@ -60,7 +60,7 @@ export default async function DashboardPage() {
   const greeting = firstName === 'there' ? 'Welcome to your study space' : `Welcome back, ${firstName}`;
 
   return (
-    <main className="workspace-page">
+    <main className="workspace-page coast-dashboard">
       <section className="dashboard-welcome">
         <div>
           <p className="page-kicker">YOUR LEARNING DESK</p>
@@ -72,6 +72,39 @@ export default async function DashboardPage() {
         <Link className="action-primary" href="/library">
           Add study material <span aria-hidden="true">+</span>
         </Link>
+      </section>
+
+      <section className="dashboard-resume" aria-label="Continue studying">
+        <div className="dashboard-resume-copy">
+          <p className="dashboard-resume-kicker">CONTINUE YOUR STUDY LOOP</p>
+          <h2>{recentDocuments[0] ? recentDocuments[0].filename : 'Your next idea starts here.'}</h2>
+          <p>
+            {recentDocuments[0]
+              ? 'Return to your material, chapter summaries, and cited answers.'
+              : 'Add a PDF and turn it into chapters, summaries, and practice.'}
+          </p>
+          <Link
+            className="dashboard-resume-action"
+            href={
+              recentDocuments[0]
+                ? '/tutor?documentId=' + encodeURIComponent(recentDocuments[0].id)
+                : '/library'
+            }
+          >
+            {recentDocuments[0] ? 'Resume studying' : 'Choose a PDF'} <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+        <div className="dashboard-book-art" aria-hidden="true">
+          <div className="dashboard-book-orbit" />
+          <div className="dashboard-book-page">
+            <span>STUDY NOTES</span>
+            <i />
+            <i />
+            <b>KEY IDEA</b>
+            <i />
+          </div>
+          <span className="dashboard-book-spark">✳</span>
+        </div>
       </section>
 
       <section className="dashboard-metrics" aria-label="Study summary">

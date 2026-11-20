@@ -427,7 +427,7 @@ export function CourseWorkspace({ slug, enrollmentId }: { slug: string; enrollme
   ];
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-10">
+    <main className="coast-course-workspace mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/courses" className="text-sm font-medium text-emerald-800 underline">

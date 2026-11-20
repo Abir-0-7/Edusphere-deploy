@@ -174,7 +174,7 @@ export function LearnerProfileForm({ getToken }: { getToken: GetToken }) {
 
   return (
     <main
-      className={`mx-auto max-w-3xl space-y-6 p-4 sm:p-6 ${draft.accessibility.larger_text ? 'text-lg' : 'text-base'}`}
+      className={`coast-profile-page mx-auto max-w-3xl space-y-6 p-4 sm:p-6 ${draft.accessibility.larger_text ? 'text-lg' : 'text-base'}`}
     >
       <div>
         <h1 className="text-2xl font-bold">Your learning profile</h1>

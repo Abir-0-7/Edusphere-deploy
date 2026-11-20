@@ -31,16 +31,19 @@ test.beforeEach(async ({ page, baseURL }) => {
 
 test('home page renders for anonymous visitors', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Make your notes work harder.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Turn a PDF into/ })).toBeVisible();
 });
 
 test('sign-in entry points and OAuth landing routes stay on the app origin', async ({ page }) => {
   await page.goto('/');
   const origin = new URL(page.url()).origin;
-  await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/sign-in');
-  await page.getByRole('link', { name: 'Start studying' }).click();
-  await expect(page).toHaveURL(origin + '/sign-in');
-  await expect(page.getByRole('heading', { name: 'Pick up where you left off.' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+    'href',
+    '/sign-in',
+  );
+  await page.getByRole('link', { name: 'Get started' }).click();
+  await expect(page).toHaveURL(origin + '/sign-up');
+  await expect(page.getByRole('heading', { name: 'Build your study space.' })).toBeVisible();
 
   const callbackCases: ReadonlyArray<readonly [string, string]> = [
     ['/sign-in/sso-callback', 'Pick up where you left off.'],
